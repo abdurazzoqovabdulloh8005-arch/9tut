@@ -233,6 +233,25 @@
           <div>
             
             <div id="questionCard" class="question-card">
+              <!-- Review Mode Banner -->
+              <div id="reviewModeBanner" class="review-mode-banner" style="display:none;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span id="reviewStatusIcon" style="font-size:1.5rem;">❌</span>
+                  <div>
+                    <div id="reviewStatusTitle" style="font-weight:800; font-size:1rem; color:var(--danger);">XATO JAVOB BERILGAN</div>
+                    <div id="reviewStatusSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Sizning javobingiz: [A] | To'g'ri javob: [C]</div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <button id="btnFilterWrongOnly" class="btn-secondary" style="font-size:0.82rem; padding:6px 12px;" onclick="toggleReviewFilter()">
+                    ❌ Faqat xatolarni ko'rish
+                  </button>
+                  <button class="btn-primary" style="font-size:0.82rem; padding:6px 14px; background:#0284c7;" onclick="returnToFinishedResults()">
+                    📊 Natijaga Qaytish
+                  </button>
+                </div>
+              </div>
+
               <div class="question-header">
                 <div class="question-meta">
                   <span id="sourceBadge" class="badge-source">Part 5</span>
@@ -274,6 +293,7 @@
               <div class="question-nav">
                 <button id="prevQBtn" class="btn-secondary" onclick="prevQuestion()">⬅️ Oldingi savol</button>
                 <div style="display:flex; gap:10px;">
+                  <button id="returnToResultsBtn" class="btn-secondary" style="display:none; background:var(--bg-main); border:1px solid #0284c7; color:#0284c7; font-weight:700;" onclick="returnToFinishedResults()">📊 Natijaga Qaytish</button>
                   <button id="checkAnswerBtn" class="btn-primary" onclick="checkCurrentAnswer()">Tekshirish ✓</button>
                   <button id="nextQBtn" class="btn-primary" onclick="nextQuestion()">Keyingisi ➡️</button>
                   <button id="reviewExamBtn" class="btn-warning" style="display:none;" onclick="openExamReviewScreen()">Imtihonni Yakunlash 🏁</button>
@@ -341,6 +361,19 @@
               <div id="finalStatusMsg" style="font-size:1.1rem; margin-bottom:16px;"></div>
               <div id="finalStatsText" style="line-height:1.8; margin-bottom:24px; font-size:1rem;"></div>
               
+              <!-- Review and Retry Actions -->
+              <div id="finishReviewActions" style="display:flex; justify-content:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+                <button id="btnReviewWrong" class="btn-primary" style="background:#ef4444; border-color:#dc2626; padding:12px 22px; font-size:1rem; font-weight:700; box-shadow:0 4px 12px rgba(239,68,68,0.3);" onclick="openQuizReviewMode(true)">
+                  🔍 Xato Savollarni Ko'rish & Tahlil (<span id="wrongCountBadge">0</span> ta)
+                </button>
+                <button id="btnReviewAll" class="btn-secondary" style="padding:12px 20px; font-size:1rem; font-weight:600;" onclick="openQuizReviewMode(false)">
+                  📖 Barcha Savollarni Tahlil Qilish
+                </button>
+                <button id="btnRetryWrong" class="btn-warning" style="padding:12px 20px; font-size:1rem; font-weight:700;" onclick="retryWrongQuestionsOnly()">
+                  🔄 Faqat Xatolarni Qaytadan Yechish
+                </button>
+              </div>
+
               <div id="certButtonArea" style="margin-bottom:20px; display:none;">
                 <button class="btn-primary" style="background:#059669; padding:12px 24px; font-size:1rem;" onclick="openCertificateModal()">
                   🏆 Rasmiy CCNA Sertifikatini Ko'rish va Yuklash

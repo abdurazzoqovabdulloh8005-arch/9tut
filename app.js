@@ -1726,6 +1726,9 @@ function startPartQuiz(part) {
   state.userAnswers = {};
   state.checkedQuestions = {};
   state.flaggedQuestions = {};
+  state.isQuizFinished = false;
+  state.isReviewMode = false;
+  state.reviewOnlyWrong = false;
 
   document.getElementById('partsSelectionView').style.display = 'none';
   document.getElementById('quizTestingArea').style.display = 'block';
@@ -1807,6 +1810,7 @@ function renderPalette() {
   const total = state.quizQuestions.length;
 
   for (let i = 0; i < total; i++) {
+    const q = state.quizQuestions[i];
     const btn = document.createElement('button');
     btn.className = 'palette-btn';
     btn.textContent = i + 1;
@@ -1815,26 +1819,87 @@ function renderPalette() {
       btn.classList.add('active');
     }
 
-    const hasAnswer = state.userAnswers[i] && state.userAnswers[i].length > 0;
-    if (hasAnswer) {
-      btn.classList.add('answered');
-    }
+    const userAns = state.userAnswers[i] || [];
+    const hasAnswer = userAns.length > 0;
+    const isChecked = !!state.checkedQuestions[i];
 
-    if (state.flaggedQuestions[i]) {
-      btn.classList.add('flagged');
+    if (state.isQuizFinished) {
+      // Test yakunlangan: to'g'ri (yashil), xato (qizil)
+      if (!hasAnswer) {
+        btn.classList.add('unanswered');
+        btn.title = `${i + 1}-savol: Javob berilmagan`;
+      } else {
+        const isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
+        if (isCorrect) {
+          btn.classList.add('correct');
+          btn.title = `${i + 1}-savol: To'g'ri ✅`;
+        } else {
+          btn.classList.add('wrong');
+          btn.title = `${i + 1}-savol: XATO ❌`;
+        }
+      }
+    } else {
+      // Test davomida
+      if (isChecked && state.mode === 'practice') {
+        const isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
+        if (isCorrect) {
+          btn.classList.add('correct');
+        } else {
+          btn.classList.add('wrong');
+        }
+      } else if (hasAnswer) {
+        btn.classList.add('answered');
+      }
+
+      if (state.flaggedQuestions[i]) {
+        btn.classList.add('flagged');
+      }
     }
 
     btn.addEventListener('click', () => {
       state.currentIndex = i;
-      renderCurrentQuestion();
+      if (state.isQuizFinished) {
+        openQuizReviewMode(false, i);
+      } else {
+        renderCurrentQuestion();
+      }
       SoundEffects.playClick();
     });
 
     grid.appendChild(btn);
   }
 
-  const answeredCount = Object.keys(state.userAnswers).filter(k => state.userAnswers[k] && state.userAnswers[k].length > 0).length;
-  document.getElementById('paletteCountProgress').textContent = `${answeredCount} / ${total} javob berildi`;
+  // Legend and progress text
+  const legendEl = document.querySelector('.palette-legend');
+  if (state.isQuizFinished) {
+    let correctCount = 0;
+    let wrongCount = 0;
+    let unansCount = 0;
+    state.quizQuestions.forEach((q, idx) => {
+      const uAns = state.userAnswers[idx] || [];
+      if (uAns.length === 0) unansCount++;
+      else if (arraysEqual(uAns.slice().sort(), q.answer.slice().sort())) correctCount++;
+      else wrongCount++;
+    });
+    if (legendEl) {
+      legendEl.innerHTML = `
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div> To'g'ri (${correctCount})</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Xato (${wrongCount})</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--border);"></div> Javobsiz (${unansCount})</div>
+      `;
+    }
+    document.getElementById('paletteCountProgress').textContent = `${correctCount} to'g'ri / ${wrongCount} xato`;
+  } else {
+    if (legendEl) {
+      legendEl.innerHTML = `
+        <div class="legend-item"><div class="legend-dot" style="background:var(--success);"></div> Javob berilgan</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--warning);"></div> Belgilangan</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--primary);"></div> Joriy</div>
+      `;
+    }
+    const answeredCount = Object.keys(state.userAnswers).filter(k => state.userAnswers[k] && state.userAnswers[k].length > 0).length;
+    document.getElementById('paletteCountProgress').textContent = `${answeredCount} / ${total} javob berildi`;
+  }
 }
 
 // RENDER CURRENT QUESTION
@@ -1851,12 +1916,12 @@ function renderCurrentQuestion() {
   const flagBtn = document.getElementById('flagBtn');
   const isFlagged = !!state.flaggedQuestions[idx];
   flagBtn.classList.toggle('flagged', isFlagged);
-  flagBtn.innerHTML = isFlagged ? '★ Belgilangan (Flagged)' : '⚐ Belgilash (Flag)';
+  flagBtn.innerHTML = isFlagged ? '🚩 Belgilangan (Flagged)' : '🏳️ Belgilash (Flag)';
 
   const bookmarkBtn = document.getElementById('bookmarkBtn');
   const isBookmarked = state.bookmarks.includes(q.id);
   bookmarkBtn.classList.toggle('bookmarked', isBookmarked);
-  bookmarkBtn.innerHTML = isBookmarked ? '★ Saqlangan' : '☆ Saqlash';
+  bookmarkBtn.innerHTML = isBookmarked ? '⭐ Saqlangan' : '☆ Saqlash';
 
   const multiAnswer = q.answer.length > 1;
   const multiNotice = multiAnswer ? ` <b style="color:var(--warning)">[Bir nechta to'g'ri javob bor: ${q.answer.length} ta]</b>` : '';
@@ -1876,8 +1941,39 @@ function renderCurrentQuestion() {
   const listEl = document.getElementById('optionsList');
   listEl.innerHTML = '';
 
-  const isChecked = !!state.checkedQuestions[idx];
+  const isReview = state.isReviewMode || state.isQuizFinished;
+  const isChecked = isReview || !!state.checkedQuestions[idx];
   const userAns = state.userAnswers[idx] || [];
+  const isUserCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
+
+  // Review Mode Banner updates
+  const reviewBanner = document.getElementById('reviewModeBanner');
+  if (reviewBanner) {
+    if (isReview) {
+      reviewBanner.style.display = 'flex';
+      const uStr = userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
+      const aStr = q.answer.join(', ');
+      if (isUserCorrect) {
+        reviewBanner.className = 'review-mode-banner is-correct';
+        document.getElementById('reviewStatusIcon').textContent = '✅';
+        document.getElementById('reviewStatusTitle').textContent = "TO'G'RI JAVOB BERILGAN";
+        document.getElementById('reviewStatusTitle').style.color = '#10b981';
+        document.getElementById('reviewStatusSubtitle').textContent = `Sizning javobingiz: [${uStr}]`;
+      } else {
+        reviewBanner.className = 'review-mode-banner';
+        document.getElementById('reviewStatusIcon').textContent = '❌';
+        document.getElementById('reviewStatusTitle').textContent = 'XATO JAVOB BERILGAN';
+        document.getElementById('reviewStatusTitle').style.color = '#ef4444';
+        document.getElementById('reviewStatusSubtitle').textContent = `Sizning javobingiz: [${uStr}] | To'g'ri javob: [${aStr}]`;
+      }
+      const filterBtn = document.getElementById('btnFilterWrongOnly');
+      if (filterBtn) {
+        filterBtn.textContent = state.reviewOnlyWrong ? "📋 Barcha savollarni ko'rish" : "❌ Faqat xatolarni ko'rish";
+      }
+    } else {
+      reviewBanner.style.display = 'none';
+    }
+  }
 
   const optKeys = Object.keys(q.options).sort();
   optKeys.forEach(letter => {
@@ -1889,8 +1985,8 @@ function renderCurrentQuestion() {
     const isSelected = userAns.includes(letter);
     if (isSelected) item.classList.add('selected');
 
-    if (isChecked && state.mode === 'practice') {
-      const isCorrectOpt = q.answer.includes(letter);
+    const isCorrectOpt = q.answer.includes(letter);
+    if (isChecked) {
       if (isCorrectOpt) {
         item.classList.add('correct');
       } else if (isSelected && !isCorrectOpt) {
@@ -1898,9 +1994,19 @@ function renderCurrentQuestion() {
       }
     }
 
+    let badgeHtml = '';
+    if (isChecked) {
+      if (isCorrectOpt) {
+        badgeHtml += ' <span style="color:#10b981; font-weight:800; font-size:0.85rem; margin-left:8px;">✅ TO\'G\'RI JAVOB</span>';
+      }
+      if (isSelected && !isCorrectOpt) {
+        badgeHtml += ' <span style="color:#ef4444; font-weight:800; font-size:0.85rem; margin-left:8px;">❌ SIZNING JAVOBINGIZ</span>';
+      }
+    }
+
     item.innerHTML = `
       <div class="option-letter">${letter}</div>
-      <div class="option-text">${formatOptionText(text)}</div>
+      <div class="option-text">${formatOptionText(text)}${badgeHtml}</div>
     `;
 
     if (!isChecked) {
@@ -1915,11 +2021,17 @@ function renderCurrentQuestion() {
 
   const expBox = document.getElementById('explanationBox');
   const expText = document.getElementById('explanationText');
-  if (isChecked && state.mode === 'practice') {
+  if (isChecked && (isReview || state.mode === 'practice')) {
     expBox.classList.add('visible');
     const ansStr = q.answer.join(', ');
     const note = q.explanation ? `<br><br><b>Tushuntirish:</b><br>${escapeHtml(q.explanation)}` : '';
-    expText.innerHTML = `<b>To'g'ri javob:</b> <span style="color:var(--success); font-weight:700;">${ansStr}</span>${note}`;
+    const uStr = userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
+    const headerHtml = isReview 
+      ? (isUserCorrect 
+          ? `<div style="color:#10b981; font-weight:800; margin-bottom:8px;">✅ Javobingiz to'g'ri!</div>` 
+          : `<div style="color:#ef4444; font-weight:800; margin-bottom:8px;">❌ Javobingiz xato! (Siz tanlagan: [${uStr}])</div>`)
+      : '';
+    expText.innerHTML = `${headerHtml}<b>To'g'ri javob:</b> <span style="color:var(--success); font-weight:700;">${ansStr}</span>${note}`;
   } else {
     expBox.classList.remove('visible');
   }
@@ -1928,16 +2040,28 @@ function renderCurrentQuestion() {
   const nextBtn = document.getElementById('nextQBtn');
   const checkBtn = document.getElementById('checkAnswerBtn');
   const reviewExamBtn = document.getElementById('reviewExamBtn');
+  const returnToResBtn = document.getElementById('returnToResultsBtn');
 
-  prevBtn.disabled = idx === 0;
+  prevBtn.disabled = idx === 0 && (!state.reviewOnlyWrong || idx === 0);
 
-  if (state.mode === 'practice') {
+  if (isReview) {
+    checkBtn.style.display = 'none';
+    reviewExamBtn.style.display = 'none';
+    if (returnToResBtn) returnToResBtn.style.display = 'inline-flex';
+    nextBtn.style.display = 'inline-flex';
+    nextBtn.textContent = state.reviewOnlyWrong ? 'Keyingi Xato Savol ➡️' : 'Keyingi Savol ➡️';
+    prevBtn.textContent = state.reviewOnlyWrong ? '⬅️ Oldingi Xato' : '⬅️ Oldingi Savol';
+  } else if (state.mode === 'practice') {
+    if (returnToResBtn) returnToResBtn.style.display = 'none';
     checkBtn.style.display = 'inline-flex';
     checkBtn.disabled = userAns.length === 0 || isChecked;
     reviewExamBtn.style.display = 'none';
-    nextBtn.textContent = idx === total - 1 ? 'Natijani Ko\'rish 🏁' : 'Keyingisi ➡️';
+    nextBtn.textContent = idx === total - 1 ? "Natijani Ko'rish 🏁" : 'Keyingisi ➡️';
+    prevBtn.textContent = '⬅️ Oldingi savol';
   } else {
+    if (returnToResBtn) returnToResBtn.style.display = 'none';
     checkBtn.style.display = 'none';
+    prevBtn.textContent = '⬅️ Oldingi savol';
     if (idx === total - 1) {
       nextBtn.style.display = 'none';
       reviewExamBtn.style.display = 'inline-flex';
@@ -1993,12 +2117,34 @@ function checkCurrentAnswer() {
 }
 
 function nextQuestion() {
+  if (state.isReviewMode && state.reviewOnlyWrong) {
+    let nextWrong = -1;
+    for (let i = state.currentIndex + 1; i < state.quizQuestions.length; i++) {
+      const uAns = state.userAnswers[i] || [];
+      if (!arraysEqual(uAns.slice().sort(), state.quizQuestions[i].answer.slice().sort())) {
+        nextWrong = i;
+        break;
+      }
+    }
+    if (nextWrong !== -1) {
+      state.currentIndex = nextWrong;
+      renderCurrentQuestion();
+      SoundEffects.playClick();
+    } else {
+      alert("Barcha xato savollarni ko'rib chiqdingiz!");
+      returnToFinishedResults();
+    }
+    return;
+  }
+
   if (state.currentIndex < state.quizQuestions.length - 1) {
     state.currentIndex++;
     renderCurrentQuestion();
     SoundEffects.playClick();
   } else {
-    if (state.mode === 'exam') {
+    if (state.isReviewMode) {
+      returnToFinishedResults();
+    } else if (state.mode === 'exam') {
       openExamReviewScreen();
     } else {
       submitFinalExam();
@@ -2007,12 +2153,124 @@ function nextQuestion() {
 }
 
 function prevQuestion() {
+  if (state.isReviewMode && state.reviewOnlyWrong) {
+    let prevWrong = -1;
+    for (let i = state.currentIndex - 1; i >= 0; i--) {
+      const uAns = state.userAnswers[i] || [];
+      if (!arraysEqual(uAns.slice().sort(), state.quizQuestions[i].answer.slice().sort())) {
+        prevWrong = i;
+        break;
+      }
+    }
+    if (prevWrong !== -1) {
+      state.currentIndex = prevWrong;
+      renderCurrentQuestion();
+      SoundEffects.playClick();
+    }
+    return;
+  }
+
   if (state.currentIndex > 0) {
     state.currentIndex--;
     renderCurrentQuestion();
     SoundEffects.playClick();
   }
 }
+
+// QUIZ REVIEW & RETRY SYSTEM
+function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
+  state.isReviewMode = true;
+  state.reviewOnlyWrong = onlyWrong;
+
+  if (targetIndex !== null) {
+    state.currentIndex = targetIndex;
+  } else if (onlyWrong) {
+    // Find first wrong question
+    const firstWrongIdx = state.quizQuestions.findIndex((q, idx) => {
+      const uAns = state.userAnswers[idx] || [];
+      return !arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
+    });
+    if (firstWrongIdx >= 0) {
+      state.currentIndex = firstWrongIdx;
+    } else {
+      alert("Tabriklaymiz! Sizda xato savollar mavjud emas.");
+      return;
+    }
+  } else {
+    state.currentIndex = 0;
+  }
+
+  document.getElementById('finishedCard').style.display = 'none';
+  document.getElementById('reviewScreenCard').style.display = 'none';
+  document.getElementById('questionCard').style.display = 'block';
+
+  renderPalette();
+  renderCurrentQuestion();
+  SoundEffects.playClick();
+}
+
+function returnToFinishedResults() {
+  state.isReviewMode = false;
+  document.getElementById('questionCard').style.display = 'none';
+  document.getElementById('reviewScreenCard').style.display = 'none';
+  document.getElementById('finishedCard').style.display = 'block';
+  renderPalette();
+  SoundEffects.playClick();
+}
+
+function toggleReviewFilter() {
+  state.reviewOnlyWrong = !state.reviewOnlyWrong;
+  if (state.reviewOnlyWrong) {
+    const uAns = state.userAnswers[state.currentIndex] || [];
+    const isCorrect = arraysEqual(uAns.slice().sort(), state.quizQuestions[state.currentIndex].answer.slice().sort());
+    if (isCorrect) {
+      const nextWrong = state.quizQuestions.findIndex((q, idx) => {
+        const a = state.userAnswers[idx] || [];
+        return !arraysEqual(a.slice().sort(), q.answer.slice().sort());
+      });
+      if (nextWrong >= 0) state.currentIndex = nextWrong;
+    }
+  }
+  renderPalette();
+  renderCurrentQuestion();
+  SoundEffects.playClick();
+}
+
+function retryWrongQuestionsOnly() {
+  const wrongQuestions = state.quizQuestions.filter((q, idx) => {
+    const uAns = state.userAnswers[idx] || [];
+    return !arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
+  });
+
+  if (wrongQuestions.length === 0) {
+    alert("Siz barcha savollarga to'g'ri javob bergansiz! Qaytadan yechish shart emas.");
+    return;
+  }
+
+  if (!confirm(`Siz ${wrongQuestions.length} ta xato savolni qaytadan yechmoqchimisiz?`)) {
+    return;
+  }
+
+  state.quizQuestions = wrongQuestions;
+  state.currentIndex = 0;
+  state.userAnswers = {};
+  state.checkedQuestions = {};
+  state.flaggedQuestions = {};
+  state.isQuizFinished = false;
+  state.isReviewMode = false;
+  state.reviewOnlyWrong = false;
+
+  document.getElementById('finishedCard').style.display = 'none';
+  document.getElementById('reviewScreenCard').style.display = 'none';
+  document.getElementById('questionCard').style.display = 'block';
+
+  document.getElementById('activePartTitle').textContent = `🔄 Xatolar ustida ishlash (${wrongQuestions.length} ta savol)`;
+
+  renderPalette();
+  renderCurrentQuestion();
+  SoundEffects.playClick();
+}
+
 
 function toggleFlagCurrent() {
   const idx = state.currentIndex;
@@ -2146,6 +2404,18 @@ function submitFinalExam() {
   document.getElementById('reviewScreenCard').style.display = 'none';
   const finishCard = document.getElementById('finishedCard');
   finishCard.style.display = 'block';
+
+  state.isQuizFinished = true;
+  state.isReviewMode = false;
+  state.reviewOnlyWrong = false;
+
+  const wrongBadge = document.getElementById('wrongCountBadge');
+  if (wrongBadge) wrongBadge.textContent = wrongCount;
+
+  const retryBtn = document.getElementById('btnRetryWrong');
+  if (retryBtn) retryBtn.style.display = wrongCount > 0 ? 'inline-flex' : 'none';
+
+  renderPalette();
 
   document.getElementById('finalPartName').textContent = `Bo'lim: ${state.activePartTitle} (${state.mode === 'exam' ? 'Imtihon' : 'Mashq'})`;
   document.getElementById('finalPercent').textContent = `${scorePercent}%`;
