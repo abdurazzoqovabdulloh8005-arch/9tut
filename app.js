@@ -2886,36 +2886,53 @@ function populateAdminPartFilter() {
   });
 }
 
-// SUB-VIEW 1: STUDENTS LIST & MANAGEMENT
+// SUB-VIEW 1: STUDENTS & ADMINS LIST & MANAGEMENT
 function renderAdminStudentsList() {
   const tbody = document.getElementById('adminStudentsTableBody');
   const countText = document.getElementById('adminStudentCountText');
   const searchInput = document.getElementById('adminStudentSearch');
   const groupSelect = document.getElementById('adminGroupFilter');
+  const roleSelect = document.getElementById('adminRoleFilter');
 
   if (!tbody) return;
 
   const users = getRegisteredUsers();
   const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
   const groupFilter = groupSelect ? groupSelect.value : 'all';
+  const roleFilter = roleSelect ? roleSelect.value : 'all';
 
-  let filtered = users.filter(u => {
+  // Primary Master Administrator entry
+  const masterAdminEntry = {
+    id: 'master_abdulloh',
+    name: 'Abdulloh',
+    login: 'abdulloh',
+    group: 'Asosiy Boshqaruv',
+    role: 'admin',
+    isMaster: true,
+    createdAt: 'Bosh Administrator'
+  };
+
+  const allDisplayUsers = [masterAdminEntry, ...users];
+
+  let filtered = allDisplayUsers.filter(u => {
     const matchQuery = !query || 
       (u.name && u.name.toLowerCase().includes(query)) || 
       (u.login && u.login.toLowerCase().includes(query));
     const matchGroup = (groupFilter === 'all') || (u.group === groupFilter);
-    return matchQuery && matchGroup;
+    const userRole = u.role || 'student';
+    const matchRole = (roleFilter === 'all') || (userRole === roleFilter);
+    return matchQuery && matchGroup && matchRole;
   });
 
   if (countText) {
-    countText.textContent = `Ko'rsatilmoqda: ${filtered.length} / ${users.length} ta talaba`;
+    countText.textContent = `Ko'rsatilmoqda: ${filtered.length} / ${allDisplayUsers.length} ta hisob`;
   }
 
   tbody.innerHTML = '';
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">
-      ${users.length === 0 ? "Hozircha hech qanday talaba ro'yxatdan o'tmagan." : "Qidiruv bo'yicha talaba topilmadi."}
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">
+      Qidiruv bo'yicha hech qanday hisob topilmadi.
     </td></tr>`;
     return;
   }
@@ -2923,7 +2940,6 @@ function renderAdminStudentsList() {
   const allResults = state.results || [];
 
   filtered.forEach((u, idx) => {
-    // Calculate user tests and average score
     const userResults = allResults.filter(r => 
       (r.studentName && r.studentName.toLowerCase() === u.name.toLowerCase()) ||
       (r.login && r.login.toLowerCase() === u.login.toLowerCase())
@@ -2934,11 +2950,17 @@ function renderAdminStudentsList() {
       ? Math.round(userResults.reduce((acc, r) => acc + (r.percent || 0), 0) / quizCount) 
       : 0;
 
+    const isAdmin = (u.role === 'admin');
+    const roleBadge = isAdmin
+      ? `<span style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.35); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👑 ${u.isMaster ? 'Bosh Admin' : 'Admin'}</span>`
+      : `<span style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.3); padding:3px 9px; border-radius:6px; font-weight:600; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👤 Foydalanuvchi</span>`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:700; color:var(--text-muted);">${idx + 1}</td>
-      <td><b>${escapeHtml(u.name)}</b></td>
+      <td><b>${escapeHtml(u.name)}</b> ${u.isMaster ? '⭐' : ''}</td>
       <td><code>${escapeHtml(u.login)}</code></td>
+      <td>${roleBadge}</td>
       <td><span style="background:var(--bg-card); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:0.85rem;">${escapeHtml(u.group || 'Guruhsiz')}</span></td>
       <td style="font-size:0.85rem; color:var(--text-muted);">${u.createdAt || '-'}</td>
       <td><b>${quizCount} ta</b></td>
@@ -2949,22 +2971,27 @@ function renderAdminStudentsList() {
       </td>
       <td style="text-align:center; white-space:nowrap;">
         <button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊 Natijalar</button>
-        <button class="btn-action-icon" title="Tahrirlash" onclick="openEditStudentModal('${u.id}')">✏️</button>
-        <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>
+        ${u.isMaster 
+          ? `<span style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px;">Asosiy</span>`
+          : `<button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
+             <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
+        }
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// STUDENT MODAL (ADD / EDIT)
+// USER MODAL (ADD / EDIT)
 function openAddStudentModal() {
   document.getElementById('studentEditId').value = '';
-  document.getElementById('studentModalTitle').textContent = "Yangi Talaba Qo'shish";
+  document.getElementById('studentModalTitle').textContent = "Yangi Foydalanuvchi / Admin Qo'shish";
   document.getElementById('modalStudentName').value = '';
   document.getElementById('modalStudentLogin').value = '';
   document.getElementById('modalStudentGroup').value = '';
   document.getElementById('modalStudentPassword').value = '';
+  const roleSelect = document.getElementById('modalStudentRole');
+  if (roleSelect) roleSelect.value = 'student';
   document.getElementById('modalPwdNotice').style.display = 'none';
 
   document.getElementById('studentFormModal').style.display = 'flex';
@@ -2977,11 +3004,13 @@ function openEditStudentModal(studentId) {
   if (!user) return;
 
   document.getElementById('studentEditId').value = user.id;
-  document.getElementById('studentModalTitle').textContent = "Talabani Tahrirlash: " + user.name;
+  document.getElementById('studentModalTitle').textContent = "Foydalanuvchini Tahrirlash: " + user.name;
   document.getElementById('modalStudentName').value = user.name || '';
   document.getElementById('modalStudentLogin').value = user.login || '';
   document.getElementById('modalStudentGroup').value = user.group || '';
   document.getElementById('modalStudentPassword').value = '';
+  const roleSelect = document.getElementById('modalStudentRole');
+  if (roleSelect) roleSelect.value = user.role || 'student';
   document.getElementById('modalPwdNotice').style.display = 'inline';
 
   document.getElementById('studentFormModal').style.display = 'flex';
@@ -2997,6 +3026,8 @@ async function saveStudentFromModal() {
   const login = document.getElementById('modalStudentLogin').value.trim().toLowerCase();
   const group = document.getElementById('modalStudentGroup').value.trim();
   const password = document.getElementById('modalStudentPassword').value;
+  const roleSelect = document.getElementById('modalStudentRole');
+  const role = (roleSelect ? roleSelect.value : 'student') || 'student';
 
   if (!name || !login || !group) {
     alert("Iltimos, Ism, Login va Guruh maydonlarini to'ldiring!");
@@ -3006,17 +3037,16 @@ async function saveStudentFromModal() {
   const users = getRegisteredUsers();
 
   if (editId) {
-    // EDIT EXISTING
     const userIndex = users.findIndex(u => u.id === editId);
     if (userIndex !== -1) {
-      // Check login uniqueness against other users
       if (users.some((u, i) => i !== userIndex && u.login.toLowerCase() === login)) {
-        alert("Bu login boshqa talaba tomonidan band qilingan!");
+        alert("Bu login boshqa foydalanuvchi tomonidan band qilingan!");
         return;
       }
       users[userIndex].name = name;
       users[userIndex].login = login;
       users[userIndex].group = group;
+      users[userIndex].role = role;
 
       if (password) {
         users[userIndex].hash = await computeSha256Hex(`${login}:${password}:${AUTH_SALT}`);
@@ -3025,27 +3055,26 @@ async function saveStudentFromModal() {
       SoundEffects.playCorrect();
       closeStudentModal();
       renderAdminDashboard();
-      alert("Talaba ma'lumotlari muvaffaqiyatli saqlandi!");
+      alert(`Foydalanuvchi (${name}) ma'lumotlari muvaffaqiyatli saqlandi!`);
     }
   } else {
-    // ADD NEW
     if (login === MASTER_ADMIN.login || users.some(u => u.login.toLowerCase() === login)) {
       alert("Ushbu login tizimda band!");
       return;
     }
     if (!password) {
-      alert("Yangi talaba uchun parol kiritish majburiy!");
+      alert("Yangi hisob uchun parol kiritish majburiy!");
       return;
     }
 
     const hash = await computeSha256Hex(`${login}:${password}:${AUTH_SALT}`);
     const newUser = {
-      id: 'std_' + Date.now(),
+      id: 'usr_' + Date.now(),
       name: name,
       login: login,
       group: group,
       hash: hash,
-      role: 'student',
+      role: role,
       createdAt: new Date().toLocaleDateString('uz-UZ')
     };
 
@@ -3054,7 +3083,8 @@ async function saveStudentFromModal() {
     SoundEffects.playCorrect();
     closeStudentModal();
     renderAdminDashboard();
-    alert(`Yangi talaba (${name}) muvaffaqiyatli qo'shildi!`);
+    const roleLabel = (role === 'admin') ? "Administrator (Admin)" : "Foydalanuvchi";
+    alert(`Yangi ${roleLabel} (${name}) muvaffaqiyatli qo'shildi!`);
   }
 }
 

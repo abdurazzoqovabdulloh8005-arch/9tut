@@ -582,8 +582,8 @@
             </p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn-primary" onclick="openAddStudentModal()" style="background:#059669;">
-              ➕ Yangi Talaba Qo'shish
+            <button class="btn-primary" onclick="openAddStudentModal()" style="background:#059669; font-weight:700;">
+              ➕ Yangi Foydalanuvchi / Admin Qo'shish
             </button>
             <button class="btn-primary" onclick="exportResultsToCSV()">
               📥 Natijalarni Excel (CSV)
@@ -629,7 +629,7 @@
         <!-- Admin Sub-Navigation Tabs -->
         <div class="admin-subnav-bar">
           <button id="adminTabBtnStudents" class="admin-subnav-btn active" onclick="switchAdminTab('students')">
-            👥 Talabalar Ro'yxati & Boshqaruv (<span id="adminStudentsBadge">0</span>)
+            👥 Foydalanuvchilar & Adminlar (<span id="adminStudentsBadge">0</span>)
           </button>
           <button id="adminTabBtnResults" class="admin-subnav-btn" onclick="switchAdminTab('results')">
             📊 Barcha Test Natijalari (<span id="adminResultsBadge">0</span>)
@@ -642,9 +642,14 @@
         <!-- SUB-VIEW 1: STUDENTS MANAGEMENT -->
         <div id="adminViewStudents">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
-            <div style="display:flex; gap:10px; flex:1; max-width:550px;">
-              <input type="text" id="adminStudentSearch" class="form-control" placeholder="Talaba ismi yoki logini bo'yicha qidirish..." oninput="renderAdminStudentsList()">
-              <select id="adminGroupFilter" class="form-control" style="width:180px;" onchange="renderAdminStudentsList()">
+            <div style="display:flex; gap:10px; flex:1; max-width:680px; flex-wrap:wrap;">
+              <input type="text" id="adminStudentSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Ism yoki login bo'yicha qidirish..." oninput="renderAdminStudentsList()">
+              <select id="adminRoleFilter" class="form-control" style="width:170px;" onchange="renderAdminStudentsList()">
+                <option value="all">Barcha rollar</option>
+                <option value="admin">👑 Faqat Adminlar</option>
+                <option value="student">👤 Faqat Foydalanuvchilar</option>
+              </select>
+              <select id="adminGroupFilter" class="form-control" style="width:160px;" onchange="renderAdminStudentsList()">
                 <option value="all">Barcha guruhlar</option>
               </select>
             </div>
@@ -656,8 +661,9 @@
               <thead>
                 <tr>
                   <th style="width:40px;">№</th>
-                  <th>Talaba F.I.SH</th>
+                  <th>F.I.SH</th>
                   <th>Login (Username)</th>
+                  <th>Roli / Huquqi</th>
                   <th>Guruhi</th>
                   <th>Ro'yxatdan O'tgan</th>
                   <th>Testlar</th>
@@ -731,7 +737,7 @@
     <div id="studentFormModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
       <div class="modal-card" style="max-width:440px; width:100%;">
         <div class="modal-header">
-          <h3 id="studentModalTitle" style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">Yangi Talaba Qo'shish</h3>
+          <h3 id="studentModalTitle" style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">Yangi Foydalanuvchi / Admin Qo'shish</h3>
           <p style="font-size:0.85rem; color:var(--text-muted);">Talaba hisob ma'lumotlarini kiriting</p>
         </div>
 
@@ -748,8 +754,16 @@
         </div>
 
         <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Guruhi *</label>
-          <input type="text" id="modalStudentGroup" class="form-control" placeholder="Masalan: CCNA-01" required>
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">👑 Tizimdagi Roli (Huquqi) *</label>
+          <select id="modalStudentRole" class="form-control" style="padding:10px 12px; font-size:0.92rem; font-weight:600;">
+            <option value="student">👤 Foydalanuvchi (Talaba) — testlar va amaliy mashqlar</option>
+            <option value="admin">👑 Administrator (Admin) — barcha huquqlar + Admin Markazi</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Guruhi / Bo'limi *</label>
+          <input type="text" id="modalStudentGroup" class="form-control" placeholder="Masalan: CCNA-01 yoki Telekom" required>
         </div>
 
         <div class="form-group" style="margin-bottom:16px;">
