@@ -1045,7 +1045,31 @@ function initHotkeys() {
   });
 }
 
-// NAVIGATION
+// NAVIGATION & TAB SWITCHING
+function switchMainTab(target) {
+  if (target === 'admin' && !state.isAdmin) {
+    target = 'quiz';
+  }
+
+  const tabs = document.querySelectorAll('.nav-tab');
+  tabs.forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === target);
+  });
+  state.currentTab = target;
+
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const activeContent = document.getElementById(target + 'Section');
+  if (activeContent) activeContent.classList.add('active');
+
+  if (target === 'admin') {
+    renderAdminDashboard();
+  } else if (target === 'study') {
+    renderStudyContent();
+  } else if (target === 'bookmarks') {
+    renderBookmarksList();
+  }
+}
+
 function initNavigation() {
   const tabs = document.querySelectorAll('.nav-tab');
   tabs.forEach(tab => {
@@ -1057,23 +1081,8 @@ function initNavigation() {
         return;
       }
 
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      state.currentTab = target;
-
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      const activeContent = document.getElementById(target + 'Section');
-      if (activeContent) activeContent.classList.add('active');
-
+      switchMainTab(target);
       SoundEffects.playClick();
-
-      if (target === 'admin') {
-        renderAdminDashboard();
-      } else if (target === 'study') {
-        renderStudyContent();
-      } else if (target === 'bookmarks') {
-        renderBookmarksList();
-      }
     });
   });
 }
@@ -1269,9 +1278,18 @@ function checkAuth() {
     if (adminNav) {
       adminNav.style.display = state.isAdmin ? 'inline-flex' : 'none';
     }
+
+    // STRICT SECURITY: If not admin, close adminSection immediately!
+    if (!state.isAdmin) {
+      const adminSection = document.getElementById('adminSection');
+      if (adminSection && adminSection.classList.contains('active')) {
+        switchMainTab('quiz');
+      }
+    }
   } else {
     state.currentUser = null;
     state.isAdmin = false;
+    switchMainTab('quiz');
 
     const loginBtn = document.getElementById('openAuthModalBtn');
     if (loginBtn) loginBtn.style.display = 'inline-flex';
@@ -1418,12 +1436,13 @@ async function handleUserLogin() {
       try { checkAuth(); } catch(e) {}
       try { renderPartsGrid(); } catch(e) {}
 
-      // If admin logs in, activate admin tab
+      // Tab activation based on role
       if (state.isAdmin) {
         setTimeout(() => {
-          const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
-          if (adminTab) adminTab.click();
-        }, 150);
+          switchMainTab('admin');
+        }, 100);
+      } else {
+        switchMainTab('quiz');
       }
     } else {
       try { SoundEffects.playIncorrect(); } catch(e) {}
@@ -1547,6 +1566,7 @@ async function handleUserRegister() {
   pwdInput.value = '';
   pwdConfirmInput.value = '';
 
+  switchMainTab('quiz');
   SoundEffects.playCorrect();
   alert(`Tabriklaymiz, ${name}! Hisobingiz muvaffaqiyatli yaratildi. Testlarni boshlashingiz mumkin.`);
   checkAuth();
@@ -1592,6 +1612,7 @@ function logoutUser() {
     state.isAdmin = false;
     localStorage.removeItem('ccna_auth_session');
     sessionStorage.removeItem('ccna_auth_session');
+    switchMainTab('quiz');
     checkAuth();
   }
 }
