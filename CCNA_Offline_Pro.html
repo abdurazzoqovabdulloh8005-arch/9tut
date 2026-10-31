@@ -2322,7 +2322,7 @@ input, button, select {
 
         <div id="authErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
 
-        <button type="submit" id="authLoginBtn" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px;">
+        <button type="button" id="authLoginBtn" onclick="handleUserLogin()" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px; cursor:pointer;">
           Kirish 🔒
         </button>
       </form>
@@ -4563,109 +4563,174 @@ function checkAuth() {
 }
 
 async function handleUserLogin() {
-  const loginInput = document.getElementById('authLoginInput');
-  const passwordInput = document.getElementById('authPasswordInput');
-  const rememberCheckbox = document.getElementById('authRememberMe');
-  const errEl = document.getElementById('authErrorMsg');
+  try {
+    const loginInput = document.getElementById('authLoginInput');
+    const passwordInput = document.getElementById('authPasswordInput');
+    const rememberCheckbox = document.getElementById('authRememberMe');
+    const errEl = document.getElementById('authErrorMsg');
 
-  if (!loginInput || !passwordInput) return;
+    if (!loginInput || !passwordInput) return;
 
-  const lockoutSeconds = getLockoutRemainingSeconds();
-  if (lockoutSeconds > 0) {
-    showAuthError(errEl, `Xavfsizlik blokirovkasi faol! Iltimos, ${lockoutSeconds} soniya kuting.`);
-    startLockoutTimer(lockoutSeconds, 'authLoginBtn', errEl);
-    return;
-  }
-
-  const rawLogin = loginInput.value.trim();
-  const rawPassword = passwordInput.value;
-
-  if (!rawLogin) {
-    showAuthError(errEl, "Iltimos, loginni kiriting!");
-    loginInput.focus();
-    return;
-  }
-  if (!rawPassword) {
-    showAuthError(errEl, "Iltimos, parolni kiriting!");
-    passwordInput.focus();
-    return;
-  }
-
-  const normalizedLogin = rawLogin.toLowerCase();
-  const credentialString = `${normalizedLogin}:${rawPassword}:${AUTH_SALT}`;
-  const computedHash = await computeSha256Hex(credentialString);
-
-  // 1. Check Master Admin
-  let match = null;
-  if (normalizedLogin === MASTER_ADMIN.login && (rawPassword === "Abdulloh8005" || computedHash === MASTER_ADMIN.hash)) {
-    match = {
-      login: MASTER_ADMIN.login,
-      name: MASTER_ADMIN.name,
-      role: 'admin',
-      group: 'Administrator'
-    };
-  } else {
-    // 2. Check Registered Students
-    const registeredUsers = getRegisteredUsers();
-    const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
-    if (found) {
-      match = {
-        login: found.login,
-        name: found.name,
-        role: found.role || 'student',
-        group: found.group || 'CCNA Guruh'
-      };
-    }
-  }
-
-  if (match) {
-    localStorage.removeItem('ccna_auth_failed_attempts');
-    localStorage.removeItem('ccna_auth_lockout_until');
-
-    const sessionData = {
-      id: 'usr_' + Date.now(),
-      login: match.login,
-      name: match.name,
-      role: match.role,
-      group: match.group,
-      authenticatedAt: new Date().toISOString()
-    };
-
-    state.currentUser = sessionData;
-    state.isAdmin = (match.role === 'admin');
-
-    if (rememberCheckbox && rememberCheckbox.checked) {
-      localStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
-    } else {
-      sessionStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
+    let lockoutSeconds = 0;
+    try {
+      lockoutSeconds = getLockoutRemainingSeconds();
+    } catch(e) {}
+    if (lockoutSeconds > 0) {
+      showAuthError(errEl, `Xavfsizlik blokirovkasi faol! Iltimos, ${lockoutSeconds} soniya kuting.`);
+      startLockoutTimer(lockoutSeconds, 'authLoginBtn', errEl);
+      return;
     }
 
-    passwordInput.value = '';
-    SoundEffects.playCorrect();
-    checkAuth();
-    renderPartsGrid();
+    const rawLogin = (loginInput.value || '').trim();
+    const rawPassword = (passwordInput.value || '').trim();
 
-    // If admin logs in, show notification
-    if (state.isAdmin) {
-      setTimeout(() => {
-        const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
-        if (adminTab) adminTab.click();
-      }, 200);
+    if (!rawLogin) {
+      showAuthError(errEl, "Iltimos, loginni kiriting!");
+      loginInput.focus();
+      return;
     }
-  } else {
-    SoundEffects.playIncorrect();
-
-    let failedAttempts = parseInt(localStorage.getItem('ccna_auth_failed_attempts') || '0', 10) + 1;
-    localStorage.setItem('ccna_auth_failed_attempts', failedAttempts.toString());
-
-    if (failedAttempts >= 5) {
-      localStorage.setItem('ccna_auth_lockout_until', (Date.now() + 30000).toString());
-      localStorage.setItem('ccna_auth_failed_attempts', '0');
-      startLockoutTimer(30, 'authLoginBtn', errEl);
-    } else {
-      showAuthError(errEl, `Noto'g'ri login yoki parol! Qolgan urinishlar: ${5 - failedAttempts} ta`);
-      passwordInput.value = '';
+    if (!rawPassword) {
+      showAuthError(errEl, "Iltimos, parolni kiriting!");
       passwordInput.focus();
+      return;
+    }
+
+    const normalizedLogin = rawLogin.toLowerCase();
+
+    // 1. Instant Master Admin Check (Instant & 100% bulletproof)
+    let match = null;
+    if (normalizedLogin === 'abdulloh' && rawPassword === 'Abdulloh8005') {
+      match = {
+        login: 'abdulloh',
+        name: 'Abdulloh',
+        role: 'admin',
+        group: 'Administrator'
+      };
+    } else {
+      // 2. Hash check for registered students or master admin hash
+      let computedHash = "";
+      try {
+        const credentialString = `${normalizedLogin}:${rawPassword}:${AUTH_SALT}`;
+        computedHash = await computeSha256Hex(credentialString);
+      } catch (e) {
+        console.warn("Hash calc error:", e);
+      }
+
+      if (normalizedLogin === MASTER_ADMIN.login && computedHash === MASTER_ADMIN.hash) {
+        match = {
+          login: MASTER_ADMIN.login,
+          name: MASTER_ADMIN.name,
+          role: 'admin',
+          group: 'Administrator'
+        };
+      } else {
+        const registeredUsers = getRegisteredUsers();
+        const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
+        if (found) {
+          match = {
+            login: found.login,
+            name: found.name,
+            role: found.role || 'student',
+            group: found.group || 'CCNA Guruh'
+          };
+        }
+      }
+    }
+
+    if (match) {
+      try {
+        localStorage.removeItem('ccna_auth_failed_attempts');
+        localStorage.removeItem('ccna_auth_lockout_until');
+      } catch(e) {}
+
+      const sessionData = {
+        id: 'usr_' + Date.now(),
+        login: match.login,
+        name: match.name,
+        role: match.role,
+        group: match.group,
+        authenticatedAt: new Date().toISOString()
+      };
+
+      state.currentUser = sessionData;
+      state.isAdmin = (match.role === 'admin');
+
+      try {
+        if (rememberCheckbox && rememberCheckbox.checked) {
+          localStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
+        } else {
+          sessionStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
+        }
+      } catch(e) {
+        console.warn("Storage write error", e);
+      }
+
+      passwordInput.value = '';
+      try { SoundEffects.playCorrect(); } catch(e) {}
+
+      // Directly reveal UI immediately
+      const authModal = document.getElementById('authModal');
+      if (authModal) authModal.style.display = 'none';
+
+      const mainContent = document.querySelector('main');
+      if (mainContent) mainContent.style.display = 'block';
+
+      const navTabs = document.querySelector('.nav-tabs');
+      if (navTabs) navTabs.style.visibility = 'visible';
+
+      const userBadge = document.getElementById('currentUserBadge');
+      const userNameEl = document.getElementById('currentUserName');
+      if (userBadge && userNameEl) {
+        userBadge.style.display = 'flex';
+        userNameEl.textContent = state.isAdmin ? `${match.name} 👑` : `${match.name} (${match.group || 'Guruhsiz'})`;
+      }
+
+      const loginBtn = document.getElementById('openAuthModalBtn');
+      if (loginBtn) loginBtn.style.display = 'none';
+
+      const adminNav = document.getElementById('adminNavTab');
+      if (adminNav) {
+        adminNav.style.display = state.isAdmin ? 'inline-flex' : 'none';
+      }
+
+      try { checkAuth(); } catch(e) {}
+      try { renderPartsGrid(); } catch(e) {}
+
+      // If admin logs in, activate admin tab
+      if (state.isAdmin) {
+        setTimeout(() => {
+          const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
+          if (adminTab) adminTab.click();
+        }, 150);
+      }
+    } else {
+      try { SoundEffects.playIncorrect(); } catch(e) {}
+
+      let failedAttempts = 1;
+      try {
+        failedAttempts = parseInt(localStorage.getItem('ccna_auth_failed_attempts') || '0', 10) + 1;
+        localStorage.setItem('ccna_auth_failed_attempts', failedAttempts.toString());
+      } catch(e) {}
+
+      if (failedAttempts >= 5) {
+        try {
+          localStorage.setItem('ccna_auth_lockout_until', (Date.now() + 30000).toString());
+          localStorage.setItem('ccna_auth_failed_attempts', '0');
+        } catch(e) {}
+        startLockoutTimer(30, 'authLoginBtn', errEl);
+      } else {
+        showAuthError(errEl, `Noto'g'ri login yoki parol! Qolgan urinishlar: ${5 - failedAttempts} ta`);
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    }
+  } catch (fatalErr) {
+    console.error("Fatal login error:", fatalErr);
+    const errEl = document.getElementById('authErrorMsg');
+    if (errEl) {
+      showAuthError(errEl, "Tizimga kirishda xatolik: " + fatalErr.message);
+    } else {
+      alert("Xatolik: " + fatalErr.message);
     }
   }
 }
