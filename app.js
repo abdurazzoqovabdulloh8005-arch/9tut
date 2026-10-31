@@ -1900,7 +1900,7 @@ function renderCurrentQuestion() {
 
     item.innerHTML = `
       <div class="option-letter">${letter}</div>
-      <div class="option-text">${escapeHtml(text)}</div>
+      <div class="option-text">${formatOptionText(text)}</div>
     `;
 
     if (!isChecked) {
@@ -2311,7 +2311,7 @@ function renderStudyBookList(questions) {
         <div class="study-opt-item ${isCorrect ? 'is-correct' : ''}">
           <div class="study-opt-letter">${letter}</div>
           <div style="flex:1;">
-            ${escapeHtml(text)}
+            ${formatOptionText(text)}
             ${isCorrect ? ' <span style="color:var(--success); font-weight:800; margin-left:8px;">✅ TO\'G\'RI JAVOB</span>' : ''}
           </div>
         </div>
@@ -2382,7 +2382,7 @@ function renderCurrentFlashcard() {
 
   // Build answer text
   const ansLetters = q.answer;
-  const ansDetails = ansLetters.map(l => `[${l}] ${q.options[l] || ''}`).join('<br>');
+  const ansDetails = ansLetters.map(l => `[${l}] ${formatOptionText(q.options[l] || '')}`).join('<br>');
   document.getElementById('flashcardAnswerText').innerHTML = ansDetails;
   document.getElementById('flashcardExplanationText').textContent = q.explanation || '';
 
@@ -2615,7 +2615,7 @@ function nextBlitzQuestion() {
     btn.className = 'option-item';
     btn.innerHTML = `
       <div class="option-letter">${letter}</div>
-      <div class="option-text">${escapeHtml(text)}</div>
+      <div class="option-text">${formatOptionText(text)}</div>
     `;
     btn.addEventListener('click', () => handleBlitzAnswer(letter, btn));
     optContainer.appendChild(btn);
@@ -3895,6 +3895,17 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function formatOptionText(text) {
+  if (!text) return '';
+  if (typeof text === 'string') {
+    const trimmed = text.trim();
+    if (trimmed.startsWith('data:image/') || (trimmed.startsWith('images/') && /\.(jpeg|jpg|png|gif|webp)$/i.test(trimmed))) {
+      return `<img src="${escapeHtml(trimmed)}" style="max-width:100%; max-height:240px; border-radius:6px; display:block; margin:6px 0; cursor:zoom-in;" onclick="event.stopPropagation(); openImageModal('${escapeHtml(trimmed)}')" alt="Option diagram">`;
+    }
+  }
+  return escapeHtml(text);
 }
 
 // IMAGE VIEWER MODAL
