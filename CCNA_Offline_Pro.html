@@ -6399,14 +6399,14 @@ function renderAdminResultsList() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight:700; color:var(--text-muted);">${idx + 1}</td>
-      <td><b>${escapeHtml(r.studentName || 'Noma'lum')}</b></td>
+      <td><b>${escapeHtml(r.studentName || "Noma'lum")}</b></td>
       <td>${escapeHtml(r.group || '-')}</td>
       <td><span style="font-weight:600; color:var(--primary);">${escapeHtml(r.partTitle || '-')}</span></td>
       <td><b>${r.correct} / ${r.total}</b></td>
       <td><b style="font-size:1.05rem; color:${isPass ? 'var(--success)' : 'var(--danger)'};">${r.percent}%</b></td>
       <td>
         <span class="status-badge ${isPass ? 'status-pass' : 'status-fail'}">
-          ${isPass ? 'O'tdi ✅' : 'Yiqildi ⚠️'}
+          ${isPass ? "O'tdi ✅" : 'Yiqildi ⚠️'}
         </span>
       </td>
       <td style="font-size:0.85rem; color:var(--text-muted);">${r.date || '-'}</td>
@@ -6473,9 +6473,9 @@ function renderAdminLeaderboard() {
 
   rankings.slice(0, 15).forEach((item, idx) => {
     let medal = `${idx + 1}`;
-    if (idx === 0) medal = '🥇 1-o'rin';
-    else if (idx === 1) medal = '🥈 2-o'rin';
-    else if (idx === 2) medal = '🥉 3-o'rin';
+    if (idx === 0) medal = "🥇 1-o'rin";
+    else if (idx === 1) medal = "🥈 2-o'rin";
+    else if (idx === 2) medal = "🥉 3-o'rin";
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -6499,13 +6499,11 @@ function exportResultsToCSV() {
   }
 
   let csvContent = "﻿"; // UTF-8 BOM
-  csvContent += "№,Talaba,Guruhi,Bo'lim,To'g'ri,Jami,Foiz,Status,Sana va Vaqt
-";
+  csvContent += "№,Talaba,Guruhi,Bo'lim,To'g'ri,Jami,Foiz,Status,Sana va Vaqt\n";
 
   results.forEach((r, idx) => {
     const status = (r.percent >= 82.5) ? "O'tdi" : "Yiqildi";
-    csvContent += `"${idx + 1}","${r.studentName || ''}","${r.group || ''}","${r.partTitle || ''}","${r.correct}","${r.total}","${r.percent}%","${status}","${r.date || ''}"
-`;
+    csvContent += `"${idx + 1}","${r.studentName || ''}","${r.group || ''}","${r.partTitle || ''}","${r.correct}","${r.total}","${r.percent}%","${status}","${r.date || ''}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
