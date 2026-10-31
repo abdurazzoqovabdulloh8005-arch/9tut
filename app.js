@@ -934,7 +934,7 @@ const PARTS_CONFIG = [
 ];
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+function initializeApp() {
   initTheme();
   initSoundButton();
   initNavigation();
@@ -945,7 +945,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initLabs();
   initCliSimulator();
   initBookmarksView();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
+}
 
 // SOUND CONTROLS
 function initSoundButton() {
@@ -1104,6 +1110,13 @@ function saveRegisteredUsers(users) {
   localStorage.setItem('ccna_registered_users', JSON.stringify(users));
 }
 
+
+function openAuthModal(defaultTab = 'login') {
+  const authModal = document.getElementById('authModal');
+  if (authModal) authModal.style.display = 'flex';
+  switchAuthTab(defaultTab);
+}
+
 function switchAuthTab(tab) {
   const loginForm = document.getElementById('loginTabForm');
   const regForm = document.getElementById('registerTabForm');
@@ -1164,6 +1177,8 @@ function checkAuth() {
     state.currentUser = savedSession;
     state.isAdmin = (savedSession.role === 'admin');
 
+    const loginBtn = document.getElementById('openAuthModalBtn');
+    if (loginBtn) loginBtn.style.display = 'none';
     if (authModal) authModal.style.display = 'none';
     if (mainContent) mainContent.style.display = 'block';
     if (navTabs) navTabs.style.visibility = 'visible';
@@ -1182,6 +1197,8 @@ function checkAuth() {
     state.currentUser = null;
     state.isAdmin = false;
 
+    const loginBtn = document.getElementById('openAuthModalBtn');
+    if (loginBtn) loginBtn.style.display = 'inline-flex';
     if (authModal) authModal.style.display = 'flex';
     if (mainContent) mainContent.style.display = 'none';
     if (navTabs) navTabs.style.visibility = 'hidden';
