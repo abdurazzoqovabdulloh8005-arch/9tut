@@ -1,0 +1,4 @@
+ccna_source/
+__pycache__/
+*.pyc
+scratch/
