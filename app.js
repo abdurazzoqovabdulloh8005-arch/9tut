@@ -1091,13 +1091,25 @@ function initNavigation() {
 const AUTH_SALT = "CCNA_PORTAL_SECURE_AUTH_v2024";
 
 // Master Admin account (Plaintext password is NEVER stored! Only salted SHA-256 hash)
-const MASTER_ADMIN = {
-  login: "abdulloh",
-  name: "Abdulloh",
-  role: "admin",
-  // SHA-256 of "abdulloh:Abdulloh8005:CCNA_PORTAL_SECURE_AUTH_v2024"
-  hash: "a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2"
-};
+// Master Admin Configuration & Password Storage
+function getMasterAdmin() {
+  try {
+    const raw = localStorage.getItem('ccna_master_admin_custom');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    login: "abdulloh",
+    name: "Abdulloh",
+    role: "admin",
+    // SHA-256 of "abdulloh:Abdulloh8005:CCNA_PORTAL_SECURE_AUTH_v2024"
+    hash: "a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2",
+    isPasswordChanged: false
+  };
+}
+
+function saveMasterAdmin(adminObj) {
+  localStorage.setItem('ccna_master_admin_custom', JSON.stringify(adminObj));
+}
 
 function sha256_pure_js(ascii) {
   function rightRotate(value, amount) {
@@ -1337,43 +1349,43 @@ async function handleUserLogin() {
 
     const normalizedLogin = rawLogin.toLowerCase();
 
-    // 1. Instant Master Admin Check (Instant & 100% bulletproof)
+    // 1. Dynamic Master Admin & User Check
     let match = null;
-    if (normalizedLogin === 'abdulloh' && rawPassword === 'Abdulloh8005') {
-      match = {
-        login: 'abdulloh',
-        name: 'Abdulloh',
-        role: 'admin',
-        group: 'Administrator'
-      };
-    } else {
-      // 2. Hash check for registered students or master admin hash
-      let computedHash = "";
-      try {
-        const credentialString = `${normalizedLogin}:${rawPassword}:${AUTH_SALT}`;
-        computedHash = await computeSha256Hex(credentialString);
-      } catch (e) {
-        console.warn("Hash calc error:", e);
-      }
+    const master = getMasterAdmin();
 
-      if (normalizedLogin === MASTER_ADMIN.login && computedHash === MASTER_ADMIN.hash) {
+    let computedHash = "";
+    try {
+      const credentialString = `${normalizedLogin}:${rawPassword}:${AUTH_SALT}`;
+      computedHash = await computeSha256Hex(credentialString);
+    } catch (e) {
+      console.warn("Hash calc error:", e);
+    }
+
+    if (normalizedLogin === master.login.toLowerCase()) {
+      const isDefaultMatch = (!master.isPasswordChanged && rawPassword === 'Abdulloh8005');
+      const isHashMatch = (computedHash === master.hash);
+
+      if (isDefaultMatch || isHashMatch) {
         match = {
-          login: MASTER_ADMIN.login,
-          name: MASTER_ADMIN.name,
+          login: master.login,
+          name: master.name,
           role: 'admin',
           group: 'Administrator'
         };
-      } else {
-        const registeredUsers = getRegisteredUsers();
-        const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
-        if (found) {
-          match = {
-            login: found.login,
-            name: found.name,
-            role: found.role || 'student',
-            group: found.group || 'CCNA Guruh'
-          };
-        }
+      }
+    }
+
+    if (!match) {
+      // 2. Check registered users (admins or students)
+      const registeredUsers = getRegisteredUsers();
+      const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
+      if (found) {
+        match = {
+          login: found.login,
+          name: found.name,
+          role: found.role || 'student',
+          group: found.group || 'CCNA Guruh'
+        };
       }
     }
 
@@ -2993,8 +3005,9 @@ function renderAdminStudentsList() {
       <td style="text-align:center; white-space:nowrap;">
         <button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊 Natijalar</button>
         ${u.isMaster 
-          ? `<span style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px;">Asosiy</span>`
-          : `<button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
+          ? `<button class="btn-action-icon" title="Bosh Admin parolini o'zgartirish" onclick="openChangePasswordModal('abdulloh')" style="color:var(--warning); font-weight:700;">🔑 Parol</button>`
+          : `<button class="btn-action-icon" title="Parolini o'zgartirish" onclick="openChangePasswordModal('${escapeHtml(u.login)}')">🔑</button>
+             <button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
              <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
         }
       </td>
@@ -3300,6 +3313,144 @@ function clearAllResults() {
     alert("Barcha test natijalari tozalandi!");
   }
 }
+
+
+// PASSWORD MANAGEMENT (ADMIN & USER SELF-SERVICE)
+function openChangePasswordModal(targetLogin = null) {
+  const modal = document.getElementById('changePasswordModal');
+  const targetLoginInput = document.getElementById('changePwdTargetLogin');
+  const oldPwdGroup = document.getElementById('changePwdOldGroup');
+  const oldPwdInput = document.getElementById('changePwdOldInput');
+  const newPwdInput = document.getElementById('changePwdNewInput');
+  const confirmPwdInput = document.getElementById('changePwdConfirmInput');
+  const subtitle = document.getElementById('changePwdSubtitle');
+  const errEl = document.getElementById('changePwdErrorMsg');
+
+  if (!modal) return;
+
+  if (!targetLogin && state.currentUser) {
+    targetLogin = state.currentUser.login;
+  }
+
+  targetLoginInput.value = targetLogin || '';
+  if (oldPwdInput) oldPwdInput.value = '';
+  if (newPwdInput) newPwdInput.value = '';
+  if (confirmPwdInput) confirmPwdInput.value = '';
+  if (errEl) errEl.style.display = 'none';
+
+  const isChangingOwn = (state.currentUser && targetLogin && state.currentUser.login.toLowerCase() === targetLogin.toLowerCase());
+  const isMasterAdmin = (state.isAdmin);
+
+  if (!isChangingOwn && isMasterAdmin) {
+    if (oldPwdGroup) oldPwdGroup.style.display = 'none';
+    if (subtitle) subtitle.textContent = `"${targetLogin}" hisobi uchun yangi parol o'rnatish`;
+  } else {
+    if (oldPwdGroup) oldPwdGroup.style.display = 'block';
+    if (subtitle) subtitle.textContent = `Hisobingiz (${targetLogin || ''}) xavfsizligi uchun yangi parol o'rnating`;
+  }
+
+  modal.style.display = 'flex';
+  if (oldPwdGroup && oldPwdGroup.style.display !== 'none') {
+    if (oldPwdInput) oldPwdInput.focus();
+  } else {
+    if (newPwdInput) newPwdInput.focus();
+  }
+}
+
+function closeChangePasswordModal() {
+  const modal = document.getElementById('changePasswordModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveNewPassword() {
+  const targetLogin = (document.getElementById('changePwdTargetLogin').value || '').toLowerCase().trim();
+  const oldPwdInput = document.getElementById('changePwdOldInput');
+  const newPwdInput = document.getElementById('changePwdNewInput');
+  const confirmPwdInput = document.getElementById('changePwdConfirmInput');
+  const errEl = document.getElementById('changePwdErrorMsg');
+  const oldPwdGroup = document.getElementById('changePwdOldGroup');
+
+  const oldPwd = oldPwdInput ? oldPwdInput.value : '';
+  const newPwd = newPwdInput ? newPwdInput.value : '';
+  const confirmPwd = confirmPwdInput ? confirmPwdInput.value : '';
+
+  if (errEl) errEl.style.display = 'none';
+
+  if (!newPwd) {
+    showAuthError(errEl, "Iltimos, yangi parolni kiriting!");
+    if (newPwdInput) newPwdInput.focus();
+    return;
+  }
+
+  if (newPwd.length < 4) {
+    showAuthError(errEl, "Yangi parol kamida 4 ta belgidan iborat bo'lishi kerak!");
+    if (newPwdInput) newPwdInput.focus();
+    return;
+  }
+
+  if (newPwd !== confirmPwd) {
+    showAuthError(errEl, "Yangi kiritilgan parollar bir-biriga mos kelmadi!");
+    if (confirmPwdInput) confirmPwdInput.focus();
+    return;
+  }
+
+  const isChangingOwn = (state.currentUser && state.currentUser.login.toLowerCase() === targetLogin);
+  const master = getMasterAdmin();
+
+  // 1. If target is Master Admin
+  if (targetLogin === master.login.toLowerCase()) {
+    if (isChangingOwn || (oldPwdGroup && oldPwdGroup.style.display !== 'none')) {
+      const oldHash = await computeSha256Hex(`${master.login.toLowerCase()}:${oldPwd}:${AUTH_SALT}`);
+      const isDefaultOld = (!master.isPasswordChanged && oldPwd === 'Abdulloh8005');
+      const isHashOld = (oldHash === master.hash);
+
+      if (!isDefaultOld && !isHashOld) {
+        showAuthError(errEl, "Joriy (eski) parol noto'g'ri kiritildi!");
+        if (oldPwdInput) oldPwdInput.focus();
+        return;
+      }
+    }
+
+    const newHash = await computeSha256Hex(`${master.login.toLowerCase()}:${newPwd}:${AUTH_SALT}`);
+    master.hash = newHash;
+    master.isPasswordChanged = true;
+    saveMasterAdmin(master);
+
+    SoundEffects.playCorrect();
+    closeChangePasswordModal();
+    alert("Bosh Administrator paroli muvaffaqiyatli yangilandi! Eski standart parol (Abdulloh8005) butunlay bekor qilindi.");
+    return;
+  }
+
+  // 2. If target is registered user
+  const users = getRegisteredUsers();
+  const userIndex = users.findIndex(u => u.login.toLowerCase() === targetLogin);
+
+  if (userIndex === -1) {
+    showAuthError(errEl, "Foydalanuvchi hisobi topilmadi!");
+    return;
+  }
+
+  const user = users[userIndex];
+
+  if (isChangingOwn && (oldPwdGroup && oldPwdGroup.style.display !== 'none')) {
+    const oldHash = await computeSha256Hex(`${targetLogin}:${oldPwd}:${AUTH_SALT}`);
+    if (oldHash !== user.hash) {
+      showAuthError(errEl, "Joriy (eski) parol noto'g'ri kiritildi!");
+      if (oldPwdInput) oldPwdInput.focus();
+      return;
+    }
+  }
+
+  const newHash = await computeSha256Hex(`${targetLogin}:${newPwd}:${AUTH_SALT}`);
+  users[userIndex].hash = newHash;
+  saveRegisteredUsers(users);
+
+  SoundEffects.playCorrect();
+  closeChangePasswordModal();
+  alert(`"${user.name}" hisobining paroli muvaffaqiyatli yangilandi!`);
+}
+
 
 // LABS SECTION
 function initLabs() {

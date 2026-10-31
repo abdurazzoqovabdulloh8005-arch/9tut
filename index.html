@@ -170,9 +170,10 @@
 
       <div class="header-actions">
         <button id="openAuthModalBtn" class="btn-icon" onclick="openAuthModal()" style="display:none; background:var(--primary); color:#fff; font-weight:700;">🔑 Kirish</button>
-        <div id="currentUserBadge" class="user-badge" style="display:none;">
-          👤 <span id="currentUserName">Foydalanuvchi</span>
-          <button onclick="logoutUser()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:6px;">Chiqish</button>
+        <div id="currentUserBadge" class="user-badge" style="display:none; align-items:center; gap:6px;">
+          <span>👤 <span id="currentUserName">Foydalanuvchi</span></span>
+          <button type="button" onclick="openChangePasswordModal()" class="badge-pwd-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); color:inherit; cursor:pointer; font-size:0.75rem; padding:2px 7px; border-radius:5px; font-weight:600;" title="Hisobingiz parolini o'zgartirish">🔑 Parol</button>
+          <button onclick="logoutUser()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:4px;">Chiqish</button>
         </div>
         <button id="soundToggleBtn" class="btn-icon" onclick="toggleSound()" title="Ovozni yoqish/o'chirish">🔊 Ovoz</button>
         <button id="adminLoginBtn" class="btn-icon" onclick="openAdminPrompt()">📊 Natijalar</button>
@@ -774,6 +775,49 @@
         <div style="display:flex; justify-content:flex-end; gap:10px;">
           <button type="button" class="btn-secondary" onclick="closeStudentModal()">Bekor qilish</button>
           <button type="button" class="btn-primary" onclick="saveStudentFromModal()">Saqlash ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
+      <div class="modal-card" style="max-width:440px; width:100%;">
+        <div class="modal-header">
+          <h3 style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">🔑 Parolni O'zgartirish</h3>
+          <p id="changePwdSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Hisobingiz xavfsizligi uchun yangi parol o'rnating</p>
+        </div>
+
+        <input type="hidden" id="changePwdTargetLogin" value="">
+
+        <div id="changePwdOldGroup" class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Joriy (Eski) Parol *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdOldInput" class="form-control" placeholder="Hozirgi parolingizni kiriting..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdOldInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parol *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdNewInput" class="form-control" placeholder="Yangi parolni kiriting (kamida 4 ta belgi)..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdNewInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parolni Qayta Kiriting *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdConfirmInput" class="form-control" placeholder="Yangi parolni takrorlang..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdConfirmInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div id="changePwdErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary" onclick="closeChangePasswordModal()">Bekor qilish</button>
+          <button type="button" class="btn-primary" onclick="saveNewPassword()">Saqlash ✓</button>
         </div>
       </div>
     </div>
