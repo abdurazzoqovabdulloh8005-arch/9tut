@@ -782,110 +782,193 @@
         </div>
 
         <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
+        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
         <div id="adminViewCharts" style="display:none;">
-          <!-- Quick Insights Row -->
-          <div class="admin-charts-insights-grid">
-            <div class="admin-insight-card">
-              <div class="insight-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">🏆</div>
-              <div>
-                <div class="insight-title">Eng Yuqori Natija</div>
-                <div class="insight-value" id="chartTopScore">-</div>
-                <div class="insight-desc" id="chartTopStudent">-</div>
+          <!-- View Mode Switcher Pills -->
+          <div class="charts-view-switcher">
+            <button type="button" id="chartsPillOverview" class="charts-view-pill active" onclick="switchChartsSubView('overview')">
+              📊 Umumiy Tahlil & Spidometr
+            </button>
+            <button type="button" id="chartsPillHeatmap" class="charts-view-pill" onclick="switchChartsSubView('heatmap')">
+              🗺️ O'zlashtirish Matritsasi (Heatmap)
+            </button>
+            <button type="button" id="chartsPillParts" class="charts-view-pill" onclick="switchChartsSubView('parts')">
+              📈 Partlar Grafigi (Part 5 - 16)
+            </button>
+            <button type="button" id="chartsPillStudents" class="charts-view-pill" onclick="switchChartsSubView('students')">
+              🏆 Talabalar Reytingi & Guruhlar
+            </button>
+          </div>
+
+          <!-- PANEL 1: OVERVIEW & SPIDOMETR -->
+          <div id="chartsPanelOverview">
+            <!-- Quick Insights 4 Cards -->
+            <div class="admin-charts-insights-grid">
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">🏆</div>
+                <div>
+                  <div class="insight-title">Eng Yuqori Natija</div>
+                  <div class="insight-value" id="chartTopScore">-</div>
+                  <div class="insight-desc" id="chartTopStudent">-</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(0, 118, 206, 0.15); color:#0076ce;">⚡</div>
+                <div>
+                  <div class="insight-title">Eng Faol Talaba</div>
+                  <div class="insight-value" id="chartActiveCount">-</div>
+                  <div class="insight-desc" id="chartActiveStudent">-</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;">🎯</div>
+                <div>
+                  <div class="insight-title">O'tish Ko'rsatkichi (≥82.5%)</div>
+                  <div class="insight-value" id="chartPassRate">0%</div>
+                  <div class="insight-desc" id="chartPassCount">0 ta muvaffaqiyatli</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(139, 92, 246, 0.15); color:#8b5cf6;">🛡️</div>
+                <div>
+                  <div class="insight-title">Hisoblar Moderatsiyasi</div>
+                  <div class="insight-value" id="chartApprovedRatio">-</div>
+                  <div class="insight-desc" id="chartPendingNotice">Tasdiq kutilmoqda</div>
+                </div>
               </div>
             </div>
-            <div class="admin-insight-card">
-              <div class="insight-icon" style="background:rgba(0, 118, 206, 0.15); color:#0076ce;">⚡</div>
-              <div>
-                <div class="insight-title">Eng Faol Talaba</div>
-                <div class="insight-value" id="chartActiveCount">-</div>
-                <div class="insight-desc" id="chartActiveStudent">-</div>
+
+            <!-- Two-Column Grid: Cisco Gauge Meter + Donut Chart -->
+            <div class="admin-charts-grid" style="margin-bottom:20px;">
+              <!-- Cisco Exam Pass Speedometer Gauge -->
+              <div class="gauge-card-box">
+                <div class="chart-header" style="width:100%; margin-bottom:10px;">
+                  <div>
+                    <h3 class="chart-title">🎯 Cisco CCNA Imtihon Spidometri</h3>
+                    <p class="chart-subtitle">O'quvchilarning umumiy o'tish balli (82.5% Pass ko'rsatkichi)</p>
+                  </div>
+                </div>
+                <div class="gauge-wrapper">
+                  <canvas id="adminGaugeCanvas" width="260" height="160"></canvas>
+                </div>
+                <div class="gauge-score-text" id="gaugeScoreText">0%</div>
+                <div id="gaugePassBadge" class="gauge-pass-badge" style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.3);">
+                  ⚠️ TESTLAR KUTILMOQDA
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:8px;">
+                  Oltin belgi: Cisco rasmiy 82.5% sertifikat chegarasi
+                </div>
+              </div>
+
+              <!-- Result Distribution Donut Chart -->
+              <div class="admin-chart-box">
+                <div class="chart-header">
+                  <div>
+                    <h3 class="chart-title">🍩 Natijalar Taqsimoti</h3>
+                    <p class="chart-subtitle">Ballar toifalari bo'yicha ulushlar</p>
+                  </div>
+                </div>
+                <div class="donut-chart-wrapper">
+                  <div style="position:relative; width:180px; height:180px;">
+                    <canvas id="adminDonutCanvas" width="180" height="180"></canvas>
+                    <div id="adminDonutCenterText" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
+                      <span style="font-size:1.6rem; font-weight:800; color:var(--text-main);" id="donutTotalText">0</span>
+                      <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Jami Test</span>
+                    </div>
+                  </div>
+                  <div id="adminDonutLegend" class="donut-legend-list"></div>
+                </div>
               </div>
             </div>
-            <div class="admin-insight-card">
-              <div class="insight-icon" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;">🎯</div>
-              <div>
-                <div class="insight-title">O'tish Ko'rsatkichi (≥82.5%)</div>
-                <div class="insight-value" id="chartPassRate">0%</div>
-                <div class="insight-desc" id="chartPassCount">0 ta muvaffaqiyatli</div>
+
+            <!-- Trend Curve -->
+            <div class="admin-chart-box full-width">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📈 Natijalar Dinamikasi va O'sish Tendentsiyasi</h3>
+                  <p class="chart-subtitle">Topshirilgan testlar ketma-ketligi bo'yicha ballarning o'zgarishi</p>
+                </div>
               </div>
-            </div>
-            <div class="admin-insight-card">
-              <div class="insight-icon" style="background:rgba(139, 92, 246, 0.15); color:#8b5cf6;">🛡️</div>
-              <div>
-                <div class="insight-title">Hisoblar Moderatsiyasi</div>
-                <div class="insight-value" id="chartApprovedRatio">-</div>
-                <div class="insight-desc" id="chartPendingNotice">Tasdiq kutilmoqda</div>
+              <div class="canvas-container" style="position:relative; width:100%; height:230px;">
+                <canvas id="adminTrendCanvas"></canvas>
               </div>
             </div>
           </div>
 
-          <!-- Main Charts Grid -->
-          <div class="admin-charts-grid">
-            <!-- Chart 1: Bar Chart of Part Scores -->
-            <div class="admin-chart-box full-width">
+          <!-- PANEL 2: STUDENT MASTERY HEATMAP (LeetCode / NetAcad Style) -->
+          <div id="chartsPanelHeatmap" style="display:none;">
+            <div class="admin-chart-box full-width" style="margin-bottom:0;">
               <div class="chart-header">
                 <div>
-                  <h3 class="chart-title">📊 CCNA Bo'limlari (Part 1 - 10) Bo'yicha O'zlashtirish</h3>
-                  <p class="chart-subtitle">Har bir Part bo'yicha o'rtacha ball (%) va testlar soni (Oltin chiziq: 82.5% Cisco o'tish chegarasi)</p>
+                  <h3 class="chart-title">🗺️ Talabalar va Bo'limlar Matritsasi (Mastery Heatmap)</h3>
+                  <p class="chart-subtitle">Har bir talabaning har bir CCNA bo'limi bo'yicha o'zlashtirish ko'rsatkichi</p>
                 </div>
                 <div class="chart-badge-legend">
                   <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% O'tgan</span>
-                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% O'rtacha</span>
-                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Qayta tayyorlanish</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% O'rtacha</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Xatolar ko'p</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:rgba(255,255,255,0.15);"></span> — Topshirilmagan</span>
+                </div>
+              </div>
+              <div class="heatmap-container" id="adminHeatmapContainer">
+                <!-- Dynamically populated table -->
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL 3: PARTS BREAKDOWN -->
+          <div id="chartsPanelParts" style="display:none;">
+            <div class="admin-chart-box full-width" style="margin-bottom:20px;">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📊 CCNA Bo'limlari (Part 5 - 16 & Full Exam) O'zlashtirilishi</h3>
+                  <p class="chart-subtitle">Mavzular bo'yicha o'rtacha ball (%) va testlar soni (Oltin chiziq: 82.5% Cisco o'tish chegarasi)</p>
+                </div>
+                <div class="chart-badge-legend">
+                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% A'lo</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% Yaxshi</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Qayta topshirish</span>
                 </div>
               </div>
               <div class="canvas-container" style="position:relative; width:100%; height:320px;">
                 <canvas id="adminPartScoresCanvas"></canvas>
               </div>
             </div>
+            <!-- Parts Mastery Cards List -->
+            <div id="adminPartsCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+            </div>
+          </div>
 
-            <!-- Chart 2: Donut Chart of Result Distribution -->
-            <div class="admin-chart-box">
+          <!-- PANEL 4: STUDENTS PODIUM & GROUPS -->
+          <div id="chartsPanelStudents" style="display:none;">
+            <!-- Top 3 Podium Card -->
+            <div class="admin-chart-box full-width" style="margin-bottom:22px;">
               <div class="chart-header">
                 <div>
-                  <h3 class="chart-title">🍩 Natijalar Taqsimoti</h3>
-                  <p class="chart-subtitle">Ballar toifalari bo'yicha ulushlar</p>
+                  <h3 class="chart-title">🏆 Yetakchi Talabalar Shohsupasi (Top 3)</h3>
+                  <p class="chart-subtitle">Eng yuqori o'rtacha ball va faollik ko'rsatgan talabalar</p>
                 </div>
               </div>
-              <div class="donut-chart-wrapper">
-                <div style="position:relative; width:200px; height:200px;">
-                  <canvas id="adminDonutCanvas" width="200" height="200"></canvas>
-                  <div id="adminDonutCenterText" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
-                    <span style="font-size:1.6rem; font-weight:800; color:var(--text-main);" id="donutTotalText">0</span>
-                    <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Jami Test</span>
-                  </div>
-                </div>
-                <div id="adminDonutLegend" class="donut-legend-list"></div>
+              <div id="adminPodiumContainer" class="podium-container">
+                <!-- Dynamically populated podium -->
               </div>
             </div>
 
-            <!-- Chart 3: Progress Trend Area Chart -->
-            <div class="admin-chart-box">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">📈 Natijalar Dinamikasi</h3>
-                  <p class="chart-subtitle">Oxirgi topshirilgan testlar bo'yicha ballar o'sishi</p>
-                </div>
-              </div>
-              <div class="canvas-container" style="position:relative; width:100%; height:220px;">
-                <canvas id="adminTrendCanvas"></canvas>
-              </div>
-            </div>
-
-            <!-- Chart 4: Group Performance Bars -->
+            <!-- Groups Cards -->
             <div class="admin-chart-box full-width">
               <div class="chart-header">
                 <div>
-                  <h3 class="chart-title">👥 Guruhlar Bo'yicha O'rtacha Ko'rsatkichlar</h3>
-                  <p class="chart-subtitle">Talabalar guruhlari kesimida faollik va o'rtacha ballar reytingi</p>
+                  <h3 class="chart-title">👥 Guruhlar va Yo'nalishlar Ko'rsatkichi</h3>
+                  <p class="chart-subtitle">O'quv guruhlari kesimida talabalar, testlar va muvaffaqiyat darajasi</p>
                 </div>
               </div>
-              <div id="adminGroupBarsList" style="display:flex; flex-direction:column; gap:14px; padding:6px 0;"></div>
+              <div id="adminGroupCardsList" class="groups-cards-grid">
+                <!-- Dynamically populated groups -->
+              </div>
             </div>
           </div>
         </div>
 
-      </div>
     </section>
 
     <!-- Student Edit / Add Modal -->

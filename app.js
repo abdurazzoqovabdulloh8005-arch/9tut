@@ -4269,8 +4269,27 @@ function toggleUserApproval(userId) {
 
 
 // ========================================================
-// ADMIN ANALYTICS & INTERACTIVE CHARTS
 // ========================================================
+// HIGH-TECH ED-TECH ANALYTICS & CHARTS SYSTEM
+// ========================================================
+let currentChartsSubView = 'overview';
+
+function switchChartsSubView(viewName) {
+  currentChartsSubView = viewName;
+  const pills = ['overview', 'heatmap', 'parts', 'students'];
+  pills.forEach(p => {
+    const btn = document.getElementById('chartsPill' + p.charAt(0).toUpperCase() + p.slice(1));
+    const panel = document.getElementById('chartsPanel' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (btn) btn.classList.toggle('active', p === viewName);
+    if (panel) panel.style.display = (p === viewName) ? 'block' : 'none';
+  });
+
+  SoundEffects.playClick();
+  setTimeout(() => {
+    renderAdminCharts();
+  }, 20);
+}
+
 function renderAdminCharts() {
   if (!state.isAdmin) return;
 
@@ -4287,10 +4306,12 @@ function renderAdminCharts() {
   const approvedRatioEl = document.getElementById('chartApprovedRatio');
   const pendingNoticeEl = document.getElementById('chartPendingNotice');
 
+  let avgOverall = 0;
   if (results.length > 0) {
     const maxResult = results.reduce((max, r) => ((r.percent || 0) > (max.percent || 0) ? r : max), results[0]);
     if (topScoreEl) topScoreEl.textContent = (maxResult.percent || 0) + '%';
-    if (topStudentEl) topStudentEl.textContent = `${maxResult.studentName || 'Talaba'} (${maxResult.part || 'Part'})`;
+    const pTitle = maxResult.partTitle || maxResult.partKey || 'Part';
+    if (topStudentEl) topStudentEl.textContent = `${maxResult.studentName || 'Talaba'} (${pTitle})`;
 
     const activityMap = {};
     results.forEach(r => {
@@ -4311,6 +4332,8 @@ function renderAdminCharts() {
     const passRate = Math.round((passCount / results.length) * 100);
     if (passRateEl) passRateEl.textContent = passRate + '%';
     if (passCountEl) passCountEl.textContent = `${passCount} / ${results.length} ta o'tdi`;
+
+    avgOverall = Math.round(results.reduce((acc, r) => acc + (r.percent || 0), 0) / results.length);
   } else {
     if (topScoreEl) topScoreEl.textContent = '0%';
     if (topStudentEl) topStudentEl.textContent = "Hozircha testlar yo'q";
@@ -4329,15 +4352,229 @@ function renderAdminCharts() {
       : '✅ Barcha hisoblar faol';
   }
 
-  // 2. Draw Charts with slight delay to ensure container width is computed
-  setTimeout(() => {
-    drawPartScoresChart(results);
+  // 2. Render depending on active sub-view
+  if (currentChartsSubView === 'overview') {
+    drawCiscoGauge(avgOverall, results.length);
     drawDonutChart(results);
     drawTrendChart(results);
-    renderGroupBars(results, users);
-  }, 30);
+  } else if (currentChartsSubView === 'heatmap') {
+    renderMasteryHeatmap(results, users);
+  } else if (currentChartsSubView === 'parts') {
+    drawPartScoresChart(results);
+    renderPartsCardsGrid(results);
+  } else if (currentChartsSubView === 'students') {
+    renderStudentPodium(results, users);
+    renderGroupPerformanceCards(results, users);
+  }
 }
 
+// 1. CISCO EXAM PASS GAUGE METER (SPIDOMETR)
+function drawCiscoGauge(scorePercent, totalTests) {
+  const canvas = document.getElementById('adminGaugeCanvas');
+  const scoreText = document.getElementById('gaugeScoreText');
+  const passBadge = document.getElementById('gaugePassBadge');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = 260;
+  const h = 160;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (scoreText) scoreText.textContent = totalTests > 0 ? (scorePercent + '%') : '0%';
+
+  if (passBadge) {
+    if (totalTests === 0) {
+      passBadge.style.background = 'rgba(255, 255, 255, 0.08)';
+      passBadge.style.color = '#94a3b8';
+      passBadge.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      passBadge.innerHTML = '⏳ TESTLAR KUTILMOQDA';
+    } else if (scorePercent >= 82.5) {
+      passBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+      passBadge.style.color = '#10b981';
+      passBadge.style.borderColor = '#10b981';
+      passBadge.innerHTML = '✅ CISCO PASSING LEVEL';
+    } else {
+      passBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+      passBadge.style.color = '#ef4444';
+      passBadge.style.borderColor = '#ef4444';
+      passBadge.innerHTML = '⚠️ RETAKE REQUIRED (<82.5%)';
+    }
+  }
+
+  const cx = w / 2;
+  const cy = 135;
+  const r = 90;
+  const arcWidth = 14;
+
+  // Background track
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, Math.PI * 2, false);
+  ctx.lineWidth = arcWidth;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.stroke();
+
+  // Colored Zones:
+  // 0% - 70%: Red
+  // 70% - 82.5%: Orange
+  // 82.5% - 100%: Green
+  function drawArcSegment(startPct, endPct, color) {
+    const sAngle = Math.PI + (startPct / 100) * Math.PI;
+    const eAngle = Math.PI + (endPct / 100) * Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, sAngle, eAngle, false);
+    ctx.lineWidth = arcWidth;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+
+  drawArcSegment(0, 70, '#ef4444');
+  drawArcSegment(70, 82.5, '#f59e0b');
+  drawArcSegment(82.5, 100, '#10b981');
+
+  // Gold indicator at 82.5% pass mark
+  const passAngle = Math.PI + 0.825 * Math.PI;
+  const passX1 = cx + (r - 12) * Math.cos(passAngle);
+  const passY1 = cy + (r - 12) * Math.sin(passAngle);
+  const passX2 = cx + (r + 12) * Math.cos(passAngle);
+  const passY2 = cy + (r + 12) * Math.sin(passAngle);
+  ctx.beginPath();
+  ctx.moveTo(passX1, passY1);
+  ctx.lineTo(passX2, passY2);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#f59e0b';
+  ctx.stroke();
+
+  // Draw Pointer Needle
+  const clampedScore = Math.max(0, Math.min(100, scorePercent));
+  const needleAngle = Math.PI + (clampedScore / 100) * Math.PI;
+  const needleLen = r - 15;
+  const tipX = cx + needleLen * Math.cos(needleAngle);
+  const tipY = cy + needleLen * Math.sin(needleAngle);
+
+  ctx.save();
+  ctx.shadowColor = scorePercent >= 82.5 ? '#10b981' : '#f59e0b';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  // Center hub pin
+  ctx.beginPath();
+  ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+  ctx.fillStyle = '#0076ce';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Tick labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('0%', cx - r - 2, cy + 16);
+  ctx.fillText('50%', cx, cy - r - 8);
+  ctx.fillText('100%', cx + r + 4, cy + 16);
+}
+
+// 2. REPUTABLE MASTERY HEATMAP (LEETCODE / NETACAD MATRIX)
+function renderMasteryHeatmap(results, users) {
+  const container = document.getElementById('adminHeatmapContainer');
+  if (!container) return;
+
+  const relevantParts = PARTS_CONFIG.filter(p => p.key !== 'all').slice(0, 12);
+
+  // Collect unique students (registered users + any in results)
+  const studentsMap = new Map();
+  users.forEach(u => {
+    studentsMap.set(u.name.toLowerCase(), { name: u.name, group: u.group || 'Guruhsiz' });
+  });
+  results.forEach(r => {
+    if (r.studentName && !studentsMap.has(r.studentName.toLowerCase())) {
+      studentsMap.set(r.studentName.toLowerCase(), { name: r.studentName, group: r.studentGroup || 'Guruhsiz' });
+    }
+  });
+
+  const studentsList = Array.from(studentsMap.values());
+  if (studentsList.length === 0) {
+    container.innerHTML = '<div style="padding:24px; text-align:center; color:var(--text-muted);">Talabalar ma'lumotlari kutilmoqda</div>';
+    return;
+  }
+
+  let tableHtml = `
+    <table class="heatmap-table">
+      <thead>
+        <tr>
+          <th class="th-student">👤 Talaba F.I.SH</th>
+          <th>Guruhi</th>
+          ${relevantParts.map(p => `<th title="${escapeHtml(p.desc || p.title)}">${escapeHtml(p.title)}</th>`).join('')}
+          <th>📊 O'rtacha</th>
+          <th>Testlar</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  studentsList.forEach(st => {
+    const stResults = results.filter(r => (r.studentName || '').toLowerCase() === st.name.toLowerCase());
+    const totalTests = stResults.length;
+    const avgScore = totalTests > 0 
+      ? Math.round(stResults.reduce((acc, r) => acc + (r.percent || 0), 0) / totalTests)
+      : 0;
+
+    tableHtml += `
+      <tr>
+        <td class="td-student"><b>${escapeHtml(st.name)}</b></td>
+        <td style="color:var(--text-muted); font-size:0.8rem;">${escapeHtml(st.group)}</td>
+    `;
+
+    relevantParts.forEach(p => {
+      const partMatches = stResults.filter(r => 
+        (r.partTitle && r.partTitle.toLowerCase().includes(p.title.toLowerCase())) ||
+        (r.partKey && r.partKey.toLowerCase().includes(p.title.toLowerCase()))
+      );
+
+      if (partMatches.length > 0) {
+        const bestScore = Math.max(...partMatches.map(m => m.percent || 0));
+        let cellClass = 'cell-mastered';
+        if (bestScore < 70) cellClass = 'cell-low';
+        else if (bestScore < 82.5) cellClass = 'cell-medium';
+
+        tableHtml += `
+          <td class="${cellClass}" title="${escapeHtml(st.name)} - ${p.title}: ${bestScore}% (${partMatches.length} ta urinish)">
+            ${bestScore}%
+          </td>
+        `;
+      } else {
+        tableHtml += `<td class="cell-empty" title="Hali topshirilmagan">—</td>`;
+      }
+    });
+
+    const avgColor = avgScore >= 82.5 ? '#10b981' : (avgScore >= 70 ? '#f59e0b' : (avgScore > 0 ? '#ef4444' : 'var(--text-muted)'));
+    tableHtml += `
+        <td style="font-weight:900; color:${avgColor};">${avgScore > 0 ? avgScore + '%' : '-'}</td>
+        <td style="color:var(--text-muted);">${totalTests} ta</td>
+      </tr>
+    `;
+  });
+
+  tableHtml += '</tbody></table>';
+  container.innerHTML = tableHtml;
+}
+
+// 3. ENHANCED BAR CHART FOR ALL REAL PARTS
 function drawPartScoresChart(results) {
   const canvas = document.getElementById('adminPartScoresCanvas');
   if (!canvas) return;
@@ -4345,7 +4582,7 @@ function drawPartScoresChart(results) {
   if (!container) return;
 
   const rect = container.getBoundingClientRect();
-  const width = rect.width || 700;
+  const width = rect.width || 750;
   const height = 300;
 
   const dpr = window.devicePixelRatio || 1;
@@ -4357,20 +4594,25 @@ function drawPartScoresChart(results) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const parts = [];
-  for (let i = 1; i <= 10; i++) parts.push('Part ' + i);
+  // Real parts from PARTS_CONFIG
+  const parts = PARTS_CONFIG.filter(p => p.key !== 'all');
 
   const partData = parts.map(p => {
-    const matching = results.filter(r => r.part && r.part.toLowerCase().includes(p.toLowerCase()));
-    if (matching.length === 0) return { name: p, avg: 0, count: 0 };
+    const matching = results.filter(r => {
+      const pTitle = r.partTitle || r.partKey || '';
+      return pTitle.toLowerCase().includes(p.title.toLowerCase()) || 
+             (r.partKey && r.partKey.toLowerCase() === p.key.toLowerCase());
+    });
+
+    if (matching.length === 0) return { name: p.title, avg: 0, count: 0 };
     const avg = Math.round(matching.reduce((acc, r) => acc + (r.percent || 0), 0) / matching.length);
-    return { name: p, avg, count: matching.length };
+    return { name: p.title, avg, count: matching.length };
   });
 
   const padLeft = 45;
   const padRight = 20;
   const padTop = 30;
-  const padBottom = 40;
+  const padBottom = 45;
   const plotWidth = width - padLeft - padRight;
   const plotHeight = height - padTop - padBottom;
 
@@ -4382,8 +4624,7 @@ function drawPartScoresChart(results) {
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
 
-  const gridSteps = [0, 25, 50, 75, 100];
-  gridSteps.forEach(val => {
+  [0, 25, 50, 75, 100].forEach(val => {
     const y = padTop + plotHeight - (val / 100) * plotHeight;
     ctx.beginPath();
     ctx.moveTo(padLeft, y);
@@ -4410,7 +4651,7 @@ function drawPartScoresChart(results) {
 
   // Draw Bars
   const colWidth = plotWidth / partData.length;
-  const barWidth = Math.max(16, Math.min(colWidth * 0.58, 44));
+  const barWidth = Math.max(14, Math.min(colWidth * 0.62, 38));
 
   partData.forEach((item, idx) => {
     const x = padLeft + idx * colWidth + (colWidth - barWidth) / 2;
@@ -4431,7 +4672,7 @@ function drawPartScoresChart(results) {
       }
 
       ctx.fillStyle = grad;
-      const r = Math.min(6, barWidth / 2);
+      const r = Math.min(5, barWidth / 2);
       ctx.beginPath();
       ctx.moveTo(x, padTop + plotHeight);
       ctx.lineTo(x, y + r);
@@ -4444,34 +4685,213 @@ function drawPartScoresChart(results) {
 
       // Top label: score
       ctx.fillStyle = item.avg >= 82.5 ? '#10b981' : (item.avg >= 70 ? '#f59e0b' : '#ef4444');
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(item.avg + '%', x + barWidth / 2, y - 8);
+      ctx.fillText(item.avg + '%', x + barWidth / 2, y - 6);
 
       // Count badge
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '10px sans-serif';
-      ctx.fillText(item.count + ' ta', x + barWidth / 2, y - 20);
+      ctx.font = '9px sans-serif';
+      ctx.fillText(item.count + ' ta', x + barWidth / 2, y - 18);
     } else {
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.setLineDash([3, 3]);
-      ctx.strokeRect(x, padTop + plotHeight - 12, barWidth, 12);
+      ctx.strokeRect(x, padTop + plotHeight - 10, barWidth, 10);
       ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
-      ctx.font = '10px sans-serif';
+      ctx.font = '9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('-', x + barWidth / 2, padTop + plotHeight - 16);
+      ctx.fillText('-', x + barWidth / 2, padTop + plotHeight - 14);
       ctx.restore();
     }
 
     // X-axis label
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('P' + (idx + 1), x + barWidth / 2, height - padBottom + 16);
+    const label = item.name.replace('Part ', 'P');
+    ctx.fillText(label, x + barWidth / 2, height - padBottom + 16);
   });
 }
 
+function renderPartsCardsGrid(results) {
+  const container = document.getElementById('adminPartsCardsGrid');
+  if (!container) return;
+
+  const parts = PARTS_CONFIG.filter(p => p.key !== 'all');
+
+  container.innerHTML = parts.map(p => {
+    const matching = results.filter(r => {
+      const pTitle = r.partTitle || r.partKey || '';
+      return pTitle.toLowerCase().includes(p.title.toLowerCase()) || 
+             (r.partKey && r.partKey.toLowerCase() === p.key.toLowerCase());
+    });
+
+    const testCount = matching.length;
+    const avg = testCount > 0 
+      ? Math.round(matching.reduce((acc, r) => acc + (r.percent || 0), 0) / testCount)
+      : 0;
+    const passCount = matching.filter(m => (m.percent || 0) >= 82.5).length;
+
+    let statusColor = '#10b981';
+    let statusText = 'A'LO (PASS)';
+    if (avg === 0) {
+      statusColor = '#94a3b8';
+      statusText = 'TESTLAR YO'Q';
+    } else if (avg < 70) {
+      statusColor = '#ef4444';
+      statusText = 'QAYTA TAYYORLANISH';
+    } else if (avg < 82.5) {
+      statusColor = '#f59e0b';
+      statusText = 'O'RTACHA';
+    }
+
+    return `
+      <div class="group-performance-card">
+        <div class="group-card-header">
+          <div class="group-card-title">📘 ${escapeHtml(p.title)}</div>
+          <span class="group-card-badge" style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}44;">
+            ${avg > 0 ? avg + '%' : '-'}
+          </span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">${escapeHtml(p.desc || '')}</div>
+        <div class="group-bar-track" style="margin-bottom:8px;">
+          <div class="group-bar-fill" style="width:${avg}%; background:${statusColor};"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-muted);">
+          <span>Jami: <b>${testCount} ta urinish</b></span>
+          <span style="color:${statusColor}; font-weight:700;">${passCount} ta o'tgan</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 4. TOP 3 STUDENT PODIUM
+function renderStudentPodium(results, users) {
+  const container = document.getElementById('adminPodiumContainer');
+  if (!container) return;
+
+  const studentStats = [];
+  const uniqueNames = new Set(results.map(r => r.studentName || r.login));
+
+  uniqueNames.forEach(name => {
+    const studentTests = results.filter(r => (r.studentName || r.login) === name);
+    const count = studentTests.length;
+    const avg = Math.round(studentTests.reduce((acc, r) => acc + (r.percent || 0), 0) / count);
+    const passed = studentTests.filter(r => (r.percent || 0) >= 82.5).length;
+    studentStats.push({ name, avg, count, passed });
+  });
+
+  studentStats.sort((a, b) => b.avg - a.avg || b.count - a.count);
+
+  if (studentStats.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); font-size:0.9rem; padding:30px;">Hozircha natijalar mavjud emas</div>';
+    return;
+  }
+
+  const p1 = studentStats[0];
+  const p2 = studentStats.length > 1 ? studentStats[1] : null;
+  const p3 = studentStats.length > 2 ? studentStats[2] : null;
+
+  container.innerHTML = `
+    <!-- 2nd Place -->
+    ${p2 ? `
+      <div class="podium-col">
+        <div class="podium-avatar" style="border-color:#94a3b8;">
+          🥈
+        </div>
+        <div class="podium-name">${escapeHtml(p2.name)}</div>
+        <div class="podium-score" style="color:#cbd5e1;">${p2.avg}%</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">${p2.count} ta test</div>
+        <div class="podium-block podium-2">2</div>
+      </div>
+    ` : '<div class="podium-col" style="visibility:hidden;"></div>'}
+
+    <!-- 1st Place (Center & Highest) -->
+    <div class="podium-col">
+      <div class="podium-avatar" style="border-color:#f59e0b; width:68px; height:68px; font-size:2rem;">
+        <span class="crown">👑</span>
+        🥇
+      </div>
+      <div class="podium-name" style="font-size:1rem; font-weight:800;">${escapeHtml(p1.name)}</div>
+      <div class="podium-score" style="color:#f59e0b; font-size:1.35rem;">${p1.avg}%</div>
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:6px;">${p1.count} ta test (${p1.passed} ta o'tgan)</div>
+      <div class="podium-block podium-1">1</div>
+    </div>
+
+    <!-- 3rd Place -->
+    ${p3 ? `
+      <div class="podium-col">
+        <div class="podium-avatar" style="border-color:#b45309;">
+          🥉
+        </div>
+        <div class="podium-name">${escapeHtml(p3.name)}</div>
+        <div class="podium-score" style="color:#d97706;">${p3.avg}%</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">${p3.count} ta test</div>
+        <div class="podium-block podium-3">3</div>
+      </div>
+    ` : '<div class="podium-col" style="visibility:hidden;"></div>'}
+  `;
+}
+
+// 5. MODERN GROUP CARDS
+function renderGroupPerformanceCards(results, users) {
+  const container = document.getElementById('adminGroupCardsList');
+  if (!container) return;
+
+  const groupsSet = new Set();
+  users.forEach(u => groupsSet.add(u.group || 'Guruhsiz'));
+  results.forEach(r => groupsSet.add(r.studentGroup || 'Guruhsiz'));
+
+  const groups = Array.from(groupsSet);
+  if (groups.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem;">Guruhlar ma'lumotlari kutilmoqda</div>';
+    return;
+  }
+
+  const groupStats = groups.map(g => {
+    const groupUsers = users.filter(u => (u.group || 'Guruhsiz') === g);
+    const groupResults = results.filter(r => (r.studentGroup || 'Guruhsiz') === g);
+    const count = groupResults.length;
+    const avg = count > 0 
+      ? Math.round(groupResults.reduce((acc, r) => acc + (r.percent || 0), 0) / count)
+      : 0;
+    const passCount = groupResults.filter(r => (r.percent || 0) >= 82.5).length;
+    const passRate = count > 0 ? Math.round((passCount / count) * 100) : 0;
+
+    return { name: g, userCount: groupUsers.length, testCount: count, avg, passRate, passCount };
+  });
+
+  groupStats.sort((a, b) => b.avg - a.avg || b.testCount - a.testCount);
+
+  container.innerHTML = groupStats.map(gs => {
+    let color = '#10b981';
+    if (gs.avg < 70) color = '#ef4444';
+    else if (gs.avg < 82.5) color = '#f59e0b';
+
+    return `
+      <div class="group-performance-card">
+        <div class="group-card-header">
+          <div class="group-card-title">🏢 ${escapeHtml(gs.name)}</div>
+          <span class="group-card-badge" style="background:${color}22; color:${color}; border:1px solid ${color}44;">
+            ${gs.avg > 0 ? gs.avg + '%' : '0%'}
+          </span>
+        </div>
+        <div class="group-bar-track" style="margin-bottom:10px;">
+          <div class="group-bar-fill" style="width:${gs.avg}%; background:${color};"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--text-muted);">
+          <span>👥 Talabalar: <b>${gs.userCount} ta</b></span>
+          <span>📝 Testlar: <b>${gs.testCount} ta</b></span>
+          <span style="color:${color}; font-weight:700;">🎯 O'tish: ${gs.passRate}%</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 6. DONUT CHART
 function drawDonutChart(results) {
   const canvas = document.getElementById('adminDonutCanvas');
   const legendEl = document.getElementById('adminDonutLegend');
@@ -4480,7 +4900,7 @@ function drawDonutChart(results) {
 
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  const size = 200;
+  const size = 180;
   canvas.width = size * dpr;
   canvas.height = size * dpr;
   canvas.style.width = size + 'px';
@@ -4511,8 +4931,8 @@ function drawDonutChart(results) {
 
   const cx = size / 2;
   const cy = size / 2;
-  const outerR = 82;
-  const innerR = 54;
+  const outerR = 76;
+  const innerR = 50;
 
   if (total === 0) {
     ctx.beginPath();
@@ -4566,6 +4986,7 @@ function drawDonutChart(results) {
   }
 }
 
+// 7. PROGRESS TREND AREA CURVE
 function drawTrendChart(results) {
   const canvas = document.getElementById('adminTrendCanvas');
   if (!canvas) return;
@@ -4573,8 +4994,8 @@ function drawTrendChart(results) {
   if (!container) return;
 
   const rect = container.getBoundingClientRect();
-  const width = rect.width || 380;
-  const height = 220;
+  const width = rect.width || 750;
+  const height = 230;
 
   const dpr = window.devicePixelRatio || 1;
   canvas.width = width * dpr;
@@ -4585,7 +5006,7 @@ function drawTrendChart(results) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const padLeft = 40;
+  const padLeft = 45;
   const padRight = 20;
   const padTop = 25;
   const padBottom = 35;
@@ -4616,6 +5037,10 @@ function drawTrendChart(results) {
   ctx.moveTo(padLeft, passY);
   ctx.lineTo(width - padRight, passY);
   ctx.stroke();
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('82.5% Pass Mark', padLeft + 6, passY - 6);
   ctx.restore();
 
   if (results.length === 0) {
@@ -4626,7 +5051,7 @@ function drawTrendChart(results) {
     return;
   }
 
-  const recent = results.slice(-12);
+  const recent = results.slice(-15);
   const stepX = recent.length > 1 ? plotWidth / (recent.length - 1) : plotWidth / 2;
 
   const points = recent.map((r, idx) => {
@@ -4696,61 +5121,3 @@ function drawTrendChart(results) {
     ctx.fillText('#' + (i + 1), pt.x, height - padBottom + 14);
   });
 }
-
-function renderGroupBars(results, users) {
-  const container = document.getElementById('adminGroupBarsList');
-  if (!container) return;
-
-  const groupsSet = new Set();
-  users.forEach(u => groupsSet.add(u.group || 'Guruhsiz'));
-  results.forEach(r => groupsSet.add(r.studentGroup || 'Guruhsiz'));
-
-  const groups = Array.from(groupsSet);
-  if (groups.length === 0) {
-    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">Guruhlar ma'lumotlari kutilmoqda</span>`;
-    return;
-  }
-
-  const groupStats = groups.map(g => {
-    const groupUsers = users.filter(u => (u.group || 'Guruhsiz') === g);
-    const groupResults = results.filter(r => (r.studentGroup || 'Guruhsiz') === g);
-    const avg = groupResults.length > 0
-      ? Math.round(groupResults.reduce((acc, r) => acc + (r.percent || 0), 0) / groupResults.length)
-      : 0;
-    return {
-      name: g,
-      userCount: groupUsers.length,
-      testCount: groupResults.length,
-      avg
-    };
-  });
-
-  groupStats.sort((a, b) => b.avg - a.avg || b.testCount - a.testCount);
-
-  container.innerHTML = groupStats.map(gs => {
-    let barColor = '#10b981';
-    if (gs.avg < 70) barColor = '#ef4444';
-    else if (gs.avg < 82.5) barColor = '#f59e0b';
-
-    return `
-      <div class="group-bar-row">
-        <div class="group-bar-label" title="${escapeHtml(gs.name)}">
-          🏢 ${escapeHtml(gs.name)}
-          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">${gs.userCount} ta talaba, ${gs.testCount} ta test</div>
-        </div>
-        <div class="group-bar-track">
-          <div class="group-bar-fill" style="width:${gs.avg}%; background:${barColor};"></div>
-        </div>
-        <div class="group-bar-val" style="color:${barColor};">
-          ${gs.avg}%
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-window.addEventListener('resize', () => {
-  if (state.isAdmin && currentAdminSubTab === 'charts') {
-    renderAdminCharts();
-  }
-});
