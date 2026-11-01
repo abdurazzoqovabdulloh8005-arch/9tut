@@ -1,1275 +1,1275 @@
-<!DOCTYPE html>
-<html lang="uz" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="theme-color" content="#0076ce">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="CCNA Pro">
-  <title>CCNA Professional Quiz & Practical Labs</title>
-  <link rel="stylesheet" href="style.css">
-  <script>
-    (function() {
-      try {
-        var s = sessionStorage.getItem('ccna_auth_session') || localStorage.getItem('ccna_auth_session');
-        if (s) {
-          var parsed = JSON.parse(s);
-          if (parsed && parsed.login) {
-            document.documentElement.classList.add('is-authenticated');
-          } else {
-            document.documentElement.classList.remove('is-authenticated');
-          }
-        } else {
-          document.documentElement.classList.remove('is-authenticated');
-        }
-      } catch(e) {
-        document.documentElement.classList.remove('is-authenticated');
-      }
-    })();
-  </script>
-</head>
-<body>
-
-  <!-- Secure Auth Modal (Login & Registration Tabs) -->
-  <div id="authModal" class="modal-overlay" style="display:flex; backdrop-filter:blur(8px);">
-    <div class="modal-card" style="max-width:440px; width:100%; box-shadow: 0 20px 40px rgba(0,0,0,0.35);">
-      <div class="modal-header" style="text-align:center; margin-bottom:16px;">
-        <div class="logo-badge" style="display:inline-block; margin-bottom:8px; font-size:1.3rem;">CCNA PRO PORTAL</div>
-        <h2 id="authModalTitle" style="font-size:1.35rem; color:var(--text-main); margin-bottom:4px;">Tizimga Kirish</h2>
-        <p id="authModalSubtitle" style="color:var(--text-muted); font-size:0.88rem;">Cisco CCNA imtihon va amaliy laboratoriyalar platformasi</p>
-      </div>
-
-      <!-- Auth Switcher Tabs -->
-      <div style="display:flex; gap:6px; background:var(--bg-main); padding:4px; border-radius:10px; border:1px solid var(--border); margin-bottom:20px;">
-        <button type="button" id="tabBtnLogin" class="auth-tab-btn active" onclick="switchAuthTab('login')" style="flex:1; padding:9px; border:none; border-radius:7px; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s;">
-          🔑 Kirish
-        </button>
-        <button type="button" id="tabBtnRegister" class="auth-tab-btn" onclick="switchAuthTab('register')" style="flex:1; padding:9px; border:none; border-radius:7px; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s;">
-          📝 Ro'yxatdan o'tish
-        </button>
-      </div>
-
-      <!-- TAB 1: LOGIN FORM -->
-      <form id="loginTabForm" onsubmit="event.preventDefault(); handleUserLogin();">
-        <div class="form-group" style="margin-bottom:14px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:5px; display:block;">👤 Login / Foydalanuvchi nomi *</label>
-          <input type="text" id="authLoginInput" class="form-control" placeholder="Masalan: Abdulloh yoki talaba logini" autocomplete="username" required autofocus style="padding:11px 13px; font-size:0.95rem;">
-        </div>
-
-        <div class="form-group" style="margin-bottom:14px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:5px; display:block;">🔑 Parol *</label>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="password" id="authPasswordInput" class="form-control" placeholder="Parolni kiriting..." autocomplete="current-password" required style="padding:11px 40px 11px 13px; font-size:0.95rem; width:100%;">
-            <button type="button" onclick="togglePasswordVisibility('authPasswordInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;" title="Parolni ko'rsatish/yashirish">👁️</button>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <label style="display:flex; align-items:center; gap:8px; font-size:0.84rem; cursor:pointer; color:var(--text-muted); user-select:none;">
-            <input type="checkbox" id="authRememberMe" checked style="width:16px; height:16px; cursor:pointer;">
-            <span>Meni eslab qolish</span>
-          </label>
-          <span style="font-size:0.78rem; color:var(--text-muted);">🔒 SHA-256 Himoyalangan</span>
-        </div>
-
-        <div id="authErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
-
-        <button type="button" id="authLoginBtn" onclick="handleUserLogin()" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px; cursor:pointer;">
-          Kirish 🔒
-        </button>
-      </form>
-
-      <!-- TAB 2: REGISTRATION FORM -->
-      <form id="registerTabForm" style="display:none;" onsubmit="event.preventDefault(); handleUserRegister();">
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">👤 Ism va Familiya *</label>
-          <input type="text" id="regFullNameInput" class="form-control" placeholder="Masalan: Jasur Rahimov" required style="padding:10px 12px; font-size:0.92rem;">
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🏷️ Login (Username) tanlang *</label>
-          <input type="text" id="regLoginInput" class="form-control" placeholder="Masalan: jasur01" required style="padding:10px 12px; font-size:0.92rem;">
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🎓 Guruh yoki Yo'nalish *</label>
-          <input type="text" id="regGroupInput" class="form-control" placeholder="Masalan: CCNA-01, Telekom, IT-Park" required style="padding:10px 12px; font-size:0.92rem;">
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🔑 Yangi Parol yarating *</label>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="password" id="regPasswordInput" class="form-control" placeholder="Kamida 4 ta belgi..." required style="padding:10px 40px 10px 12px; font-size:0.92rem; width:100%;">
-            <button type="button" onclick="togglePasswordVisibility('regPasswordInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:14px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🔁 Parolni takrorlang *</label>
-          <input type="password" id="regPasswordConfirmInput" class="form-control" placeholder="Parolni qayta kiriting..." required style="padding:10px 12px; font-size:0.92rem;">
-        </div>
-
-        <div id="regErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
-
-        <button type="submit" id="authRegisterBtn" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px; background:#059669;">
-          Hisob Yaratish & Boshlash 🚀
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Certificate Modal -->
-  <div id="certModal" class="modal-overlay" style="display:none;">
-    <div style="max-width:800px; width:100%; position:relative;">
-      <button onclick="closeCertModal()" style="position:absolute; top:-40px; right:0; background:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:700;">Yopish ✕</button>
-      
-      <div id="certificateContainer" class="certificate-container">
-        <div class="cert-header">
-          <div class="logo-badge" style="display:inline-block; margin-bottom:8px; font-size:1.4rem;">CISCO CCNA</div>
-          <div class="cert-title">CERTIFICATE OF ACHIEVEMENT</div>
-          <div class="cert-subtitle">OFFICIAL KNOWLEDGE VERIFICATION</div>
-        </div>
-
-        <div style="font-size:0.95rem; color:#64748b; text-transform:uppercase; letter-spacing:1px;">Ushbu sertifikat tasdiqlaydi:</div>
-        <div id="certRecipientName" class="cert-recipient">Sardor Aliyev</div>
-
-        <div class="cert-body">
-          Cisco Certified Network Associate (CCNA) bo'yicha nazariy va amaliy test sinovlaridan muvaffaqiyatli o'tib, <b id="certPartTitle">Part 5</b> bo'limi bo'yicha <b id="certScorePercent" style="color:#0076ce;">95%</b> natija bilan yuqori darajada o'zlashtirganini tasdiqlaydi.
-        </div>
-
-        <div class="cert-footer">
-          <div class="cert-sig">
-            <div class="cert-sig-line"></div>
-            <div style="font-size:0.8rem; font-weight:700;">Cisco CCNA Instructor</div>
-          </div>
-          <div class="cert-seal">
-            VERIFIED<br>PASS ✅
-          </div>
-          <div class="cert-sig">
-            <div id="certDateText" style="font-size:0.85rem; font-weight:600; margin-bottom:6px;">2024.10.30</div>
-            <div style="font-size:0.8rem; font-weight:700;">Berilgan Sana</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:16px;">
-        <button class="btn-primary" onclick="printCertificate()">🖨️ Sertifikatni Chop Etish / PDF saqlash</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Image Zoom Modal -->
-  <div id="imageZoomModal" class="image-zoom-overlay" style="display:none;" onclick="closeImageModal()">
-    <button class="image-zoom-close" onclick="closeImageModal()">✕ Yopish</button>
-    <img id="imageZoomContent" class="image-zoom-content" src="" alt="Enlarged Diagram" onclick="event.stopPropagation()">
-  </div>
-
-  <!-- Header -->
-  <header>
-    <div class="header-container">
-      <div class="logo-area">
-        <div class="logo-badge">CCNA PRO</div>
-        <div class="logo-title">
-          <h1>Professional Offline Trainer</h1>
-          <span>1167 ta Savol + Pearson VUE Simulyatori + 21 ta Amaliy Lab</span>
-        </div>
-      </div>
-
-      <nav class="nav-tabs">
-        <button class="nav-tab active" data-tab="quiz">📝 Part Quizlar</button>
-        <button class="nav-tab" data-tab="study" style="color:var(--primary); font-weight:700;">📖 O'qish & Yodlash Zali</button>
-        <button class="nav-tab" data-tab="labs">🛠️ Amaliy Lablar (21)</button>
-        <button class="nav-tab" data-tab="cli">💻 Cisco CLI Simulyator</button>
-        <button class="nav-tab" data-tab="guide">📘 Packet Tracer Qo'llanma</button>
-        <button class="nav-tab" data-tab="cheatsheet">⚡ Buyruqlar Lug'ati</button>
-        <button class="nav-tab" data-tab="bookmarks">⭐ Saqlanganlar</button>
-        <button id="adminNavTab" class="nav-tab" data-tab="admin" style="color:var(--warning); font-weight:700;">📊 Natijalar (Admin)</button>
-      </nav>
-
-      <div class="header-actions">
-        <button id="openAuthModalBtn" class="btn-icon" onclick="openAuthModal()" style="display:none; background:var(--primary); color:#fff; font-weight:700;">🔑 Kirish</button>
-        <div id="currentUserBadge" class="user-badge" style="display:none; align-items:center; gap:6px;">
-          <span>👤 <span id="currentUserName">Foydalanuvchi</span></span>
-          <button type="button" onclick="openChangePasswordModal()" class="badge-pwd-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); color:inherit; cursor:pointer; font-size:0.75rem; padding:2px 7px; border-radius:5px; font-weight:600;" title="Hisobingiz parolini o'zgartirish">🔑 Parol</button>
-          <button onclick="logoutUser()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:4px;">Chiqish</button>
-        </div>
-        <button id="soundToggleBtn" class="btn-icon" onclick="toggleSound()" title="Ovozni yoqish/o'chirish">🔊 Ovoz</button>
-        <button id="adminLoginBtn" class="btn-icon" onclick="openAdminPrompt()">📊 Natijalar</button>
-        <button id="themeToggleBtn" class="btn-icon" onclick="toggleTheme()">🌙 Tungi</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main id="mainAppContent" style="display:none;">
-
-    <!-- SECTION 1: QUIZ -->
-    <section id="quizSection" class="tab-content active">
-
-      <!-- View A: Part Selection Cards -->
-      <div id="partsSelectionView">
-        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-          <div>
-            <h2 style="font-size:1.4rem; color:var(--text-main);">📚 CCNA Quiz Bo'limlari (Partlar)</h2>
-            <p style="color:var(--text-muted); font-size:0.95rem;">Bo'lim ustiga bosing. Pearson VUE standartidagi savollar xaritasi (Question Palette) bilan qulay ishlang.</p>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">Test Rejimi:</label>
-            <select id="partModeSelect" class="form-control" style="width:auto; padding:8px 12px;">
-              <option value="practice">Mashq Rejimi (Har savoldan so'ng javob ko'rinadi)</option>
-              <option value="exam">Imtihon Rejimi (Pearson VUE: Vaqtli, ko'rib chiqish va yakuniy ball)</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="partsGrid" class="part-grid"></div>
-      </div>
-
-      <!-- View B: Question Test Area (Pearson VUE Style Layout) -->
-      <div id="quizTestingArea" style="display:none;">
-        
-        <div class="filter-card">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn-secondary" onclick="confirmExitQuiz()">⬅️ Bo'limlarga Qaytish</button>
-            <h3 id="activePartTitle" style="color:var(--primary); font-size:1.15rem;">Part 5</h3>
-          </div>
-          <div style="display:flex; align-items:center; gap:14px;">
-            <span id="activeModeLabel" style="font-size:0.88rem; font-weight:700; color:var(--text-muted);">Mashq Rejimi</span>
-            <div id="examTimer" class="stat-chip" style="display:none; color:var(--primary); font-weight:800; font-size:1rem;">⏱️ 00:00</div>
-          </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="progress-container">
-          <div id="progressBarFill" class="progress-bar-fill"></div>
-        </div>
-
-        <!-- Testing Layout: Question + Question Palette -->
-        <div class="quiz-testing-layout">
-          
-          <!-- Left Column: Current Question Card -->
-          <div>
-            
-            <div id="questionCard" class="question-card">
-              <!-- Review Mode Banner -->
-              <div id="reviewModeBanner" class="review-mode-banner" style="display:none;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <span id="reviewStatusIcon" style="font-size:1.5rem;">❌</span>
-                  <div>
-                    <div id="reviewStatusTitle" style="font-weight:800; font-size:1rem; color:var(--danger);">XATO JAVOB BERILGAN</div>
-                    <div id="reviewStatusSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Sizning javobingiz: [A] | To'g'ri javob: [C]</div>
-                  </div>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                  <button id="btnFilterWrongOnly" class="btn-secondary" style="font-size:0.82rem; padding:6px 12px;" onclick="toggleReviewFilter()">
-                    ❌ Faqat xatolarni ko'rish
-                  </button>
-                  <button class="btn-primary" style="font-size:0.82rem; padding:6px 14px; background:#0284c7;" onclick="returnToFinishedResults()">
-                    📊 Natijaga Qaytish
-                  </button>
-                </div>
-              </div>
-
-              <div class="question-header">
-                <div class="question-meta">
-                  <span id="sourceBadge" class="badge-source">Part 5</span>
-                  <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Savol <span id="currentQNum">1 / 49</span></span>
-                </div>
-                <div style="display:flex; gap:8px;">
-                  <button id="flagBtn" class="btn-flag" onclick="toggleFlagCurrent()" title="Keyinroq qaytish uchun belgilash">
-                    ⚐ Belgilash (Flag)
-                  </button>
-                  <button id="bookmarkBtn" class="btn-flag" onclick="toggleBookmarkCurrent()">
-                    ☆ Saqlash
-                  </button>
-                </div>
-              </div>
-
-              <!-- Hotkeys Helper Bar -->
-              <div class="hotkeys-hint">
-                <span>⚡ Tezkor tugmalar:</span>
-                <span><span class="hotkey-badge">A, B, C, D</span> Tanlash</span>
-                <span><span class="hotkey-badge">← Oldingi</span></span>
-                <span><span class="hotkey-badge">Keyingi →</span></span>
-                <span><span class="hotkey-badge">Enter</span> Tekshirish</span>
-              </div>
-
-              <div id="questionText" class="question-body">
-                Yuklanmoqda...
-              </div>
-
-              <!-- Options List -->
-              <div id="optionsList" class="options-list"></div>
-
-              <!-- Explanation Box -->
-              <div id="explanationBox" class="explanation-box">
-                <div class="explanation-title">💡 Izoh va To'g'ri Javob</div>
-                <div id="explanationText" class="explanation-text"></div>
-              </div>
-
-              <!-- Action Navigation -->
-              <div class="question-nav">
-                <button id="prevQBtn" class="btn-secondary" onclick="prevQuestion()">⬅️ Oldingi savol</button>
-                <div style="display:flex; gap:10px;">
-                  <button id="returnToResultsBtn" class="btn-secondary" style="display:none; background:var(--bg-main); border:1px solid #0284c7; color:#0284c7; font-weight:700;" onclick="returnToFinishedResults()">📊 Natijaga Qaytish</button>
-                  <button id="checkAnswerBtn" class="btn-primary" onclick="checkCurrentAnswer()">Tekshirish ✓</button>
-                  <button id="nextQBtn" class="btn-primary" onclick="nextQuestion()">Keyingisi ➡️</button>
-                  <button id="reviewExamBtn" class="btn-warning" style="display:none;" onclick="openExamReviewScreen()">Imtihonni Yakunlash 🏁</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Review Screen (Before Final Submission) -->
-            <div id="reviewScreenCard" class="review-card" style="display:none;">
-              <h2 style="margin-bottom:8px;">📋 Imtihon Xulosasi va Ko'rib Chiqish (Review Screen)</h2>
-              <p style="color:var(--text-muted); font-size:0.92rem;">
-                Imtihonni topshirishdan oldin barcha savollarga javob berganingizni tekshiring. Belgilangan (Flagged) savollarga qaytib o'zgartirishingiz mumkin.
-              </p>
-
-              <div class="review-summary-grid">
-                <div class="review-stat-item">
-                  <h3 id="revTotalCount" style="color:var(--primary);">0</h3>
-                  <span>Jami Savollar</span>
-                </div>
-                <div class="review-stat-item">
-                  <h3 id="revAnsweredCount" style="color:var(--success);">0</h3>
-                  <span>Javob Berilgan</span>
-                </div>
-                <div class="review-stat-item">
-                  <h3 id="revUnansweredCount" style="color:var(--danger);">0</h3>
-                  <span>Javobsiz Qolgan</span>
-                </div>
-                <div class="review-stat-item">
-                  <h3 id="revFlaggedCount" style="color:var(--warning);">0</h3>
-                  <span>Belgilangan (Flagged)</span>
-                </div>
-              </div>
-
-              <div class="review-table-wrapper">
-                <table class="admin-table">
-                  <thead>
-                    <tr>
-                      <th>№</th>
-                      <th>Savol Mazmuni</th>
-                      <th>Sizning Javobingiz</th>
-                      <th>Holat</th>
-                      <th>O'tish</th>
-                    </tr>
-                  </thead>
-                  <tbody id="reviewTableBody"></tbody>
-                </table>
-              </div>
-
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <button class="btn-secondary" onclick="closeReviewScreen()">⬅️ Savollarga Qaytish</button>
-                <button class="btn-primary" style="padding:12px 24px; font-size:1rem;" onclick="submitFinalExam()">
-                  Tasdiqlash va Imtihonni Topshirish 🎯
-                </button>
-              </div>
-            </div>
-
-            <!-- Finished Card (Results) -->
-            <div id="finishedCard" class="finished-card" style="display:none;">
-              <div class="score-circle">
-                <div id="finalPercent">0%</div>
-                <span>NATIJA</span>
-              </div>
-              <h2 style="margin-bottom:8px;">Test Yakunlandi!</h2>
-              <div id="finalPartName" style="color:var(--text-muted); font-size:1rem; margin-bottom:12px;"></div>
-              <div id="finalStatusMsg" style="font-size:1.1rem; margin-bottom:16px;"></div>
-              <div id="finalStatsText" style="line-height:1.8; margin-bottom:24px; font-size:1rem;"></div>
-              
-              <!-- Review and Retry Actions -->
-              <div id="finishReviewActions" style="display:flex; justify-content:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
-                <button id="btnReviewWrong" class="btn-primary" style="background:#ef4444; border-color:#dc2626; padding:12px 22px; font-size:1rem; font-weight:700; box-shadow:0 4px 12px rgba(239,68,68,0.3);" onclick="openQuizReviewMode(true)">
-                  🔍 Xato Savollarni Ko'rish & Tahlil (<span id="wrongCountBadge">0</span> ta)
-                </button>
-                <button id="btnReviewAll" class="btn-secondary" style="padding:12px 20px; font-size:1rem; font-weight:600;" onclick="openQuizReviewMode(false)">
-                  📖 Barcha Savollarni Tahlil Qilish
-                </button>
-                <button id="btnRetryWrong" class="btn-warning" style="padding:12px 20px; font-size:1rem; font-weight:700;" onclick="retryWrongQuestionsOnly()">
-                  🔄 Faqat Xatolarni Qaytadan Yechish
-                </button>
-              </div>
-
-              <div id="certButtonArea" style="margin-bottom:20px; display:none;">
-                <button class="btn-primary" style="background:#059669; padding:12px 24px; font-size:1rem;" onclick="openCertificateModal()">
-                  🏆 Rasmiy CCNA Sertifikatini Ko'rish va Yuklash
-                </button>
-              </div>
-
-              <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-                <button class="btn-primary" onclick="backToPartsList()">Boshqa Partni Tanlash 📚</button>
-                <button class="btn-secondary" onclick="restartCurrentPart()">Ushbu Partni Qaytadan Yechish 🔄</button>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Right Column: Question Palette (Pearson VUE) -->
-          <div>
-            <div class="palette-card">
-              <div class="palette-title">
-                <span>Savollar Xaritasi</span>
-                <span id="paletteCountProgress" style="font-size:0.8rem; color:var(--text-muted);">0 / 0</span>
-              </div>
-
-              <div class="palette-legend">
-                <div class="legend-item"><div class="legend-dot" style="background:var(--success);"></div> Javob berilgan</div>
-                <div class="legend-item"><div class="legend-dot" style="background:var(--warning);"></div> Belgilangan</div>
-                <div class="legend-item"><div class="legend-dot" style="background:var(--primary);"></div> Joriy</div>
-              </div>
-
-              <div id="paletteGrid" class="palette-grid"></div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-    <!-- SECTION 2: STUDY & MEMORY TRAINER (NEW!) -->
-    <section id="studySection" class="tab-content">
-      
-      <!-- Study Header & Controls -->
-      <div class="study-header-card">
-        <div>
-          <h2 style="font-size:1.6rem; margin-bottom:6px;">📖 O'qish & Ko'z Xotirasi Mashg'ulot Zali</h2>
-          <p style="opacity:0.9; font-size:0.95rem; max-width:650px;">
-            Test yechishdan oldin savollarni o'qib chiqish, to'g'ri javoblarga ko'zni o'rgatish va kalit so'zlarni bir qarashda eslab qolish uchun maxsus tayyorlangan bo'lim!
-          </p>
-        </div>
-
-        <div class="study-view-tabs">
-          <button id="studyTabBook" class="study-view-btn active" onclick="switchStudyView('book')">📚 Konspekt</button>
-          <button id="studyTabFlash" class="study-view-btn" onclick="switchStudyView('flash')">🃏 Leitner Flashcard</button>
-          <button id="studyTabMatch" class="study-view-btn" onclick="switchStudyView('match')">🧩 Match Pairs</button>
-          <button id="studyTabBlitz" class="study-view-btn" onclick="switchStudyView('blitz')">⚡ Speed Blitz</button>
-          <button id="studyTabDragDrop" class="study-view-btn" onclick="switchStudyView('dragdrop')">🎯 Drag & Drop</button>
-          <button id="studyTabKeys" class="study-view-btn" onclick="switchStudyView('keys')">⚡ Kalit So'zlar</button>
-        </div>
-      </div>
-
-      <!-- Filter Controls for Study -->
-      <div class="filter-card">
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-          <label style="font-weight:700; font-size:0.88rem; color:var(--text-muted);">Bo'limni tanlang:</label>
-          <select id="studySourceSelect" class="form-control" style="width:auto; padding:8px 14px;" onchange="renderStudyContent()">
-            <option value="all">Barcha Bo'limlar (1167 ta savol)</option>
-          </select>
-        </div>
-
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input type="text" id="studySearchInput" class="form-control" placeholder="Kalit so'z bo'yicha tezkor qidirish..." style="max-width:320px;" oninput="renderStudyContent()">
-          <span id="studyResultsCount" style="font-size:0.85rem; font-weight:700; color:var(--primary); white-space:nowrap;">0 ta savol</span>
-        </div>
-      </div>
-
-      <!-- VIEW 1: BOOK MODE (List of all questions with highlighted answers & memory cues) -->
-      <div id="studyBookView">
-        <div id="studyQuestionsList" class="study-list"></div>
-      </div>
-
-      <!-- VIEW 2: FLASHCARD MODE (Interactive memory trainer) -->
-      <div id="studyFlashView" style="display:none;">
-        <div class="flashcard-wrapper">
-          <div id="flashcardElement" class="flashcard" onclick="flipFlashcard()">
-            <div>
-              <div id="flashcardBadge" class="flashcard-badge">Savol 1 / 49</div>
-              <div id="flashcardQuestion" class="flashcard-q">Savol yuklanmoqda...</div>
-            </div>
-
-            <div>
-              <div id="flashcardHintText" style="color:var(--text-muted); font-size:0.88rem; margin-bottom:12px;">
-                💡 Javobni ochish uchun kartaning ustiga bosing (yoki Space)
-              </div>
-              <div id="flashcardAnswerBox" class="flashcard-answer-revealed" style="display:none;">
-                <div style="font-size:0.85rem; color:var(--success); font-weight:800; text-transform:uppercase; margin-bottom:6px;">To'g'ri Javob:</div>
-                <div id="flashcardAnswerText" style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin-bottom:8px;"></div>
-                <div id="flashcardExplanationText" style="font-size:0.9rem; color:var(--text-muted); line-height:1.5;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flashcard-nav">
-            <button class="btn-secondary" onclick="prevFlashcard()">⬅️ Oldingi</button>
-            <button class="btn-primary" onclick="flipFlashcard()">👁️ Javobni Ko'rish / Yashirish</button>
-            <button class="btn-primary" onclick="nextFlashcard()">Keyingi ➡️</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- VIEW 3: KEYWORD MATCH MATRIX (Cheat Associations) -->
-      <div id="studyKeysView" style="display:none;">
-        <div class="guide-card">
-          <h3 style="color:var(--primary); margin-bottom:8px;">⚡ CCNA Eng Mashhur Kalit So'zlar Bog'liqligi (Keyword Match Matrix)</h3>
-          <p style="color:var(--text-muted); font-size:0.92rem; margin-bottom:16px;">
-            Cisco CCNA imtihonida savol ichida ushbu kalit so'zlarni ko'rishingiz bilan to'g'ri javobni 1 soniyada xatosiz tanlay olasiz:
-          </p>
-
-          <table class="keyword-table">
-            <thead>
-              <tr>
-                <th style="width:35%;">Savoldagi Kalit So'z (Trigger)</th>
-                <th style="width:35%;">Javobdagi Kalit So'z (To'g'ri Variant)</th>
-                <th>Mavzu va Izoh</th>
-              </tr>
-            </thead>
-            <tbody id="keywordTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- VIEW 4: MATCH PAIRS (PUZZLE GAME) -->
-      <div id="studyMatchView" style="display:none;">
-        <div style="text-align:center; margin-bottom:16px;">
-          <h3 style="font-size:1.3rem; color:var(--text-main);">🧩 Termin va Javoblarni Juftlash (Memory Puzzle)</h3>
-          <p style="color:var(--text-muted); font-size:0.9rem;">Chapdagi terminni va unga mos o'ngdagi to'g'ri javobni tanlang. To'g'ri juftlanganlar yashil bo'lib birikadi!</p>
-          <div style="margin-top:10px; font-weight:700; color:var(--primary);">
-            Topilgan juftliklar: <span id="matchScore">0</span> / <span id="matchTotal">5</span>
-          </div>
-        </div>
-
-        <div class="match-arena-grid">
-          <div id="matchLeftCol" class="match-column"></div>
-          <div id="matchRightCol" class="match-column"></div>
-        </div>
-
-        <div style="text-align:center; margin-top:20px;">
-          <button class="btn-primary" onclick="initMatchGame()">Yangi Raund Boshlash 🔄</button>
-        </div>
-      </div>
-
-      <!-- VIEW 5: SPEED BLITZ (60 SEC RAPID REACTION) -->
-      <div id="studyBlitzView" style="display:none;">
-        <div class="blitz-header">
-          <div>
-            <h2 style="font-size:1.5rem; margin-bottom:4px;">⚡ 60 Soniyalik Tezkor Blits (Speed Reflex)</h2>
-            <p style="opacity:0.9; font-size:0.9rem;">Savollarni o'qib darhol to'g'ri javobni tanlang! Har bir to'g'ri javob Combo hisobini oshiradi.</p>
-          </div>
-          <div style="display:flex; align-items:center; gap:16px;">
-            <div class="blitz-score-chip">
-              <span>🎯 Ball:</span> <b id="blitzScore">0</b>
-              <span id="blitzStreakBadge" class="blitz-streak-badge" style="display:none;">Combo x2! 🔥</span>
-            </div>
-            <div class="blitz-timer-circle">
-              <span id="blitzSeconds">60</span>
-              <span>SONIYA</span>
-            </div>
-          </div>
-        </div>
-
-        <div id="blitzGameArea" style="max-width:760px; margin:0 auto;">
-          <div class="question-card" style="margin-bottom:16px;">
-            <div id="blitzQText" class="question-body" style="font-size:1.2rem; min-height:70px;">
-              Boshlash uchun pastdagi tugmani bosing!
-            </div>
-            <div id="blitzOptionsList" class="options-list"></div>
-          </div>
-
-          <div style="text-align:center;">
-            <button id="blitzStartBtn" class="btn-primary" style="padding:14px 28px; font-size:1.1rem;" onclick="startSpeedBlitz()">
-              Blitsni Boshlash ⏱️
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- VIEW 6: CISCO DRAG & DROP ARENA -->
-      <div id="studyDragDropView" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-          <div>
-            <h3 style="font-size:1.3rem; color:var(--text-main);">🎯 Cisco CCNA Rasmiy Drag & Drop Mashqlari</h3>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Chapdagi buyruq yoki standartni bosib tanlang, so'ng o'ngdagi mos bo'sh katak ustiga bosing!</p>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <select id="ddExerciseSelect" class="form-control" style="width:auto; padding:6px 12px;" onchange="loadDragDropExercise()">
-              <!-- Populated by JS -->
-            </select>
-          </div>
-        </div>
-
-        <div id="ddTitleBox" style="font-weight:700; font-size:1.05rem; color:var(--primary); margin-bottom:16px; background:var(--bg-main); padding:12px 16px; border-radius:8px; border:1px solid var(--border);"></div>
-
-        <div class="dd-board">
-          <!-- Left pool of draggable items -->
-          <div class="dd-pool">
-            <div class="dd-pool-title">📌 Variantlar (Tanlash uchun bosing):</div>
-            <div id="ddPoolContainer" class="dd-items-container"></div>
-          </div>
-
-          <!-- Right target drop slots -->
-          <div class="dd-targets">
-            <div class="dd-target-title">🎯 Joylashtirish Kataklari:</div>
-            <div id="ddTargetsContainer"></div>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:12px;">
-          <div style="display:flex; gap:10px;">
-            <button class="btn-primary" onclick="checkDragDropAnswers()">Tekshirish ✓</button>
-            <button class="btn-secondary" onclick="resetCurrentDragDrop()">Qayta tiklash 🔄</button>
-          </div>
-          <div style="display:flex; gap:10px;">
-            <button class="btn-secondary" onclick="prevDragDropExercise()">⬅️ Oldingi mashq</button>
-            <button class="btn-secondary" onclick="nextDragDropExercise()">Keyingi mashq ➡️</button>
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- SECTION 3: ADMIN PANEL -->
-    <section id="adminSection" class="tab-content">
-      <div class="admin-card">
-        <div class="admin-header">
-          <div>
-            <h2 style="font-size:1.45rem; display:flex; align-items:center; gap:8px;">
-              👑 Administrator Boshqaruv Markazi
-            </h2>
-            <p style="color:var(--text-muted); font-size:0.92rem;">
-              Ro'yxatdan o'tgan barcha talabalar, ularning shaxsiy hisoblari, test natijalari va umumiy tahlili
-            </p>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn-primary" onclick="openAddStudentModal()" style="background:#059669; font-weight:700;">
-              ➕ Yangi Foydalanuvchi / Admin Qo'shish
-            </button>
-            <button class="btn-primary" onclick="exportResultsToCSV()">
-              📥 Natijalarni Excel (CSV)
-            </button>
-            <button class="btn-danger" onclick="clearAllResults()">
-              🗑️ Test Tarixini Tozalash
-            </button>
-          </div>
-        </div>
-
-        <!-- Stats Overview Cards -->
-        <div class="admin-stats-grid">
-          <div class="admin-stat-box">
-            <div class="admin-stat-icon">👥</div>
-            <div class="admin-stat-info">
-              <h4>Jami Talabalar</h4>
-              <b id="adminTotalStudents">0</b>
-            </div>
-          </div>
-          <div class="admin-stat-box">
-            <div class="admin-stat-icon">📝</div>
-            <div class="admin-stat-info">
-              <h4>Topshirilgan Testlar</h4>
-              <b id="adminTotalQuizzes">0</b>
-            </div>
-          </div>
-          <div class="admin-stat-box">
-            <div class="admin-stat-icon">🎯</div>
-            <div class="admin-stat-info">
-              <h4>O'rtacha Natija</h4>
-              <b id="adminAvgScore">0%</b>
-            </div>
-          </div>
-          <div class="admin-stat-box">
-            <div class="admin-stat-icon">🏆</div>
-            <div class="admin-stat-info">
-              <h4>Sertifikat Olganlar</h4>
-              <b id="adminTotalCerts">0</b>
-            </div>
-          </div>
-        </div>
-
-        <!-- Admin Sub-Navigation Tabs -->
-        <div class="admin-subnav-bar">
-          <button id="adminTabBtnStudents" class="admin-subnav-btn active" onclick="switchAdminTab('students')">
-            👥 Foydalanuvchilar & Adminlar (<span id="adminStudentsBadge">0</span>)
-          </button>
-          <button id="adminTabBtnResults" class="admin-subnav-btn" onclick="switchAdminTab('results')">
-            📊 Barcha Test Natijalari (<span id="adminResultsBadge">0</span>)
-          </button>
-          <button id="adminTabBtnCharts" class="admin-subnav-btn" onclick="switchAdminTab('charts')">
-            📈 Grafik Tahlillar & Statistika
-          </button>
-          <button id="adminTabBtnLeaderboard" class="admin-subnav-btn" onclick="switchAdminTab('leaderboard')">
-            🏆 Talabalar Reytingi (Top)
-          </button>
-        </div>
-
-        <!-- SUB-VIEW 1: STUDENTS MANAGEMENT -->
-        <div id="adminViewStudents">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
-            <div style="display:flex; gap:10px; flex:1; max-width:680px; flex-wrap:wrap;">
-              <input type="text" id="adminStudentSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Ism yoki login bo'yicha qidirish..." oninput="renderAdminStudentsList()">
-              <select id="adminRoleFilter" class="form-control" style="width:170px;" onchange="renderAdminStudentsList()">
-                <option value="all">Barcha rollar</option>
-                <option value="admin">👑 Faqat Adminlar</option>
-                <option value="student">👤 Faqat Foydalanuvchilar</option>
-              </select>
-              <select id="adminGroupFilter" class="form-control" style="width:160px;" onchange="renderAdminStudentsList()">
-                <option value="all">Barcha guruhlar</option>
-              </select>
-            </div>
-            <span style="font-size:0.85rem; color:var(--text-muted);" id="adminStudentCountText"></span>
-          </div>
-
-          <div class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th style="width:40px;">№</th>
-                  <th>F.I.SH</th>
-                  <th>Login (Username)</th>
-                  <th>Roli / Huquqi</th>
-                  <th>Holati</th>
-                  <th>Guruhi</th>
-                  <th>Ro'yxatdan O'tgan</th>
-                  <th>Testlar</th>
-                  <th>O'rtacha Ball</th>
-                  <th style="text-align:center;">Amallar</th>
-                </tr>
-              </thead>
-              <tbody id="adminStudentsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SUB-VIEW 2: TEST RESULTS -->
-        <div id="adminViewResults" style="display:none;">
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
-            <input type="text" id="adminResultsSearch" class="form-control" style="max-width:240px;" placeholder="Qidirish (ism, part)..." oninput="renderAdminResultsList()">
-            <select id="adminResultPartFilter" class="form-control" style="width:auto;" onchange="renderAdminResultsList()">
-              <option value="all">Barcha Partlar</option>
-            </select>
-            <select id="adminResultStatusFilter" class="form-control" style="width:auto;" onchange="renderAdminResultsList()">
-              <option value="all">Barcha Natijalar</option>
-              <option value="pass">Faqat O'tganlar (≥82.5%) ✅</option>
-              <option value="fail">Yiqilganlar (&lt;82.5%) ⚠️</option>
-            </select>
-          </div>
-
-          <div class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th style="width:40px;">№</th>
-                  <th>Talaba F.I.SH</th>
-                  <th>Guruhi</th>
-                  <th>Bo'lim (Part)</th>
-                  <th>To'g'ri / Jami</th>
-                  <th>Foiz</th>
-                  <th>Status</th>
-                  <th>Sana va Vaqt</th>
-                  <th style="text-align:center;">Amal</th>
-                </tr>
-              </thead>
-              <tbody id="adminResultsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SUB-VIEW 3: LEADERBOARD -->
-        <div id="adminViewLeaderboard" style="display:none;">
-          <div class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th style="width:60px;">O'rin</th>
-                  <th>Talaba F.I.SH</th>
-                  <th>Guruhi</th>
-                  <th>Topshirgan Testlari</th>
-                  <th>Muvaffaqiyatli (O'tgan)</th>
-                  <th>O'rtacha Ball</th>
-                  <th>Sertifikatlar</th>
-                </tr>
-              </thead>
-              <tbody id="adminLeaderboardTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
-        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
-        <div id="adminViewCharts" style="display:none;">
-          <!-- View Mode Switcher Pills -->
-          <div class="charts-view-switcher">
-            <button type="button" id="chartsPillOverview" class="charts-view-pill active" onclick="switchChartsSubView('overview')">
-              📊 Umumiy Tahlil & Spidometr
-            </button>
-            <button type="button" id="chartsPillHeatmap" class="charts-view-pill" onclick="switchChartsSubView('heatmap')">
-              🗺️ O'zlashtirish Matritsasi (Heatmap)
-            </button>
-            <button type="button" id="chartsPillParts" class="charts-view-pill" onclick="switchChartsSubView('parts')">
-              📈 Partlar Grafigi (Part 5 - 16)
-            </button>
-            <button type="button" id="chartsPillStudents" class="charts-view-pill" onclick="switchChartsSubView('students')">
-              🏆 Talabalar Reytingi & Guruhlar
-            </button>
-          </div>
-
-          <!-- PANEL 1: OVERVIEW & SPIDOMETR -->
-          <div id="chartsPanelOverview">
-            <!-- Quick Insights 4 Cards -->
-            <div class="admin-charts-insights-grid">
-              <div class="admin-insight-card">
-                <div class="insight-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">🏆</div>
-                <div>
-                  <div class="insight-title">Eng Yuqori Natija</div>
-                  <div class="insight-value" id="chartTopScore">-</div>
-                  <div class="insight-desc" id="chartTopStudent">-</div>
-                </div>
-              </div>
-              <div class="admin-insight-card">
-                <div class="insight-icon" style="background:rgba(0, 118, 206, 0.15); color:#0076ce;">⚡</div>
-                <div>
-                  <div class="insight-title">Eng Faol Talaba</div>
-                  <div class="insight-value" id="chartActiveCount">-</div>
-                  <div class="insight-desc" id="chartActiveStudent">-</div>
-                </div>
-              </div>
-              <div class="admin-insight-card">
-                <div class="insight-icon" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;">🎯</div>
-                <div>
-                  <div class="insight-title">O'tish Ko'rsatkichi (≥82.5%)</div>
-                  <div class="insight-value" id="chartPassRate">0%</div>
-                  <div class="insight-desc" id="chartPassCount">0 ta muvaffaqiyatli</div>
-                </div>
-              </div>
-              <div class="admin-insight-card">
-                <div class="insight-icon" style="background:rgba(139, 92, 246, 0.15); color:#8b5cf6;">🛡️</div>
-                <div>
-                  <div class="insight-title">Hisoblar Moderatsiyasi</div>
-                  <div class="insight-value" id="chartApprovedRatio">-</div>
-                  <div class="insight-desc" id="chartPendingNotice">Tasdiq kutilmoqda</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Two-Column Grid: Cisco Gauge Meter + Donut Chart -->
-            <div class="admin-charts-grid" style="margin-bottom:20px;">
-              <!-- Cisco Exam Pass Speedometer Gauge -->
-              <div class="gauge-card-box">
-                <div class="chart-header" style="width:100%; margin-bottom:10px;">
-                  <div>
-                    <h3 class="chart-title">🎯 Cisco CCNA Imtihon Spidometri</h3>
-                    <p class="chart-subtitle">O'quvchilarning umumiy o'tish balli (82.5% Pass ko'rsatkichi)</p>
-                  </div>
-                </div>
-                <div class="gauge-wrapper">
-                  <canvas id="adminGaugeCanvas" width="260" height="160"></canvas>
-                </div>
-                <div class="gauge-score-text" id="gaugeScoreText">0%</div>
-                <div id="gaugePassBadge" class="gauge-pass-badge" style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.3);">
-                  ⚠️ TESTLAR KUTILMOQDA
-                </div>
-                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:8px;">
-                  Oltin belgi: Cisco rasmiy 82.5% sertifikat chegarasi
-                </div>
-              </div>
-
-              <!-- Result Distribution Donut Chart -->
-              <div class="admin-chart-box">
-                <div class="chart-header">
-                  <div>
-                    <h3 class="chart-title">🍩 Natijalar Taqsimoti</h3>
-                    <p class="chart-subtitle">Ballar toifalari bo'yicha ulushlar</p>
-                  </div>
-                </div>
-                <div class="donut-chart-wrapper">
-                  <div style="position:relative; width:180px; height:180px;">
-                    <canvas id="adminDonutCanvas" width="180" height="180"></canvas>
-                    <div id="adminDonutCenterText" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
-                      <span style="font-size:1.6rem; font-weight:800; color:var(--text-main);" id="donutTotalText">0</span>
-                      <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Jami Test</span>
-                    </div>
-                  </div>
-                  <div id="adminDonutLegend" class="donut-legend-list"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Trend Curve -->
-            <div class="admin-chart-box full-width">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">📈 Natijalar Dinamikasi va O'sish Tendentsiyasi</h3>
-                  <p class="chart-subtitle">Topshirilgan testlar ketma-ketligi bo'yicha ballarning o'zgarishi</p>
-                </div>
-              </div>
-              <div class="canvas-container" style="position:relative; width:100%; height:230px;">
-                <canvas id="adminTrendCanvas"></canvas>
-              </div>
-            </div>
-          </div>
-
-          <!-- PANEL 2: STUDENT MASTERY HEATMAP (LeetCode / NetAcad Style) -->
-          <div id="chartsPanelHeatmap" style="display:none;">
-            <div class="admin-chart-box full-width" style="margin-bottom:0;">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">🗺️ Talabalar va Bo'limlar Matritsasi (Mastery Heatmap)</h3>
-                  <p class="chart-subtitle">Har bir talabaning har bir CCNA bo'limi bo'yicha o'zlashtirish ko'rsatkichi</p>
-                </div>
-                <div class="chart-badge-legend">
-                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% O'tgan</span>
-                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% O'rtacha</span>
-                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Xatolar ko'p</span>
-                  <span style="margin-left:12px;"><span class="legend-dot" style="background:rgba(255,255,255,0.15);"></span> — Topshirilmagan</span>
-                </div>
-              </div>
-              <div class="heatmap-container" id="adminHeatmapContainer">
-                <!-- Dynamically populated table -->
-              </div>
-            </div>
-          </div>
-
-          <!-- PANEL 3: PARTS BREAKDOWN -->
-          <div id="chartsPanelParts" style="display:none;">
-            <div class="admin-chart-box full-width" style="margin-bottom:20px;">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">📊 CCNA Bo'limlari (Part 5 - 16 & Full Exam) O'zlashtirilishi</h3>
-                  <p class="chart-subtitle">Mavzular bo'yicha o'rtacha ball (%) va testlar soni (Oltin chiziq: 82.5% Cisco o'tish chegarasi)</p>
-                </div>
-                <div class="chart-badge-legend">
-                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% A'lo</span>
-                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% Yaxshi</span>
-                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Qayta topshirish</span>
-                </div>
-              </div>
-              <div class="canvas-container" style="position:relative; width:100%; height:320px;">
-                <canvas id="adminPartScoresCanvas"></canvas>
-              </div>
-            </div>
-            <!-- Parts Mastery Cards List -->
-            <div id="adminPartsCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-            </div>
-          </div>
-
-          <!-- PANEL 4: STUDENTS PODIUM & GROUPS -->
-          <div id="chartsPanelStudents" style="display:none;">
-            <!-- Top 3 Podium Card -->
-            <div class="admin-chart-box full-width" style="margin-bottom:22px;">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">🏆 Yetakchi Talabalar Shohsupasi (Top 3)</h3>
-                  <p class="chart-subtitle">Eng yuqori o'rtacha ball va faollik ko'rsatgan talabalar</p>
-                </div>
-              </div>
-              <div id="adminPodiumContainer" class="podium-container">
-                <!-- Dynamically populated podium -->
-              </div>
-            </div>
-
-            <!-- Groups Cards -->
-            <div class="admin-chart-box full-width">
-              <div class="chart-header">
-                <div>
-                  <h3 class="chart-title">👥 Guruhlar va Yo'nalishlar Ko'rsatkichi</h3>
-                  <p class="chart-subtitle">O'quv guruhlari kesimida talabalar, testlar va muvaffaqiyat darajasi</p>
-                </div>
-              </div>
-              <div id="adminGroupCardsList" class="groups-cards-grid">
-                <!-- Dynamically populated groups -->
-              </div>
-            </div>
-          </div>
-        </div>
-
-    </section>
-
-    <!-- Student Edit / Add Modal -->
-    <div id="studentFormModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
-      <div class="modal-card" style="max-width:440px; width:100%;">
-        <div class="modal-header">
-          <h3 id="studentModalTitle" style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">Yangi Foydalanuvchi / Admin Qo'shish</h3>
-          <p style="font-size:0.85rem; color:var(--text-muted);">Talaba hisob ma'lumotlarini kiriting</p>
-        </div>
-
-        <input type="hidden" id="studentEditId" value="">
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Ism va Familiya *</label>
-          <input type="text" id="modalStudentName" class="form-control" placeholder="Masalan: Sardor Aliyev" required>
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Login *</label>
-          <input type="text" id="modalStudentLogin" class="form-control" placeholder="Masalan: sardor01" required>
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">👑 Tizimdagi Roli (Huquqi) *</label>
-          <select id="modalStudentRole" class="form-control" style="padding:10px 12px; font-size:0.92rem; font-weight:600;">
-            <option value="student">👤 Foydalanuvchi (Talaba) — testlar va amaliy mashqlar</option>
-            <option value="admin">👑 Administrator (Admin) — barcha huquqlar + Admin Markazi</option>
-          </select>
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Guruhi / Bo'limi *</label>
-          <input type="text" id="modalStudentGroup" class="form-control" placeholder="Masalan: CCNA-01 yoki Telekom" required>
-        </div>
-
-        <div class="form-group" style="margin-bottom:16px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Parol <span id="modalPwdNotice" style="font-weight:400; font-size:0.75rem; color:var(--text-muted);">(Tahrirlashda bo'sh qoldirilsa o'zgarmaydi)</span></label>
-          <input type="password" id="modalStudentPassword" class="form-control" placeholder="Parol kiriting...">
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn-secondary" onclick="closeStudentModal()">Bekor qilish</button>
-          <button type="button" class="btn-primary" onclick="saveStudentFromModal()">Saqlash ✓</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Change Password Modal -->
-    <div id="changePasswordModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
-      <div class="modal-card" style="max-width:440px; width:100%;">
-        <div class="modal-header">
-          <h3 style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">🔑 Parolni O'zgartirish</h3>
-          <p id="changePwdSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Hisobingiz xavfsizligi uchun yangi parol o'rnating</p>
-        </div>
-
-        <input type="hidden" id="changePwdTargetLogin" value="">
-
-        <div id="changePwdOldGroup" class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Joriy (Eski) Parol *</label>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="password" id="changePwdOldInput" class="form-control" placeholder="Hozirgi parolingizni kiriting..." style="padding:10px 40px 10px 12px; width:100%;">
-            <button type="button" onclick="togglePasswordVisibility('changePwdOldInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:12px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parol *</label>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="password" id="changePwdNewInput" class="form-control" placeholder="Yangi parolni kiriting (kamida 4 ta belgi)..." style="padding:10px 40px 10px 12px; width:100%;">
-            <button type="button" onclick="togglePasswordVisibility('changePwdNewInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:16px;">
-          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parolni Qayta Kiriting *</label>
-          <div style="position:relative; display:flex; align-items:center;">
-            <input type="password" id="changePwdConfirmInput" class="form-control" placeholder="Yangi parolni takrorlang..." style="padding:10px 40px 10px 12px; width:100%;">
-            <button type="button" onclick="togglePasswordVisibility('changePwdConfirmInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
-          </div>
-        </div>
-
-        <div id="changePwdErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn-secondary" onclick="closeChangePasswordModal()">Bekor qilish</button>
-          <button type="button" class="btn-primary" onclick="saveNewPassword()">Saqlash ✓</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION 4: LABS -->
-    <section id="labsSection" class="tab-content">
-      <div class="labs-grid">
-        <div class="labs-sidebar">
-          <h3 style="margin-bottom:12px; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Amaliy Laboratoriyalar</h3>
-          <div id="labsList" class="labs-list"></div>
-        </div>
-
-        <div class="lab-detail-card">
-          <div class="lab-title-area">
-            <div>
-              <h2 id="labTitle" style="color:var(--text-main); font-size:1.4rem;">Lab 1</h2>
-              <span style="font-size:0.85rem; color:var(--text-muted);">Cisco Packet Tracer uchun to'liq amaliy konfiguratsiya</span>
-            </div>
-            <div style="display:flex; gap:8px;">
-              <button class="btn-primary" onclick="copyLabCode()">📋 Nusxalash</button>
-              <button class="btn-secondary" onclick="openLabInSimulator()">💻 CLI Simulyatorda Mashq Qilish</button>
-            </div>
-          </div>
-
-          <div id="labPtTopology"></div>
-
-          <div class="lab-section-title">📌 Bajarilishi kerak bo'lgan vazifalar (Tasks):</div>
-          <div id="labTasksBox" class="tasks-box"></div>
-
-          <div class="lab-section-title">💻 Cisco IOS Konfiguratsiyasi (Solution):</div>
-          <div class="code-block-wrapper">
-            <button class="btn-copy-code" onclick="copyLabCode()">Nusxalash</button>
-            <pre id="labSolutionCode" class="code-block"></pre>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 5: CLI SIMULATOR -->
-    <section id="cliSection" class="tab-content">
-      <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-        <div>
-          <h2>💻 Virtual Cisco IOS CLI Simulyatori</h2>
-          <p style="color:var(--text-muted); font-size:0.95rem;">
-            Tab orqali avto-to'ldirish, <code>?</code> orqali yordam va bosqichma-bosqich real topshiriqlar!
-          </p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">Mavzuni tanlang:</label>
-          <select id="cliScenarioSelect" class="form-control" style="width:auto; max-width:100%; padding:6px 12px;" onchange="switchCliScenario()">
-            <option value="0">Lab 1: Switch Port Access & Voice VLAN Sozlash</option>
-            <option value="1">Lab 2: 802.1Q Trunking & VLAN Naming</option>
-            <option value="2">Lab 3: Trunk Allowed VLANs & Native VLAN Untagged</option>
-            <option value="3">Lab 4: Floating Static Route (Zaxira yo'l)</option>
-            <option value="4">Lab 5: IPv4 Subnetting & Interface Configuration</option>
-            <option value="5">Lab 6: Enterprise VLAN 99 FINANCIAL & Access Ports</option>
-            <option value="6">Lab 7: Point-to-Point IPv4 Subnetting /30</option>
-            <option value="7">Lab 9: OSPF Area 0 & Process ID Sozlash</option>
-            <option value="8">Lab 10: OSPF Router ID & Network Sozlash</option>
-            <option value="9">Lab 11: 802.1Q Trunking & Untagged Native VLAN</option>
-            <option value="10">Lab 12: Multi-VLAN Naming (IT & HR User VLAN)</option>
-            <option value="11">Lab 13: Trunk Allowed VLAN Lists on Port Range</option>
-            <option value="12">Lab 14: IEEE 802.1Q Dot1q Trunk Encapsulation</option>
-            <option value="13">Lab 15: IPv4 /28 Host Configuration & Default Gateway</option>
-            <option value="14">Lab 16: Industry Standard Dot1q Trunk & Native VLAN</option>
-            <option value="15">Lab 17: Static Default Route & Host Route /32</option>
-            <option value="16">Lab 18: Default Routing to ISP & Next-Hop</option>
-            <option value="17">Lab 19: Cisco IOS PAT (Port Address Translation / NAT Overload)</option>
-            <option value="18">Lab 20: OSPF Multi-Router & Router ID (HQ1)</option>
-            <option value="19">Lab 21: Extended Named ACL (WWW_ACL) Sozlash</option>
-            <option value="20">Lab 22: NAT/PAT Overload & NTP Master Sozlash</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="cliGoalCard" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px;"></div>
-
-      <div class="terminal-card">
-        <div class="terminal-header">
-          <div class="terminal-dots">
-            <div class="dot dot-red"></div>
-            <div class="dot dot-yellow"></div>
-            <div class="dot dot-green"></div>
-          </div>
-          <div class="terminal-title">Cisco IOS Switch Terminal (SW-1)</div>
-          <div style="font-size:0.75rem; color:#8b949e;">Tab: auto-complete | ?: yordam</div>
-        </div>
-
-        <div id="cliBody" class="terminal-body">
-          <div id="cliHistory" class="terminal-history">
-            <div class="terminal-line info">Cisco IOS Software, Catalyst 2960 Software (C2960-LANBASEK9-M).</div>
-            <div class="terminal-line info">Professional Interactive CLI Simulator ishga tushirildi.</div>
-          </div>
-
-          <div class="terminal-input-row">
-            <span id="cliPrompt" class="terminal-prompt">SW-1&gt;</span>
-            <input type="text" id="cliInput" class="terminal-input" placeholder="buyruqni kiriting (masalan: enable)..." autocomplete="off" spellcheck="false">
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 6: PACKET TRACER GUIDE -->
-    <section id="guideSection" class="tab-content">
-      <div class="guide-card">
-        <h2 style="margin-bottom:16px; color:var(--primary);">📘 Cisco Packet Tracer Orqali CCNA Amaliyotini O'rganish Metodikasi</h2>
-        <p style="margin-bottom:20px; font-size:1.02rem; line-height:1.7;">
-          Sizning kompyuteringizda <b>Cisco Packet Tracer</b> o'rnatilgan. Ushbu dastur orqali 21 ta laboratoriyani qanday mustaqil bajarish bo'yicha bosqichlar:
-        </p>
-
-        <div class="step-card">
-          <h4>1-QADAM: Packet Tracer dasturini ishga tushirish</h4>
-          <p style="font-size:0.92rem; color:var(--text-muted);">
-            Desktopingizdagi <code>Cisco Packet Tracer</code> yorlig'ini bosing. Dastur ochilganda pastki chap burchakda tarmoq qurilmalari joylashgan.
-          </p>
-        </div>
-
-        <div class="step-card">
-          <h4>2-QADAM: Kerakli Qurilmalarni Ishchi Maydonga Joylashtirish</h4>
-          <p style="font-size:0.92rem; color:var(--text-muted);">
-            • Switchlar: <b>Cisco 2960</b><br>
-            • Routerlar: <b>Cisco 2811</b> yoki <b>1941</b><br>
-            • Kompyuterlar: <b>PC</b> yoki <b>IP Phone</b>.
-          </p>
-        </div>
-
-        <div class="step-card">
-          <h4>3-QADAM: CLI orqali sozlash</h4>
-          <p style="font-size:0.92rem; color:var(--text-muted);">
-            Qurilmaning ustiga bosing ➔ <b>CLI</b> tabiga o'ting. Ushbu dasturimizning <b>"🛠️ Amaliy Lablar"</b> bo'limidan berilgan yechim buyruqlarini bosqichma-bosqich kiriting.
-          </p>
-        </div>
-
-        <div class="step-card">
-          <h4>4-QADAM: Tekshirish va Natijani Sinash (Verification)</h4>
-          <p style="font-size:0.92rem; color:var(--text-muted);">
-            • <code>show ip interface brief</code> — portlar holati.<br>
-            • <code>show vlan brief</code> — VLANlar ro'yxati.<br>
-            • <code>show ip route</code> — yo'nalishlar jadvali.<br>
-            • PC lardan bir-biriga <code>ping &lt;IP&gt;</code> yuborib tekshiring.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 7: CHEAT SHEET -->
-    <section id="cheatsheetSection" class="tab-content">
-      <div style="margin-bottom:20px;">
-        <h2>⚡ Cisco CCNA Buyruqlar Lug'ati (Cheat Sheet)</h2>
-        <p style="color:var(--text-muted);">Imtihon va amaliy laboratoriyalarda eng ko'p ishlatiladigan buyruqlar</p>
-      </div>
-
-      <div class="cheatsheet-grid">
-        <div class="cheat-card">
-          <h3>📁 VLAN & Access Portlar</h3>
-          <table class="cheat-table">
-            <tr><td><code>vlan 10</code></td><td>VLAN 10 yaratish</td></tr>
-            <tr><td><code>name Sales</code></td><td>VLANga nom berish</td></tr>
-            <tr><td><code>int e0/1</code></td><td>Portga kirish</td></tr>
-            <tr><td><code>switchport mode access</code></td><td>Portni access qilish</td></tr>
-            <tr><td><code>switchport access vlan 10</code></td><td>VLAN 10 ga ulash</td></tr>
-            <tr><td><code>switchport voice vlan 11</code></td><td>Voice VLAN sozlash</td></tr>
-            <tr><td><code>show vlan brief</code></td><td>VLANlarni tekshirish</td></tr>
-          </table>
-        </div>
-
-        <div class="cheat-card">
-          <h3>🔗 Trunking & Native VLAN</h3>
-          <table class="cheat-table">
-            <tr><td><code>switchport mode trunk</code></td><td>Trunk rejimini yoqish</td></tr>
-            <tr><td><code>switchport trunk encapsulation dot1q</code></td><td>802.1Q enkapsulyatsiya</td></tr>
-            <tr><td><code>switchport trunk allowed vlan 10,20</code></td><td>Ruxsat berilgan VLANlar</td></tr>
-            <tr><td><code>switchport trunk native vlan 99</code></td><td>Native VLAN o'rnatish</td></tr>
-            <tr><td><code>show interfaces trunk</code></td><td>Trunk holatini ko'rish</td></tr>
-          </table>
-        </div>
-
-        <div class="cheat-card">
-          <h3>🌐 Routing & OSPF</h3>
-          <table class="cheat-table">
-            <tr><td><code>ip route 0.0.0.0 0.0.0.0 &lt;GW&gt;</code></td><td>Default route</td></tr>
-            <tr><td><code>router ospf 10</code></td><td>OSPF boshlash</td></tr>
-            <tr><td><code>network 10.0.0.0 0.0.0.255 area 0</code></td><td>Tarmoq qo'shish</td></tr>
-            <tr><td><code>show ip route</code></td><td>Marshrut jadvali</td></tr>
-            <tr><td><code>show ip ospf neighbor</code></td><td>OSPF qo'shnilari</td></tr>
-          </table>
-        </div>
-
-        <div class="cheat-card">
-          <h3>🛡️ Port Security & Xavfsizlik</h3>
-          <table class="cheat-table">
-            <tr><td><code>switchport port-security</code></td><td>Port security yoqish</td></tr>
-            <tr><td><code>switchport port-security maximum 2</code></td><td>Maksimal MAC soni</td></tr>
-            <tr><td><code>switchport port-security violation restrict</code></td><td>Buzilishdagi chora</td></tr>
-            <tr><td><code>switchport port-security mac-address sticky</code></td><td>Sticky MAC</td></tr>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 8: BOOKMARKS -->
-    <section id="bookmarksSection" class="tab-content">
-      <div id="bookmarksListContainer"></div>
-    </section>
-
-  </main>
-
-  <!-- Load Data and Main Script -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="uz" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#0076ce">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CCNA Pro">
+  <title>CCNA Professional Quiz & Practical Labs</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    (function() {
+      try {
+        var s = sessionStorage.getItem('ccna_auth_session') || localStorage.getItem('ccna_auth_session');
+        if (s) {
+          var parsed = JSON.parse(s);
+          if (parsed && parsed.login) {
+            document.documentElement.classList.add('is-authenticated');
+          } else {
+            document.documentElement.classList.remove('is-authenticated');
+          }
+        } else {
+          document.documentElement.classList.remove('is-authenticated');
+        }
+      } catch(e) {
+        document.documentElement.classList.remove('is-authenticated');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Secure Auth Modal (Login & Registration Tabs) -->
+  <div id="authModal" class="modal-overlay" style="display:flex; backdrop-filter:blur(8px);">
+    <div class="modal-card" style="max-width:440px; width:100%; box-shadow: 0 20px 40px rgba(0,0,0,0.35);">
+      <div class="modal-header" style="text-align:center; margin-bottom:16px;">
+        <div class="logo-badge" style="display:inline-block; margin-bottom:8px; font-size:1.3rem;">CCNA PRO PORTAL</div>
+        <h2 id="authModalTitle" style="font-size:1.35rem; color:var(--text-main); margin-bottom:4px;">Tizimga Kirish</h2>
+        <p id="authModalSubtitle" style="color:var(--text-muted); font-size:0.88rem;">Cisco CCNA imtihon va amaliy laboratoriyalar platformasi</p>
+      </div>
+
+      <!-- Auth Switcher Tabs -->
+      <div style="display:flex; gap:6px; background:var(--bg-main); padding:4px; border-radius:10px; border:1px solid var(--border); margin-bottom:20px;">
+        <button type="button" id="tabBtnLogin" class="auth-tab-btn active" onclick="switchAuthTab('login')" style="flex:1; padding:9px; border:none; border-radius:7px; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s;">
+          🔑 Kirish
+        </button>
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn" onclick="switchAuthTab('register')" style="flex:1; padding:9px; border:none; border-radius:7px; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s;">
+          📝 Ro'yxatdan o'tish
+        </button>
+      </div>
+
+      <!-- TAB 1: LOGIN FORM -->
+      <form id="loginTabForm" onsubmit="event.preventDefault(); handleUserLogin(); return false;">
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:5px; display:block;">👤 Login / Foydalanuvchi nomi *</label>
+          <input type="text" id="authLoginInput" class="form-control" placeholder="Masalan: Abdulloh yoki talaba logini" autocomplete="username" required autofocus style="padding:11px 13px; font-size:0.95rem;" onkeydown="if(event.key==='Enter'){var p=document.getElementById('authPasswordInput');if(p)p.focus();}">
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:5px; display:block;">🔑 Parol *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="authPasswordInput" class="form-control" placeholder="Parolni kiriting..." autocomplete="current-password" required style="padding:11px 40px 11px 13px; font-size:0.95rem; width:100%;" onkeydown="if(event.key==='Enter'){handleUserLogin();}">
+            <button type="button" onclick="togglePasswordVisibility('authPasswordInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;" title="Parolni ko'rsatish/yashirish">👁️</button>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.84rem; cursor:pointer; color:var(--text-muted); user-select:none;">
+            <input type="checkbox" id="authRememberMe" checked style="width:16px; height:16px; cursor:pointer;">
+            <span>Meni eslab qolish</span>
+          </label>
+          <span style="font-size:0.78rem; color:var(--text-muted);">🔒 SHA-256 Himoyalangan</span>
+        </div>
+
+        <div id="authErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
+
+        <button type="button" id="authLoginBtn" onclick="handleUserLogin();" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px; cursor:pointer;">
+          Kirish 🔓
+        </button>
+      </form>
+
+      <!-- TAB 2: REGISTRATION FORM -->
+      <form id="registerTabForm" style="display:none;" onsubmit="event.preventDefault(); handleUserRegister();">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">👤 Ism va Familiya *</label>
+          <input type="text" id="regFullNameInput" class="form-control" placeholder="Masalan: Jasur Rahimov" required style="padding:10px 12px; font-size:0.92rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🏷️ Login (Username) tanlang *</label>
+          <input type="text" id="regLoginInput" class="form-control" placeholder="Masalan: jasur01" required style="padding:10px 12px; font-size:0.92rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🎓 Guruh yoki Yo'nalish *</label>
+          <input type="text" id="regGroupInput" class="form-control" placeholder="Masalan: CCNA-01, Telekom, IT-Park" required style="padding:10px 12px; font-size:0.92rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🔑 Yangi Parol yarating *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="regPasswordInput" class="form-control" placeholder="Kamida 4 ta belgi..." required style="padding:10px 40px 10px 12px; font-size:0.92rem; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('regPasswordInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">🔁 Parolni takrorlang *</label>
+          <input type="password" id="regPasswordConfirmInput" class="form-control" placeholder="Parolni qayta kiriting..." required style="padding:10px 12px; font-size:0.92rem;">
+        </div>
+
+        <div id="regErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
+
+        <button type="button" id="authRegisterBtn" onclick="handleUserRegister();" class="btn-primary" style="width:100%; padding:12px; font-size:1rem; font-weight:700; border-radius:8px; background:#059669; cursor:pointer;">
+          Hisob Yaratish & Boshlash 🚀
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Certificate Modal -->
+  <div id="certModal" class="modal-overlay" style="display:none;">
+    <div style="max-width:800px; width:100%; position:relative;">
+      <button onclick="closeCertModal()" style="position:absolute; top:-40px; right:0; background:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:700;">Yopish ✕</button>
+      
+      <div id="certificateContainer" class="certificate-container">
+        <div class="cert-header">
+          <div class="logo-badge" style="display:inline-block; margin-bottom:8px; font-size:1.4rem;">CISCO CCNA</div>
+          <div class="cert-title">CERTIFICATE OF ACHIEVEMENT</div>
+          <div class="cert-subtitle">OFFICIAL KNOWLEDGE VERIFICATION</div>
+        </div>
+
+        <div style="font-size:0.95rem; color:#64748b; text-transform:uppercase; letter-spacing:1px;">Ushbu sertifikat tasdiqlaydi:</div>
+        <div id="certRecipientName" class="cert-recipient">Sardor Aliyev</div>
+
+        <div class="cert-body">
+          Cisco Certified Network Associate (CCNA) bo'yicha nazariy va amaliy test sinovlaridan muvaffaqiyatli o'tib, <b id="certPartTitle">Part 5</b> bo'limi bo'yicha <b id="certScorePercent" style="color:#0076ce;">95%</b> natija bilan yuqori darajada o'zlashtirganini tasdiqlaydi.
+        </div>
+
+        <div class="cert-footer">
+          <div class="cert-sig">
+            <div class="cert-sig-line"></div>
+            <div style="font-size:0.8rem; font-weight:700;">Cisco CCNA Instructor</div>
+          </div>
+          <div class="cert-seal">
+            VERIFIED<br>PASS ✅
+          </div>
+          <div class="cert-sig">
+            <div id="certDateText" style="font-size:0.85rem; font-weight:600; margin-bottom:6px;">2024.10.30</div>
+            <div style="font-size:0.8rem; font-weight:700;">Berilgan Sana</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:16px;">
+        <button class="btn-primary" onclick="printCertificate()">🖨️ Sertifikatni Chop Etish / PDF saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Zoom Modal -->
+  <div id="imageZoomModal" class="image-zoom-overlay" style="display:none;" onclick="closeImageModal()">
+    <button class="image-zoom-close" onclick="closeImageModal()">✕ Yopish</button>
+    <img id="imageZoomContent" class="image-zoom-content" src="" alt="Enlarged Diagram" onclick="event.stopPropagation()">
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo-area">
+        <div class="logo-badge">CCNA PRO</div>
+        <div class="logo-title">
+          <h1>Professional Offline Trainer</h1>
+          <span>1167 ta Savol + Pearson VUE Simulyatori + 21 ta Amaliy Lab</span>
+        </div>
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="quiz">📝 Part Quizlar</button>
+        <button class="nav-tab" data-tab="study" style="color:var(--primary); font-weight:700;">📖 O'qish & Yodlash Zali</button>
+        <button class="nav-tab" data-tab="labs">🛠️ Amaliy Lablar (21)</button>
+        <button class="nav-tab" data-tab="cli">💻 Cisco CLI Simulyator</button>
+        <button class="nav-tab" data-tab="guide">📘 Packet Tracer Qo'llanma</button>
+        <button class="nav-tab" data-tab="cheatsheet">⚡ Buyruqlar Lug'ati</button>
+        <button class="nav-tab" data-tab="bookmarks">⭐ Saqlanganlar</button>
+        <button id="adminNavTab" class="nav-tab" data-tab="admin" style="color:var(--warning); font-weight:700;">📊 Natijalar (Admin)</button>
+      </nav>
+
+      <div class="header-actions">
+        <button id="openAuthModalBtn" class="btn-icon" onclick="openAuthModal()" style="display:none; background:var(--primary); color:#fff; font-weight:700;">🔑 Kirish</button>
+        <div id="currentUserBadge" class="user-badge" style="display:none; align-items:center; gap:6px;">
+          <span>👤 <span id="currentUserName">Foydalanuvchi</span></span>
+          <button type="button" onclick="openChangePasswordModal()" class="badge-pwd-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); color:inherit; cursor:pointer; font-size:0.75rem; padding:2px 7px; border-radius:5px; font-weight:600;" title="Hisobingiz parolini o'zgartirish">🔑 Parol</button>
+          <button onclick="logoutUser()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:4px;">Chiqish</button>
+        </div>
+        <button id="soundToggleBtn" class="btn-icon" onclick="toggleSound()" title="Ovozni yoqish/o'chirish">🔊 Ovoz</button>
+        <button id="adminLoginBtn" class="btn-icon" onclick="openAdminPrompt()">📊 Natijalar</button>
+        <button id="themeToggleBtn" class="btn-icon" onclick="toggleTheme()">🌙 Tungi</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="mainAppContent" style="display:none;">
+
+    <!-- SECTION 1: QUIZ -->
+    <section id="quizSection" class="tab-content active">
+
+      <!-- View A: Part Selection Cards -->
+      <div id="partsSelectionView">
+        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 style="font-size:1.4rem; color:var(--text-main);">📚 CCNA Quiz Bo'limlari (Partlar)</h2>
+            <p style="color:var(--text-muted); font-size:0.95rem;">Bo'lim ustiga bosing. Pearson VUE standartidagi savollar xaritasi (Question Palette) bilan qulay ishlang.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">Test Rejimi:</label>
+            <select id="partModeSelect" class="form-control" style="width:auto; padding:8px 12px;">
+              <option value="practice">Mashq Rejimi (Har savoldan so'ng javob ko'rinadi)</option>
+              <option value="exam">Imtihon Rejimi (Pearson VUE: Vaqtli, ko'rib chiqish va yakuniy ball)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="partsGrid" class="part-grid"></div>
+      </div>
+
+      <!-- View B: Question Test Area (Pearson VUE Style Layout) -->
+      <div id="quizTestingArea" style="display:none;">
+        
+        <div class="filter-card">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn-secondary" onclick="confirmExitQuiz()">⬅️ Bo'limlarga Qaytish</button>
+            <h3 id="activePartTitle" style="color:var(--primary); font-size:1.15rem;">Part 5</h3>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span id="activeModeLabel" style="font-size:0.88rem; font-weight:700; color:var(--text-muted);">Mashq Rejimi</span>
+            <div id="examTimer" class="stat-chip" style="display:none; color:var(--primary); font-weight:800; font-size:1rem;">⏱️ 00:00</div>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+          <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+
+        <!-- Testing Layout: Question + Question Palette -->
+        <div class="quiz-testing-layout">
+          
+          <!-- Left Column: Current Question Card -->
+          <div>
+            
+            <div id="questionCard" class="question-card">
+              <!-- Review Mode Banner -->
+              <div id="reviewModeBanner" class="review-mode-banner" style="display:none;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span id="reviewStatusIcon" style="font-size:1.5rem;">❌</span>
+                  <div>
+                    <div id="reviewStatusTitle" style="font-weight:800; font-size:1rem; color:var(--danger);">XATO JAVOB BERILGAN</div>
+                    <div id="reviewStatusSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Sizning javobingiz: [A] | To'g'ri javob: [C]</div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <button id="btnFilterWrongOnly" class="btn-secondary" style="font-size:0.82rem; padding:6px 12px;" onclick="toggleReviewFilter()">
+                    ❌ Faqat xatolarni ko'rish
+                  </button>
+                  <button class="btn-primary" style="font-size:0.82rem; padding:6px 14px; background:#0284c7;" onclick="returnToFinishedResults()">
+                    📊 Natijaga Qaytish
+                  </button>
+                </div>
+              </div>
+
+              <div class="question-header">
+                <div class="question-meta">
+                  <span id="sourceBadge" class="badge-source">Part 5</span>
+                  <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Savol <span id="currentQNum">1 / 49</span></span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button id="flagBtn" class="btn-flag" onclick="toggleFlagCurrent()" title="Keyinroq qaytish uchun belgilash">
+                    ⚐ Belgilash (Flag)
+                  </button>
+                  <button id="bookmarkBtn" class="btn-flag" onclick="toggleBookmarkCurrent()">
+                    ☆ Saqlash
+                  </button>
+                </div>
+              </div>
+
+              <!-- Hotkeys Helper Bar -->
+              <div class="hotkeys-hint">
+                <span>⚡ Tezkor tugmalar:</span>
+                <span><span class="hotkey-badge">A, B, C, D</span> Tanlash</span>
+                <span><span class="hotkey-badge">← Oldingi</span></span>
+                <span><span class="hotkey-badge">Keyingi →</span></span>
+                <span><span class="hotkey-badge">Enter</span> Tekshirish</span>
+              </div>
+
+              <div id="questionText" class="question-body">
+                Yuklanmoqda...
+              </div>
+
+              <!-- Options List -->
+              <div id="optionsList" class="options-list"></div>
+
+              <!-- Explanation Box -->
+              <div id="explanationBox" class="explanation-box">
+                <div class="explanation-title">💡 Izoh va To'g'ri Javob</div>
+                <div id="explanationText" class="explanation-text"></div>
+              </div>
+
+              <!-- Action Navigation -->
+              <div class="question-nav">
+                <button id="prevQBtn" class="btn-secondary" onclick="prevQuestion()">⬅️ Oldingi savol</button>
+                <div style="display:flex; gap:10px;">
+                  <button id="returnToResultsBtn" class="btn-secondary" style="display:none; background:var(--bg-main); border:1px solid #0284c7; color:#0284c7; font-weight:700;" onclick="returnToFinishedResults()">📊 Natijaga Qaytish</button>
+                  <button id="checkAnswerBtn" class="btn-primary" onclick="checkCurrentAnswer()">Tekshirish ✓</button>
+                  <button id="nextQBtn" class="btn-primary" onclick="nextQuestion()">Keyingisi ➡️</button>
+                  <button id="reviewExamBtn" class="btn-warning" style="display:none;" onclick="openExamReviewScreen()">Imtihonni Yakunlash 🏁</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Screen (Before Final Submission) -->
+            <div id="reviewScreenCard" class="review-card" style="display:none;">
+              <h2 style="margin-bottom:8px;">📋 Imtihon Xulosasi va Ko'rib Chiqish (Review Screen)</h2>
+              <p style="color:var(--text-muted); font-size:0.92rem;">
+                Imtihonni topshirishdan oldin barcha savollarga javob berganingizni tekshiring. Belgilangan (Flagged) savollarga qaytib o'zgartirishingiz mumkin.
+              </p>
+
+              <div class="review-summary-grid">
+                <div class="review-stat-item">
+                  <h3 id="revTotalCount" style="color:var(--primary);">0</h3>
+                  <span>Jami Savollar</span>
+                </div>
+                <div class="review-stat-item">
+                  <h3 id="revAnsweredCount" style="color:var(--success);">0</h3>
+                  <span>Javob Berilgan</span>
+                </div>
+                <div class="review-stat-item">
+                  <h3 id="revUnansweredCount" style="color:var(--danger);">0</h3>
+                  <span>Javobsiz Qolgan</span>
+                </div>
+                <div class="review-stat-item">
+                  <h3 id="revFlaggedCount" style="color:var(--warning);">0</h3>
+                  <span>Belgilangan (Flagged)</span>
+                </div>
+              </div>
+
+              <div class="review-table-wrapper">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>№</th>
+                      <th>Savol Mazmuni</th>
+                      <th>Sizning Javobingiz</th>
+                      <th>Holat</th>
+                      <th>O'tish</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reviewTableBody"></tbody>
+                </table>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <button class="btn-secondary" onclick="closeReviewScreen()">⬅️ Savollarga Qaytish</button>
+                <button class="btn-primary" style="padding:12px 24px; font-size:1rem;" onclick="submitFinalExam()">
+                  Tasdiqlash va Imtihonni Topshirish 🎯
+                </button>
+              </div>
+            </div>
+
+            <!-- Finished Card (Results) -->
+            <div id="finishedCard" class="finished-card" style="display:none;">
+              <div class="score-circle">
+                <div id="finalPercent">0%</div>
+                <span>NATIJA</span>
+              </div>
+              <h2 style="margin-bottom:8px;">Test Yakunlandi!</h2>
+              <div id="finalPartName" style="color:var(--text-muted); font-size:1rem; margin-bottom:12px;"></div>
+              <div id="finalStatusMsg" style="font-size:1.1rem; margin-bottom:16px;"></div>
+              <div id="finalStatsText" style="line-height:1.8; margin-bottom:24px; font-size:1rem;"></div>
+              
+              <!-- Review and Retry Actions -->
+              <div id="finishReviewActions" style="display:flex; justify-content:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+                <button id="btnReviewWrong" class="btn-primary" style="background:#ef4444; border-color:#dc2626; padding:12px 22px; font-size:1rem; font-weight:700; box-shadow:0 4px 12px rgba(239,68,68,0.3);" onclick="openQuizReviewMode(true)">
+                  🔍 Xato Savollarni Ko'rish & Tahlil (<span id="wrongCountBadge">0</span> ta)
+                </button>
+                <button id="btnReviewAll" class="btn-secondary" style="padding:12px 20px; font-size:1rem; font-weight:600;" onclick="openQuizReviewMode(false)">
+                  📖 Barcha Savollarni Tahlil Qilish
+                </button>
+                <button id="btnRetryWrong" class="btn-warning" style="padding:12px 20px; font-size:1rem; font-weight:700;" onclick="retryWrongQuestionsOnly()">
+                  🔄 Faqat Xatolarni Qaytadan Yechish
+                </button>
+              </div>
+
+              <div id="certButtonArea" style="margin-bottom:20px; display:none;">
+                <button class="btn-primary" style="background:#059669; padding:12px 24px; font-size:1rem;" onclick="openCertificateModal()">
+                  🏆 Rasmiy CCNA Sertifikatini Ko'rish va Yuklash
+                </button>
+              </div>
+
+              <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                <button class="btn-primary" onclick="backToPartsList()">Boshqa Partni Tanlash 📚</button>
+                <button class="btn-secondary" onclick="restartCurrentPart()">Ushbu Partni Qaytadan Yechish 🔄</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Question Palette (Pearson VUE) -->
+          <div>
+            <div class="palette-card">
+              <div class="palette-title">
+                <span>Savollar Xaritasi</span>
+                <span id="paletteCountProgress" style="font-size:0.8rem; color:var(--text-muted);">0 / 0</span>
+              </div>
+
+              <div class="palette-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:var(--success);"></div> Javob berilgan</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--warning);"></div> Belgilangan</div>
+                <div class="legend-item"><div class="legend-dot" style="background:var(--primary);"></div> Joriy</div>
+              </div>
+
+              <div id="paletteGrid" class="palette-grid"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SECTION 2: STUDY & MEMORY TRAINER (NEW!) -->
+    <section id="studySection" class="tab-content">
+      
+      <!-- Study Header & Controls -->
+      <div class="study-header-card">
+        <div>
+          <h2 style="font-size:1.6rem; margin-bottom:6px;">📖 O'qish & Ko'z Xotirasi Mashg'ulot Zali</h2>
+          <p style="opacity:0.9; font-size:0.95rem; max-width:650px;">
+            Test yechishdan oldin savollarni o'qib chiqish, to'g'ri javoblarga ko'zni o'rgatish va kalit so'zlarni bir qarashda eslab qolish uchun maxsus tayyorlangan bo'lim!
+          </p>
+        </div>
+
+        <div class="study-view-tabs">
+          <button id="studyTabBook" class="study-view-btn active" onclick="switchStudyView('book')">📚 Konspekt</button>
+          <button id="studyTabFlash" class="study-view-btn" onclick="switchStudyView('flash')">🃏 Leitner Flashcard</button>
+          <button id="studyTabMatch" class="study-view-btn" onclick="switchStudyView('match')">🧩 Match Pairs</button>
+          <button id="studyTabBlitz" class="study-view-btn" onclick="switchStudyView('blitz')">⚡ Speed Blitz</button>
+          <button id="studyTabDragDrop" class="study-view-btn" onclick="switchStudyView('dragdrop')">🎯 Drag & Drop</button>
+          <button id="studyTabKeys" class="study-view-btn" onclick="switchStudyView('keys')">⚡ Kalit So'zlar</button>
+        </div>
+      </div>
+
+      <!-- Filter Controls for Study -->
+      <div class="filter-card">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <label style="font-weight:700; font-size:0.88rem; color:var(--text-muted);">Bo'limni tanlang:</label>
+          <select id="studySourceSelect" class="form-control" style="width:auto; padding:8px 14px;" onchange="renderStudyContent()">
+            <option value="all">Barcha Bo'limlar (1167 ta savol)</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="studySearchInput" class="form-control" placeholder="Kalit so'z bo'yicha tezkor qidirish..." style="max-width:320px;" oninput="renderStudyContent()">
+          <span id="studyResultsCount" style="font-size:0.85rem; font-weight:700; color:var(--primary); white-space:nowrap;">0 ta savol</span>
+        </div>
+      </div>
+
+      <!-- VIEW 1: BOOK MODE (List of all questions with highlighted answers & memory cues) -->
+      <div id="studyBookView">
+        <div id="studyQuestionsList" class="study-list"></div>
+      </div>
+
+      <!-- VIEW 2: FLASHCARD MODE (Interactive memory trainer) -->
+      <div id="studyFlashView" style="display:none;">
+        <div class="flashcard-wrapper">
+          <div id="flashcardElement" class="flashcard" onclick="flipFlashcard()">
+            <div>
+              <div id="flashcardBadge" class="flashcard-badge">Savol 1 / 49</div>
+              <div id="flashcardQuestion" class="flashcard-q">Savol yuklanmoqda...</div>
+            </div>
+
+            <div>
+              <div id="flashcardHintText" style="color:var(--text-muted); font-size:0.88rem; margin-bottom:12px;">
+                💡 Javobni ochish uchun kartaning ustiga bosing (yoki Space)
+              </div>
+              <div id="flashcardAnswerBox" class="flashcard-answer-revealed" style="display:none;">
+                <div style="font-size:0.85rem; color:var(--success); font-weight:800; text-transform:uppercase; margin-bottom:6px;">To'g'ri Javob:</div>
+                <div id="flashcardAnswerText" style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin-bottom:8px;"></div>
+                <div id="flashcardExplanationText" style="font-size:0.9rem; color:var(--text-muted); line-height:1.5;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flashcard-nav">
+            <button class="btn-secondary" onclick="prevFlashcard()">⬅️ Oldingi</button>
+            <button class="btn-primary" onclick="flipFlashcard()">👁️ Javobni Ko'rish / Yashirish</button>
+            <button class="btn-primary" onclick="nextFlashcard()">Keyingi ➡️</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: KEYWORD MATCH MATRIX (Cheat Associations) -->
+      <div id="studyKeysView" style="display:none;">
+        <div class="guide-card">
+          <h3 style="color:var(--primary); margin-bottom:8px;">⚡ CCNA Eng Mashhur Kalit So'zlar Bog'liqligi (Keyword Match Matrix)</h3>
+          <p style="color:var(--text-muted); font-size:0.92rem; margin-bottom:16px;">
+            Cisco CCNA imtihonida savol ichida ushbu kalit so'zlarni ko'rishingiz bilan to'g'ri javobni 1 soniyada xatosiz tanlay olasiz:
+          </p>
+
+          <table class="keyword-table">
+            <thead>
+              <tr>
+                <th style="width:35%;">Savoldagi Kalit So'z (Trigger)</th>
+                <th style="width:35%;">Javobdagi Kalit So'z (To'g'ri Variant)</th>
+                <th>Mavzu va Izoh</th>
+              </tr>
+            </thead>
+            <tbody id="keywordTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 4: MATCH PAIRS (PUZZLE GAME) -->
+      <div id="studyMatchView" style="display:none;">
+        <div style="text-align:center; margin-bottom:16px;">
+          <h3 style="font-size:1.3rem; color:var(--text-main);">🧩 Termin va Javoblarni Juftlash (Memory Puzzle)</h3>
+          <p style="color:var(--text-muted); font-size:0.9rem;">Chapdagi terminni va unga mos o'ngdagi to'g'ri javobni tanlang. To'g'ri juftlanganlar yashil bo'lib birikadi!</p>
+          <div style="margin-top:10px; font-weight:700; color:var(--primary);">
+            Topilgan juftliklar: <span id="matchScore">0</span> / <span id="matchTotal">5</span>
+          </div>
+        </div>
+
+        <div class="match-arena-grid">
+          <div id="matchLeftCol" class="match-column"></div>
+          <div id="matchRightCol" class="match-column"></div>
+        </div>
+
+        <div style="text-align:center; margin-top:20px;">
+          <button class="btn-primary" onclick="initMatchGame()">Yangi Raund Boshlash 🔄</button>
+        </div>
+      </div>
+
+      <!-- VIEW 5: SPEED BLITZ (60 SEC RAPID REACTION) -->
+      <div id="studyBlitzView" style="display:none;">
+        <div class="blitz-header">
+          <div>
+            <h2 style="font-size:1.5rem; margin-bottom:4px;">⚡ 60 Soniyalik Tezkor Blits (Speed Reflex)</h2>
+            <p style="opacity:0.9; font-size:0.9rem;">Savollarni o'qib darhol to'g'ri javobni tanlang! Har bir to'g'ri javob Combo hisobini oshiradi.</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div class="blitz-score-chip">
+              <span>🎯 Ball:</span> <b id="blitzScore">0</b>
+              <span id="blitzStreakBadge" class="blitz-streak-badge" style="display:none;">Combo x2! 🔥</span>
+            </div>
+            <div class="blitz-timer-circle">
+              <span id="blitzSeconds">60</span>
+              <span>SONIYA</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="blitzGameArea" style="max-width:760px; margin:0 auto;">
+          <div class="question-card" style="margin-bottom:16px;">
+            <div id="blitzQText" class="question-body" style="font-size:1.2rem; min-height:70px;">
+              Boshlash uchun pastdagi tugmani bosing!
+            </div>
+            <div id="blitzOptionsList" class="options-list"></div>
+          </div>
+
+          <div style="text-align:center;">
+            <button id="blitzStartBtn" class="btn-primary" style="padding:14px 28px; font-size:1.1rem;" onclick="startSpeedBlitz()">
+              Blitsni Boshlash ⏱️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 6: CISCO DRAG & DROP ARENA -->
+      <div id="studyDragDropView" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:1.3rem; color:var(--text-main);">🎯 Cisco CCNA Rasmiy Drag & Drop Mashqlari</h3>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Chapdagi buyruq yoki standartni bosib tanlang, so'ng o'ngdagi mos bo'sh katak ustiga bosing!</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <select id="ddExerciseSelect" class="form-control" style="width:auto; padding:6px 12px;" onchange="loadDragDropExercise()">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+        </div>
+
+        <div id="ddTitleBox" style="font-weight:700; font-size:1.05rem; color:var(--primary); margin-bottom:16px; background:var(--bg-main); padding:12px 16px; border-radius:8px; border:1px solid var(--border);"></div>
+
+        <div class="dd-board">
+          <!-- Left pool of draggable items -->
+          <div class="dd-pool">
+            <div class="dd-pool-title">📌 Variantlar (Tanlash uchun bosing):</div>
+            <div id="ddPoolContainer" class="dd-items-container"></div>
+          </div>
+
+          <!-- Right target drop slots -->
+          <div class="dd-targets">
+            <div class="dd-target-title">🎯 Joylashtirish Kataklari:</div>
+            <div id="ddTargetsContainer"></div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <button class="btn-primary" onclick="checkDragDropAnswers()">Tekshirish ✓</button>
+            <button class="btn-secondary" onclick="resetCurrentDragDrop()">Qayta tiklash 🔄</button>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" onclick="prevDragDropExercise()">⬅️ Oldingi mashq</button>
+            <button class="btn-secondary" onclick="nextDragDropExercise()">Keyingi mashq ➡️</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 3: ADMIN PANEL -->
+    <section id="adminSection" class="tab-content">
+      <div class="admin-card">
+        <div class="admin-header">
+          <div>
+            <h2 style="font-size:1.45rem; display:flex; align-items:center; gap:8px;">
+              👑 Administrator Boshqaruv Markazi
+            </h2>
+            <p style="color:var(--text-muted); font-size:0.92rem;">
+              Ro'yxatdan o'tgan barcha talabalar, ularning shaxsiy hisoblari, test natijalari va umumiy tahlili
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openAddStudentModal()" style="background:#059669; font-weight:700;">
+              ➕ Yangi Foydalanuvchi / Admin Qo'shish
+            </button>
+            <button class="btn-primary" onclick="exportResultsToCSV()">
+              📥 Natijalarni Excel (CSV)
+            </button>
+            <button class="btn-danger" onclick="clearAllResults()">
+              🗑️ Test Tarixini Tozalash
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats Overview Cards -->
+        <div class="admin-stats-grid">
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">👥</div>
+            <div class="admin-stat-info">
+              <h4>Jami Talabalar</h4>
+              <b id="adminTotalStudents">0</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">📝</div>
+            <div class="admin-stat-info">
+              <h4>Topshirilgan Testlar</h4>
+              <b id="adminTotalQuizzes">0</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">🎯</div>
+            <div class="admin-stat-info">
+              <h4>O'rtacha Natija</h4>
+              <b id="adminAvgScore">0%</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">🏆</div>
+            <div class="admin-stat-info">
+              <h4>Sertifikat Olganlar</h4>
+              <b id="adminTotalCerts">0</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Sub-Navigation Tabs -->
+        <div class="admin-subnav-bar">
+          <button id="adminTabBtnStudents" class="admin-subnav-btn active" onclick="switchAdminTab('students')">
+            👥 Foydalanuvchilar & Adminlar (<span id="adminStudentsBadge">0</span>)
+          </button>
+          <button id="adminTabBtnResults" class="admin-subnav-btn" onclick="switchAdminTab('results')">
+            📊 Barcha Test Natijalari (<span id="adminResultsBadge">0</span>)
+          </button>
+          <button id="adminTabBtnCharts" class="admin-subnav-btn" onclick="switchAdminTab('charts')">
+            📈 Grafik Tahlillar & Statistika
+          </button>
+          <button id="adminTabBtnLeaderboard" class="admin-subnav-btn" onclick="switchAdminTab('leaderboard')">
+            🏆 Talabalar Reytingi (Top)
+          </button>
+        </div>
+
+        <!-- SUB-VIEW 1: STUDENTS MANAGEMENT -->
+        <div id="adminViewStudents">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; gap:10px; flex:1; max-width:680px; flex-wrap:wrap;">
+              <input type="text" id="adminStudentSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Ism yoki login bo'yicha qidirish..." oninput="renderAdminStudentsList()">
+              <select id="adminRoleFilter" class="form-control" style="width:170px;" onchange="renderAdminStudentsList()">
+                <option value="all">Barcha rollar</option>
+                <option value="admin">👑 Faqat Adminlar</option>
+                <option value="student">👤 Faqat Foydalanuvchilar</option>
+              </select>
+              <select id="adminGroupFilter" class="form-control" style="width:160px;" onchange="renderAdminStudentsList()">
+                <option value="all">Barcha guruhlar</option>
+              </select>
+            </div>
+            <span style="font-size:0.85rem; color:var(--text-muted);" id="adminStudentCountText"></span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;">№</th>
+                  <th>F.I.SH</th>
+                  <th>Login (Username)</th>
+                  <th>Roli / Huquqi</th>
+                  <th>Holati</th>
+                  <th>Guruhi</th>
+                  <th>Ro'yxatdan O'tgan</th>
+                  <th>Testlar</th>
+                  <th>O'rtacha Ball</th>
+                  <th style="text-align:center;">Amallar</th>
+                </tr>
+              </thead>
+              <tbody id="adminStudentsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 2: TEST RESULTS -->
+        <div id="adminViewResults" style="display:none;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+            <input type="text" id="adminResultsSearch" class="form-control" style="max-width:240px;" placeholder="Qidirish (ism, part)..." oninput="renderAdminResultsList()">
+            <select id="adminResultPartFilter" class="form-control" style="width:auto;" onchange="renderAdminResultsList()">
+              <option value="all">Barcha Partlar</option>
+            </select>
+            <select id="adminResultStatusFilter" class="form-control" style="width:auto;" onchange="renderAdminResultsList()">
+              <option value="all">Barcha Natijalar</option>
+              <option value="pass">Faqat O'tganlar (≥82.5%) ✅</option>
+              <option value="fail">Yiqilganlar (&lt;82.5%) ⚠️</option>
+            </select>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;">№</th>
+                  <th>Talaba F.I.SH</th>
+                  <th>Guruhi</th>
+                  <th>Bo'lim (Part)</th>
+                  <th>To'g'ri / Jami</th>
+                  <th>Foiz</th>
+                  <th>Status</th>
+                  <th>Sana va Vaqt</th>
+                  <th style="text-align:center;">Amal</th>
+                </tr>
+              </thead>
+              <tbody id="adminResultsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 3: LEADERBOARD -->
+        <div id="adminViewLeaderboard" style="display:none;">
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">O'rin</th>
+                  <th>Talaba F.I.SH</th>
+                  <th>Guruhi</th>
+                  <th>Topshirgan Testlari</th>
+                  <th>Muvaffaqiyatli (O'tgan)</th>
+                  <th>O'rtacha Ball</th>
+                  <th>Sertifikatlar</th>
+                </tr>
+              </thead>
+              <tbody id="adminLeaderboardTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
+        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
+        <div id="adminViewCharts" style="display:none;">
+          <!-- View Mode Switcher Pills -->
+          <div class="charts-view-switcher">
+            <button type="button" id="chartsPillOverview" class="charts-view-pill active" onclick="switchChartsSubView('overview')">
+              📊 Umumiy Tahlil & Spidometr
+            </button>
+            <button type="button" id="chartsPillHeatmap" class="charts-view-pill" onclick="switchChartsSubView('heatmap')">
+              🗺️ O'zlashtirish Matritsasi (Heatmap)
+            </button>
+            <button type="button" id="chartsPillParts" class="charts-view-pill" onclick="switchChartsSubView('parts')">
+              📈 Partlar Grafigi (Part 5 - 16)
+            </button>
+            <button type="button" id="chartsPillStudents" class="charts-view-pill" onclick="switchChartsSubView('students')">
+              🏆 Talabalar Reytingi & Guruhlar
+            </button>
+          </div>
+
+          <!-- PANEL 1: OVERVIEW & SPIDOMETR -->
+          <div id="chartsPanelOverview">
+            <!-- Quick Insights 4 Cards -->
+            <div class="admin-charts-insights-grid">
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">🏆</div>
+                <div>
+                  <div class="insight-title">Eng Yuqori Natija</div>
+                  <div class="insight-value" id="chartTopScore">-</div>
+                  <div class="insight-desc" id="chartTopStudent">-</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(0, 118, 206, 0.15); color:#0076ce;">⚡</div>
+                <div>
+                  <div class="insight-title">Eng Faol Talaba</div>
+                  <div class="insight-value" id="chartActiveCount">-</div>
+                  <div class="insight-desc" id="chartActiveStudent">-</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;">🎯</div>
+                <div>
+                  <div class="insight-title">O'tish Ko'rsatkichi (≥82.5%)</div>
+                  <div class="insight-value" id="chartPassRate">0%</div>
+                  <div class="insight-desc" id="chartPassCount">0 ta muvaffaqiyatli</div>
+                </div>
+              </div>
+              <div class="admin-insight-card">
+                <div class="insight-icon" style="background:rgba(139, 92, 246, 0.15); color:#8b5cf6;">🛡️</div>
+                <div>
+                  <div class="insight-title">Hisoblar Moderatsiyasi</div>
+                  <div class="insight-value" id="chartApprovedRatio">-</div>
+                  <div class="insight-desc" id="chartPendingNotice">Tasdiq kutilmoqda</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Two-Column Grid: Cisco Gauge Meter + Donut Chart -->
+            <div class="admin-charts-grid" style="margin-bottom:20px;">
+              <!-- Cisco Exam Pass Speedometer Gauge -->
+              <div class="gauge-card-box">
+                <div class="chart-header" style="width:100%; margin-bottom:10px;">
+                  <div>
+                    <h3 class="chart-title">🎯 Cisco CCNA Imtihon Spidometri</h3>
+                    <p class="chart-subtitle">O'quvchilarning umumiy o'tish balli (82.5% Pass ko'rsatkichi)</p>
+                  </div>
+                </div>
+                <div class="gauge-wrapper">
+                  <canvas id="adminGaugeCanvas" width="260" height="160"></canvas>
+                </div>
+                <div class="gauge-score-text" id="gaugeScoreText">0%</div>
+                <div id="gaugePassBadge" class="gauge-pass-badge" style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.3);">
+                  ⚠️ TESTLAR KUTILMOQDA
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:8px;">
+                  Oltin belgi: Cisco rasmiy 82.5% sertifikat chegarasi
+                </div>
+              </div>
+
+              <!-- Result Distribution Donut Chart -->
+              <div class="admin-chart-box">
+                <div class="chart-header">
+                  <div>
+                    <h3 class="chart-title">🍩 Natijalar Taqsimoti</h3>
+                    <p class="chart-subtitle">Ballar toifalari bo'yicha ulushlar</p>
+                  </div>
+                </div>
+                <div class="donut-chart-wrapper">
+                  <div style="position:relative; width:180px; height:180px;">
+                    <canvas id="adminDonutCanvas" width="180" height="180"></canvas>
+                    <div id="adminDonutCenterText" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
+                      <span style="font-size:1.6rem; font-weight:800; color:var(--text-main);" id="donutTotalText">0</span>
+                      <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Jami Test</span>
+                    </div>
+                  </div>
+                  <div id="adminDonutLegend" class="donut-legend-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trend Curve -->
+            <div class="admin-chart-box full-width">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📈 Natijalar Dinamikasi va O'sish Tendentsiyasi</h3>
+                  <p class="chart-subtitle">Topshirilgan testlar ketma-ketligi bo'yicha ballarning o'zgarishi</p>
+                </div>
+              </div>
+              <div class="canvas-container" style="position:relative; width:100%; height:230px;">
+                <canvas id="adminTrendCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL 2: STUDENT MASTERY HEATMAP (LeetCode / NetAcad Style) -->
+          <div id="chartsPanelHeatmap" style="display:none;">
+            <div class="admin-chart-box full-width" style="margin-bottom:0;">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">🗺️ Talabalar va Bo'limlar Matritsasi (Mastery Heatmap)</h3>
+                  <p class="chart-subtitle">Har bir talabaning har bir CCNA bo'limi bo'yicha o'zlashtirish ko'rsatkichi</p>
+                </div>
+                <div class="chart-badge-legend">
+                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% O'tgan</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% O'rtacha</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Xatolar ko'p</span>
+                  <span style="margin-left:12px;"><span class="legend-dot" style="background:rgba(255,255,255,0.15);"></span> — Topshirilmagan</span>
+                </div>
+              </div>
+              <div class="heatmap-container" id="adminHeatmapContainer">
+                <!-- Dynamically populated table -->
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL 3: PARTS BREAKDOWN -->
+          <div id="chartsPanelParts" style="display:none;">
+            <div class="admin-chart-box full-width" style="margin-bottom:20px;">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📊 CCNA Bo'limlari (Part 5 - 16 & Full Exam) O'zlashtirilishi</h3>
+                  <p class="chart-subtitle">Mavzular bo'yicha o'rtacha ball (%) va testlar soni (Oltin chiziq: 82.5% Cisco o'tish chegarasi)</p>
+                </div>
+                <div class="chart-badge-legend">
+                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% A'lo</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% Yaxshi</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Qayta topshirish</span>
+                </div>
+              </div>
+              <div class="canvas-container" style="position:relative; width:100%; height:320px;">
+                <canvas id="adminPartScoresCanvas"></canvas>
+              </div>
+            </div>
+            <!-- Parts Mastery Cards List -->
+            <div id="adminPartsCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+            </div>
+          </div>
+
+          <!-- PANEL 4: STUDENTS PODIUM & GROUPS -->
+          <div id="chartsPanelStudents" style="display:none;">
+            <!-- Top 3 Podium Card -->
+            <div class="admin-chart-box full-width" style="margin-bottom:22px;">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">🏆 Yetakchi Talabalar Shohsupasi (Top 3)</h3>
+                  <p class="chart-subtitle">Eng yuqori o'rtacha ball va faollik ko'rsatgan talabalar</p>
+                </div>
+              </div>
+              <div id="adminPodiumContainer" class="podium-container">
+                <!-- Dynamically populated podium -->
+              </div>
+            </div>
+
+            <!-- Groups Cards -->
+            <div class="admin-chart-box full-width">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">👥 Guruhlar va Yo'nalishlar Ko'rsatkichi</h3>
+                  <p class="chart-subtitle">O'quv guruhlari kesimida talabalar, testlar va muvaffaqiyat darajasi</p>
+                </div>
+              </div>
+              <div id="adminGroupCardsList" class="groups-cards-grid">
+                <!-- Dynamically populated groups -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+    </section>
+
+    <!-- Student Edit / Add Modal -->
+    <div id="studentFormModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
+      <div class="modal-card" style="max-width:440px; width:100%;">
+        <div class="modal-header">
+          <h3 id="studentModalTitle" style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">Yangi Foydalanuvchi / Admin Qo'shish</h3>
+          <p style="font-size:0.85rem; color:var(--text-muted);">Talaba hisob ma'lumotlarini kiriting</p>
+        </div>
+
+        <input type="hidden" id="studentEditId" value="">
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Ism va Familiya *</label>
+          <input type="text" id="modalStudentName" class="form-control" placeholder="Masalan: Sardor Aliyev" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Login *</label>
+          <input type="text" id="modalStudentLogin" class="form-control" placeholder="Masalan: sardor01" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">👑 Tizimdagi Roli (Huquqi) *</label>
+          <select id="modalStudentRole" class="form-control" style="padding:10px 12px; font-size:0.92rem; font-weight:600;">
+            <option value="student">👤 Foydalanuvchi (Talaba) — testlar va amaliy mashqlar</option>
+            <option value="admin">👑 Administrator (Admin) — barcha huquqlar + Admin Markazi</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Guruhi / Bo'limi *</label>
+          <input type="text" id="modalStudentGroup" class="form-control" placeholder="Masalan: CCNA-01 yoki Telekom" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Parol <span id="modalPwdNotice" style="font-weight:400; font-size:0.75rem; color:var(--text-muted);">(Tahrirlashda bo'sh qoldirilsa o'zgarmaydi)</span></label>
+          <input type="password" id="modalStudentPassword" class="form-control" placeholder="Parol kiriting...">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary" onclick="closeStudentModal()">Bekor qilish</button>
+          <button type="button" class="btn-primary" onclick="saveStudentFromModal()">Saqlash ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal-overlay" style="display:none; backdrop-filter:blur(6px); z-index:9999;">
+      <div class="modal-card" style="max-width:440px; width:100%;">
+        <div class="modal-header">
+          <h3 style="font-size:1.25rem; color:var(--text-main); margin-bottom:4px;">🔑 Parolni O'zgartirish</h3>
+          <p id="changePwdSubtitle" style="font-size:0.85rem; color:var(--text-muted);">Hisobingiz xavfsizligi uchun yangi parol o'rnating</p>
+        </div>
+
+        <input type="hidden" id="changePwdTargetLogin" value="">
+
+        <div id="changePwdOldGroup" class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Joriy (Eski) Parol *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdOldInput" class="form-control" placeholder="Hozirgi parolingizni kiriting..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdOldInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parol *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdNewInput" class="form-control" placeholder="Yangi parolni kiriting (kamida 4 ta belgi)..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdNewInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Yangi Parolni Qayta Kiriting *</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="changePwdConfirmInput" class="form-control" placeholder="Yangi parolni takrorlang..." style="padding:10px 40px 10px 12px; width:100%;">
+            <button type="button" onclick="togglePasswordVisibility('changePwdConfirmInput')" style="position:absolute; right:10px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:4px;">👁️</button>
+          </div>
+        </div>
+
+        <div id="changePwdErrorMsg" style="display:none; color:var(--danger); font-size:0.86rem; margin-bottom:12px; padding:9px 12px; background:rgba(239, 68, 68, 0.12); border-radius:7px; border:1px solid rgba(239, 68, 68, 0.3); text-align:center; font-weight:600;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary" onclick="closeChangePasswordModal()">Bekor qilish</button>
+          <button type="button" class="btn-primary" onclick="saveNewPassword()">Saqlash ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: LABS -->
+    <section id="labsSection" class="tab-content">
+      <div class="labs-grid">
+        <div class="labs-sidebar">
+          <h3 style="margin-bottom:12px; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Amaliy Laboratoriyalar</h3>
+          <div id="labsList" class="labs-list"></div>
+        </div>
+
+        <div class="lab-detail-card">
+          <div class="lab-title-area">
+            <div>
+              <h2 id="labTitle" style="color:var(--text-main); font-size:1.4rem;">Lab 1</h2>
+              <span style="font-size:0.85rem; color:var(--text-muted);">Cisco Packet Tracer uchun to'liq amaliy konfiguratsiya</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-primary" onclick="copyLabCode()">📋 Nusxalash</button>
+              <button class="btn-secondary" onclick="openLabInSimulator()">💻 CLI Simulyatorda Mashq Qilish</button>
+            </div>
+          </div>
+
+          <div id="labPtTopology"></div>
+
+          <div class="lab-section-title">📌 Bajarilishi kerak bo'lgan vazifalar (Tasks):</div>
+          <div id="labTasksBox" class="tasks-box"></div>
+
+          <div class="lab-section-title">💻 Cisco IOS Konfiguratsiyasi (Solution):</div>
+          <div class="code-block-wrapper">
+            <button class="btn-copy-code" onclick="copyLabCode()">Nusxalash</button>
+            <pre id="labSolutionCode" class="code-block"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: CLI SIMULATOR -->
+    <section id="cliSection" class="tab-content">
+      <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2>💻 Virtual Cisco IOS CLI Simulyatori</h2>
+          <p style="color:var(--text-muted); font-size:0.95rem;">
+            Tab orqali avto-to'ldirish, <code>?</code> orqali yordam va bosqichma-bosqich real topshiriqlar!
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">Mavzuni tanlang:</label>
+          <select id="cliScenarioSelect" class="form-control" style="width:auto; max-width:100%; padding:6px 12px;" onchange="switchCliScenario()">
+            <option value="0">Lab 1: Switch Port Access & Voice VLAN Sozlash</option>
+            <option value="1">Lab 2: 802.1Q Trunking & VLAN Naming</option>
+            <option value="2">Lab 3: Trunk Allowed VLANs & Native VLAN Untagged</option>
+            <option value="3">Lab 4: Floating Static Route (Zaxira yo'l)</option>
+            <option value="4">Lab 5: IPv4 Subnetting & Interface Configuration</option>
+            <option value="5">Lab 6: Enterprise VLAN 99 FINANCIAL & Access Ports</option>
+            <option value="6">Lab 7: Point-to-Point IPv4 Subnetting /30</option>
+            <option value="7">Lab 9: OSPF Area 0 & Process ID Sozlash</option>
+            <option value="8">Lab 10: OSPF Router ID & Network Sozlash</option>
+            <option value="9">Lab 11: 802.1Q Trunking & Untagged Native VLAN</option>
+            <option value="10">Lab 12: Multi-VLAN Naming (IT & HR User VLAN)</option>
+            <option value="11">Lab 13: Trunk Allowed VLAN Lists on Port Range</option>
+            <option value="12">Lab 14: IEEE 802.1Q Dot1q Trunk Encapsulation</option>
+            <option value="13">Lab 15: IPv4 /28 Host Configuration & Default Gateway</option>
+            <option value="14">Lab 16: Industry Standard Dot1q Trunk & Native VLAN</option>
+            <option value="15">Lab 17: Static Default Route & Host Route /32</option>
+            <option value="16">Lab 18: Default Routing to ISP & Next-Hop</option>
+            <option value="17">Lab 19: Cisco IOS PAT (Port Address Translation / NAT Overload)</option>
+            <option value="18">Lab 20: OSPF Multi-Router & Router ID (HQ1)</option>
+            <option value="19">Lab 21: Extended Named ACL (WWW_ACL) Sozlash</option>
+            <option value="20">Lab 22: NAT/PAT Overload & NTP Master Sozlash</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="cliGoalCard" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px;"></div>
+
+      <div class="terminal-card">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <div class="terminal-title">Cisco IOS Switch Terminal (SW-1)</div>
+          <div style="font-size:0.75rem; color:#8b949e;">Tab: auto-complete | ?: yordam</div>
+        </div>
+
+        <div id="cliBody" class="terminal-body">
+          <div id="cliHistory" class="terminal-history">
+            <div class="terminal-line info">Cisco IOS Software, Catalyst 2960 Software (C2960-LANBASEK9-M).</div>
+            <div class="terminal-line info">Professional Interactive CLI Simulator ishga tushirildi.</div>
+          </div>
+
+          <div class="terminal-input-row">
+            <span id="cliPrompt" class="terminal-prompt">SW-1&gt;</span>
+            <input type="text" id="cliInput" class="terminal-input" placeholder="buyruqni kiriting (masalan: enable)..." autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: PACKET TRACER GUIDE -->
+    <section id="guideSection" class="tab-content">
+      <div class="guide-card">
+        <h2 style="margin-bottom:16px; color:var(--primary);">📘 Cisco Packet Tracer Orqali CCNA Amaliyotini O'rganish Metodikasi</h2>
+        <p style="margin-bottom:20px; font-size:1.02rem; line-height:1.7;">
+          Sizning kompyuteringizda <b>Cisco Packet Tracer</b> o'rnatilgan. Ushbu dastur orqali 21 ta laboratoriyani qanday mustaqil bajarish bo'yicha bosqichlar:
+        </p>
+
+        <div class="step-card">
+          <h4>1-QADAM: Packet Tracer dasturini ishga tushirish</h4>
+          <p style="font-size:0.92rem; color:var(--text-muted);">
+            Desktopingizdagi <code>Cisco Packet Tracer</code> yorlig'ini bosing. Dastur ochilganda pastki chap burchakda tarmoq qurilmalari joylashgan.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <h4>2-QADAM: Kerakli Qurilmalarni Ishchi Maydonga Joylashtirish</h4>
+          <p style="font-size:0.92rem; color:var(--text-muted);">
+            • Switchlar: <b>Cisco 2960</b><br>
+            • Routerlar: <b>Cisco 2811</b> yoki <b>1941</b><br>
+            • Kompyuterlar: <b>PC</b> yoki <b>IP Phone</b>.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <h4>3-QADAM: CLI orqali sozlash</h4>
+          <p style="font-size:0.92rem; color:var(--text-muted);">
+            Qurilmaning ustiga bosing ➔ <b>CLI</b> tabiga o'ting. Ushbu dasturimizning <b>"🛠️ Amaliy Lablar"</b> bo'limidan berilgan yechim buyruqlarini bosqichma-bosqich kiriting.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <h4>4-QADAM: Tekshirish va Natijani Sinash (Verification)</h4>
+          <p style="font-size:0.92rem; color:var(--text-muted);">
+            • <code>show ip interface brief</code> — portlar holati.<br>
+            • <code>show vlan brief</code> — VLANlar ro'yxati.<br>
+            • <code>show ip route</code> — yo'nalishlar jadvali.<br>
+            • PC lardan bir-biriga <code>ping &lt;IP&gt;</code> yuborib tekshiring.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: CHEAT SHEET -->
+    <section id="cheatsheetSection" class="tab-content">
+      <div style="margin-bottom:20px;">
+        <h2>⚡ Cisco CCNA Buyruqlar Lug'ati (Cheat Sheet)</h2>
+        <p style="color:var(--text-muted);">Imtihon va amaliy laboratoriyalarda eng ko'p ishlatiladigan buyruqlar</p>
+      </div>
+
+      <div class="cheatsheet-grid">
+        <div class="cheat-card">
+          <h3>📁 VLAN & Access Portlar</h3>
+          <table class="cheat-table">
+            <tr><td><code>vlan 10</code></td><td>VLAN 10 yaratish</td></tr>
+            <tr><td><code>name Sales</code></td><td>VLANga nom berish</td></tr>
+            <tr><td><code>int e0/1</code></td><td>Portga kirish</td></tr>
+            <tr><td><code>switchport mode access</code></td><td>Portni access qilish</td></tr>
+            <tr><td><code>switchport access vlan 10</code></td><td>VLAN 10 ga ulash</td></tr>
+            <tr><td><code>switchport voice vlan 11</code></td><td>Voice VLAN sozlash</td></tr>
+            <tr><td><code>show vlan brief</code></td><td>VLANlarni tekshirish</td></tr>
+          </table>
+        </div>
+
+        <div class="cheat-card">
+          <h3>🔗 Trunking & Native VLAN</h3>
+          <table class="cheat-table">
+            <tr><td><code>switchport mode trunk</code></td><td>Trunk rejimini yoqish</td></tr>
+            <tr><td><code>switchport trunk encapsulation dot1q</code></td><td>802.1Q enkapsulyatsiya</td></tr>
+            <tr><td><code>switchport trunk allowed vlan 10,20</code></td><td>Ruxsat berilgan VLANlar</td></tr>
+            <tr><td><code>switchport trunk native vlan 99</code></td><td>Native VLAN o'rnatish</td></tr>
+            <tr><td><code>show interfaces trunk</code></td><td>Trunk holatini ko'rish</td></tr>
+          </table>
+        </div>
+
+        <div class="cheat-card">
+          <h3>🌐 Routing & OSPF</h3>
+          <table class="cheat-table">
+            <tr><td><code>ip route 0.0.0.0 0.0.0.0 &lt;GW&gt;</code></td><td>Default route</td></tr>
+            <tr><td><code>router ospf 10</code></td><td>OSPF boshlash</td></tr>
+            <tr><td><code>network 10.0.0.0 0.0.0.255 area 0</code></td><td>Tarmoq qo'shish</td></tr>
+            <tr><td><code>show ip route</code></td><td>Marshrut jadvali</td></tr>
+            <tr><td><code>show ip ospf neighbor</code></td><td>OSPF qo'shnilari</td></tr>
+          </table>
+        </div>
+
+        <div class="cheat-card">
+          <h3>🛡️ Port Security & Xavfsizlik</h3>
+          <table class="cheat-table">
+            <tr><td><code>switchport port-security</code></td><td>Port security yoqish</td></tr>
+            <tr><td><code>switchport port-security maximum 2</code></td><td>Maksimal MAC soni</td></tr>
+            <tr><td><code>switchport port-security violation restrict</code></td><td>Buzilishdagi chora</td></tr>
+            <tr><td><code>switchport port-security mac-address sticky</code></td><td>Sticky MAC</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 8: BOOKMARKS -->
+    <section id="bookmarksSection" class="tab-content">
+      <div id="bookmarksListContainer"></div>
+    </section>
+
+  </main>
+
+  <!-- Load Data and Main Script -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
