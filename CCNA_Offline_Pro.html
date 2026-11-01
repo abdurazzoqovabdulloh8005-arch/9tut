@@ -2324,13 +2324,13 @@ input, button, select {
 
 /* Fast Auth State Rules (Zero Flicker On Page Refresh) */
 html.is-authenticated #authModal {
-  display: none !important;
+  display: none;
 }
 html.is-authenticated main {
-  display: block !important;
+  display: block;
 }
 html.is-authenticated .nav-tabs {
-  visibility: visible !important;
+  visibility: visible;
 }
 
 
@@ -2849,9 +2849,15 @@ html.is-authenticated .nav-tabs {
           var parsed = JSON.parse(s);
           if (parsed && parsed.login) {
             document.documentElement.classList.add('is-authenticated');
+          } else {
+            document.documentElement.classList.remove('is-authenticated');
           }
+        } else {
+          document.documentElement.classList.remove('is-authenticated');
         }
-      } catch(e) {}
+      } catch(e) {
+        document.documentElement.classList.remove('is-authenticated');
+      }
     })();
   </script>
 </head>
@@ -5358,8 +5364,15 @@ function saveRegisteredUsers(users) {
 
 
 function openAuthModal(defaultTab = 'login') {
+  document.documentElement.classList.remove('is-authenticated');
   const authModal = document.getElementById('authModal');
-  if (authModal) authModal.style.display = 'flex';
+  if (authModal) {
+    authModal.style.display = 'flex';
+  }
+  const mainContent = document.querySelector('main');
+  if (mainContent && !state.currentUser) {
+    mainContent.style.display = 'none';
+  }
   switchAuthTab(defaultTab);
 }
 
@@ -5455,11 +5468,20 @@ function checkAuth() {
   } else {
     state.currentUser = null;
     state.isAdmin = false;
+    document.documentElement.classList.remove('is-authenticated');
+
+    try {
+      localStorage.removeItem('ccna_auth_session');
+      sessionStorage.removeItem('ccna_auth_session');
+    } catch(e) {}
+
     switchMainTab('quiz');
 
     const loginBtn = document.getElementById('openAuthModalBtn');
     if (loginBtn) loginBtn.style.display = 'inline-flex';
-    if (authModal) authModal.style.display = 'flex';
+    if (authModal) {
+      authModal.style.display = 'flex';
+    }
     if (mainContent) mainContent.style.display = 'none';
     if (navTabs) navTabs.style.visibility = 'hidden';
     if (userBadge) userBadge.style.display = 'none';

@@ -2310,13 +2310,13 @@ input, button, select {
 
 /* Fast Auth State Rules (Zero Flicker On Page Refresh) */
 html.is-authenticated #authModal {
-  display: none !important;
+  display: none;
 }
 html.is-authenticated main {
-  display: block !important;
+  display: block;
 }
 html.is-authenticated .nav-tabs {
-  visibility: visible !important;
+  visibility: visible;
 }
 
 
