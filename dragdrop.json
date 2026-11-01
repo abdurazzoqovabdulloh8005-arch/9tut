@@ -1,0 +1,708 @@
+[
+  {
+    "id": 1,
+    "title": "Drag and drop the SNMP manager and agent identifier commands from the left onto the functions on the right.",
+    "pairs": [
+      {
+        "term": "show snmp group",
+        "def": "displays the SNMP security model in use"
+      },
+      {
+        "term": "show snmp community",
+        "def": "displays the SNMP access string"
+      },
+      {
+        "term": "show snmp chassis",
+        "def": "displays the SNMP server serial number"
+      },
+      {
+        "term": "show snmp engineID",
+        "def": "displays the IP address of the remote SNMP device"
+      },
+      {
+        "term": "show snmp host",
+        "def": "displays information about the SNMP recipient"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Drag and drop the 802.11 wireless standards from the left onto the matching statements on the right.",
+    "pairs": [
+      {
+        "term": "802.11b",
+        "def": "Supports a maximum data rate of 11 Mbps"
+      },
+      {
+        "term": "802.11a",
+        "def": "Operates in the 5 GHz band only and supports a maximum data rate of 54 Mbps"
+      },
+      {
+        "term": "802.11ac",
+        "def": "Operates in the 5 GHz band only and supports a maximum data rate that can exceed 100 Mbps"
+      },
+      {
+        "term": "802.11n",
+        "def": "Operates in the 2.4 GHz and 5 GHz bands"
+      },
+      {
+        "term": "802.11g",
+        "def": "Operates in the 2.4 GHz band only and supports a maximum data rate of 54 Mbps"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Drag and drop the DNS lookup components from the left onto the functions on the right.",
+    "pairs": [
+      {
+        "term": "service that maps hostname to IP addresses",
+        "def": "DNS"
+      },
+      {
+        "term": "local database of address mappings that improves name resolution performance",
+        "def": "cache"
+      },
+      {
+        "term": "component of a URL that indicates the location or organization type",
+        "def": "domain"
+      },
+      {
+        "term": "disables DNS services on a Cisco device",
+        "def": "no ip domain-lookup"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Drag and drop the AAA terms from the left onto the description on the right.",
+    "pairs": [
+      {
+        "term": "tracks activity",
+        "def": "accounting"
+      },
+      {
+        "term": "verifies access rights",
+        "def": "authorization"
+      },
+      {
+        "term": "updates session attributes",
+        "def": "CoA"
+      },
+      {
+        "term": "verifies identity",
+        "def": "authentication"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Drag and drop the lightweight access point operation modes from the left onto the descriptions on the right.",
+    "pairs": [
+      {
+        "term": "allows for packet captures of wireless traffic",
+        "def": "sniffer mode"
+      },
+      {
+        "term": "allows the access point to communicate with the WLC over a WAN link",
+        "def": "Flexconnect mode"
+      },
+      {
+        "term": "receive only mode which acts as a dedicated sensor for RFID and IDS",
+        "def": "monitor mode"
+      },
+      {
+        "term": "preferred for connecting access points in a mesh environment",
+        "def": "bridge mode"
+      },
+      {
+        "term": "monitor for rogue APs, does not handle data at all",
+        "def": "rogue detector mode"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Drag and drop the statements about networking from the left onto the corresponding networking types on the right.",
+    "pairs": [
+      {
+        "term": "derived from the FF00",
+        "def": ":/8 address range"
+      },
+      {
+        "term": "awareness",
+        "def": "user-awareness learning level that focuses on security practice that all employees must understand and enforce"
+      },
+      {
+        "term": "education",
+        "def": "user-awareness learning level that focuses on learning about topics and practices beyond what is typically required by the user’s job"
+      },
+      {
+        "term": "security policy",
+        "def": "document that outlines an organization’s security goals and practices and the roles and responsibilities of the organization’s personnel"
+      },
+      {
+        "term": "security standard",
+        "def": "tactical document that sets out specific tasks and methods to maintain security"
+      },
+      {
+        "term": "training",
+        "def": "user-awareness learning level that focuses on teaching employees how to perform tasks specifically required by their jobs"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Drag and drop the traffic types from the left onto the QoS delivery mechanisms on the right.",
+    "pairs": [
+      {
+        "term": "best effort",
+        "def": "standard Web browsing traffic"
+      },
+      {
+        "term": "priority queue",
+        "def": "VoIP traffic"
+      },
+      {
+        "term": "policing",
+        "def": "video traffic"
+      },
+      {
+        "term": "shaping",
+        "def": "database synchronization traffic"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Drag and drop the functions of AAA supporting protocols from the left onto the protocols on the right.",
+    "pairs": [
+      {
+        "term": "creates a resource and returns to URI in the response header",
+        "def": "POST"
+      },
+      {
+        "term": "removes a resource",
+        "def": "DELETE"
+      },
+      {
+        "term": "retrieves a list of a resource’s URIs",
+        "def": "GET"
+      },
+      {
+        "term": "updates a resource using instructions included in the request body",
+        "def": "PATCH"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Drag and drop the Wi-Fi terms from the left onto the descriptions on the right.",
+    "pairs": [
+      {
+        "term": "Wi-Fi option based around one or more access points",
+        "def": "distribution system"
+      },
+      {
+        "term": "Wi-Fi option in which cells from different access points are linked together",
+        "def": "extended service set"
+      },
+      {
+        "term": "alphanumeric text string that identifies a wireless network",
+        "def": "SSID"
+      },
+      {
+        "term": "entire wireless cell of an access point and the linkage to the wired network",
+        "def": "infrastructure mode"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Drag and drop the functions of SNMP fault-management from the left onto the definitions on the right.",
+    "pairs": [
+      {
+        "term": "The administrator can manually intervene at the source of the fault",
+        "def": "problem resolution"
+      },
+      {
+        "term": "The system identifies performance degradation or service interruption",
+        "def": "fault detection"
+      },
+      {
+        "term": "The system groups alarms from related issues",
+        "def": "event correlation and aggregation"
+      },
+      {
+        "term": "The system reports on the source of the issue",
+        "def": "fault diagnosis and isolation"
+      },
+      {
+        "term": "B    209.165.200.224 [20/0] via 10.10.12.2, 03",
+        "def": "03:03"
+      },
+      {
+        "term": "B    209.165.201.0 [20/0] via 10.10.12.2, 03",
+        "def": "03:03"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "title": "Drag and drop the steps in a standard DNS lookup operation from the left into the order on the right.",
+    "pairs": [
+      {
+        "term": "Step 1",
+        "def": "An endpoint submits a request for the IP address of a domain name"
+      },
+      {
+        "term": "Step 2",
+        "def": "The DNS submits a request to a root DNS server"
+      },
+      {
+        "term": "Step 3",
+        "def": "The DNS submits a request to the domain DNS server"
+      },
+      {
+        "term": "Step 4",
+        "def": "The DNS receives a reply from the domain DNS server"
+      },
+      {
+        "term": "Step 5",
+        "def": "The DNS responds to the endpoint"
+      },
+      {
+        "term": "O   172.16.2.128/25 [110/3184437] via 207.165.200.250, 00",
+        "def": "00:24, Serial0/0/0"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "title": "Drag and drop the device behaviors from the left onto the matching HSRP state on the right.",
+    "pairs": [
+      {
+        "term": "is waiting to hear from the neighbor device",
+        "def": "Learn"
+      },
+      {
+        "term": "is forwarding packets",
+        "def": "Active"
+      },
+      {
+        "term": "has heard from the neighbor device and is receiving hello packets",
+        "def": "Listen"
+      },
+      {
+        "term": "is transmitting and receiving hello packets",
+        "def": "Speak"
+      },
+      {
+        "term": "B     209.165.200.224 [20/0] via 10.10.12.2,03",
+        "def": "32:14"
+      },
+      {
+        "term": "B     209.165.201.0 [20/0] via 10.10.12.2,02",
+        "def": "26:53"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "title": "Drag and drop the RF terms from the left onto the corresponding statements on the right.",
+    "pairs": [
+      {
+        "term": "measure of the total unwanted signals at the receiver",
+        "def": "noise floor"
+      },
+      {
+        "term": "relative power of the desired radio signal to unwanted signals at the receiver",
+        "def": "signal-to-noise ratio"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "title": "Drag and drop the Ansible terms from the left onto the right.",
+    "pairs": [
+      {
+        "term": "collection of actions to perform on target devices, expressed in YAML format",
+        "def": "playbook"
+      },
+      {
+        "term": "device with Ansible installed that manages target devices",
+        "def": "control node"
+      },
+      {
+        "term": "network device, without Ansible installed, upon which commands can be executed",
+        "def": "managed node"
+      },
+      {
+        "term": "specific action to be performed on one or more target devices",
+        "def": "task"
+      },
+      {
+        "term": "unit of Python code to be executed",
+        "def": "module"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "title": "Drag and drop the REST API call method for HTTP from the left onto the action they perform on the right.",
+    "pairs": [
+      {
+        "term": "creates a resource on the server",
+        "def": "POST"
+      },
+      {
+        "term": "reads data from the server",
+        "def": "GET"
+      },
+      {
+        "term": "removes a resource from the server",
+        "def": "DELETE"
+      },
+      {
+        "term": "updates an entry in the database",
+        "def": "PUT"
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "title": "Drag and drop the DNS commands from the left onto their effects on the right.",
+    "pairs": [
+      {
+        "term": "enables host-to-IP-address translation",
+        "def": "ip domain-lookup"
+      },
+      {
+        "term": "adds an entry to the host table",
+        "def": "ip host switch_1 192.168.0.1"
+      },
+      {
+        "term": "displays address-mapping information",
+        "def": "show hosts"
+      },
+      {
+        "term": "specifies the IP address of the DNS server",
+        "def": "ip name-server"
+      },
+      {
+        "term": "completes the FQDN of the DNS server",
+        "def": "ip domain-name"
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "title": "Drag and drop the IPv6 address types from the left onto their description on the right.",
+    "pairs": [
+      {
+        "term": "multicast address used only locally within the site",
+        "def": "FF05::23:becf:22:1111"
+      },
+      {
+        "term": "address that is prohibited from routing to the Internet",
+        "def": "FD00:0000:0000:1a2d:a153:3992:a19d:ccca"
+      },
+      {
+        "term": "address that is unique and reserved for documentation purposes",
+        "def": "2001:DB8::bced:1234:456d:aacc"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "title": "Drag and drop the cloud-computing components from the left onto the correct descriptions on the right.",
+    "pairs": [
+      {
+        "term": "The resource pool can expand quickly to meet demand",
+        "def": "rapid elasticity"
+      },
+      {
+        "term": "The consumer can choose when to start or stop using the service",
+        "def": "on-demand self-service"
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "title": "Drag and drop the VLAN port modes from the left onto the descriptions on the right.",
+    "pairs": [
+      {
+        "term": "allows the port to belong to one VLAN when manually configured",
+        "def": "static access"
+      },
+      {
+        "term": "allows the port to be assigned automatically to one VLAN",
+        "def": "dynamic access"
+      },
+      {
+        "term": "allows the port to belong to one or more VLANs",
+        "def": "trunk"
+      },
+      {
+        "term": "allows the port to support a single VLAN across a service-provider network",
+        "def": "tunnel"
+      },
+      {
+        "term": "allows the port to communicate with others within the same community VLAN",
+        "def": "private"
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "title": "Drag and drop the SNMP components from the left onto the descriptions on the right.",
+    "pairs": [
+      {
+        "term": "network node controlled by SNMP",
+        "def": "managed device"
+      },
+      {
+        "term": "system that runs monitoring applications and controls network nodes",
+        "def": "NMS"
+      },
+      {
+        "term": "SNMP component that captures and translates device and network data",
+        "def": "agent"
+      },
+      {
+        "term": "Answer",
+        "def": "C"
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "title": "Drag and drop the virtualization concepts from the left onto the matching statements on the right.",
+    "pairs": [
+      {
+        "term": "An operating system instance that is decoupled from the server hardware",
+        "def": "virtual machine"
+      },
+      {
+        "term": "Each core can run more than one process simultaneously",
+        "def": "multithreading"
+      },
+      {
+        "term": "Runs on a physical server, manages, and allocates the physical resources",
+        "def": "hypervisor"
+      },
+      {
+        "term": "The software that manages the basic functions of the physical hardware",
+        "def": "host operating system"
+      },
+      {
+        "term": "The software that manages the basic functions of the virtual machine",
+        "def": "guest operating system"
+      },
+      {
+        "term": "easy-to-manage deployment option that may lack scalability",
+        "def": "agent"
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "title": "Drag and drop the DNS lookup commands from the left onto the functions on the right.",
+    "pairs": [
+      {
+        "term": "enables DNS lookup on an individual interface",
+        "def": "ip domain lookup source-interface"
+      },
+      {
+        "term": "enables the DNS server on the device",
+        "def": "ip dns server"
+      },
+      {
+        "term": "identifies a DNS server to provide lookup services",
+        "def": "ip name-server"
+      },
+      {
+        "term": "specifies a sequence of domain names",
+        "def": "ip domain list"
+      },
+      {
+        "term": "specifies the default domain to append to unqualified host names",
+        "def": "ip domain name"
+      },
+      {
+        "term": "statically maps an IP address to a hostname",
+        "def": "ip host"
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "title": "Drag and drop the destination IPs from the left onto the paths to reach those destinations on the right.",
+    "pairs": [
+      {
+        "term": "Router 2",
+        "def": "10.10.13.126"
+      },
+      {
+        "term": "Router 3",
+        "def": "10.10.13.129"
+      },
+      {
+        "term": "Router 4",
+        "def": "10.10.13.150"
+      },
+      {
+        "term": "Router 5",
+        "def": "10.10.13.209"
+      },
+      {
+        "term": "Internet cloud",
+        "def": "1.1.1.1"
+      },
+      {
+        "term": "MPLS cloud",
+        "def": "209.165.200.30"
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "title": "Drag and drop the AAA features from the left onto the corresponding AAA security services on the right. Not all options ",
+    "pairs": [
+      {
+        "term": "Answer",
+        "def": "B"
+      },
+      {
+        "term": "72.16.2.0/24 [120/2] via 207.165.200.250, 00",
+        "def": "00:25, Serial0/0/0"
+      },
+      {
+        "term": "92.168.1.0/24 [110/84437] via 207.165.200.254, 00",
+        "def": "00:17, Serial0/0/1"
+      },
+      {
+        "term": "92.168.2.0/24 [90/3164437] via 207.165.200.254, 00",
+        "def": "00:15, Serial0/0/1"
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "title": "Drag and drop the learned prefixes from the left onto the preferred route methods from which they were learned on the ri",
+    "pairs": [
+      {
+        "term": "static",
+        "def": "207.165.200.244/30"
+      },
+      {
+        "term": "EIGRP",
+        "def": "192.168.2.0/24"
+      },
+      {
+        "term": "OSPF",
+        "def": "192.168.1.0/24"
+      },
+      {
+        "term": "RIP",
+        "def": "172.16.2.0/24"
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "title": "Drag and drop the management connection types from the left onto the definitions on the right.",
+    "pairs": [
+      {
+        "term": "supports clear-text connections to the controller CLI",
+        "def": "Telnet"
+      },
+      {
+        "term": "supports physical connections over a serial cable",
+        "def": "console"
+      },
+      {
+        "term": "supports secure web access for management of the device",
+        "def": "HTTPS"
+      },
+      {
+        "term": "supports encrypted access to CLI and a secure channel for data transfer",
+        "def": "SSH"
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "title": "Drag and drop the HTTP verbs from the left onto the API operations on the right.",
+    "pairs": [
+      {
+        "term": "DELETE",
+        "def": "erases a specific resource"
+      },
+      {
+        "term": "GET",
+        "def": "requests specific information about a resource"
+      },
+      {
+        "term": "PATCH",
+        "def": "partially modifies a specific resource"
+      },
+      {
+        "term": "POST",
+        "def": "creates a subordinate resource under the specified URI"
+      },
+      {
+        "term": "PUT",
+        "def": "fully replaces the current version of a specific resource with new content from the payload"
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "title": "Drag and drop the network topology architecture types from the left onto the corresponding function on the right. Not al",
+    "pairs": [
+      {
+        "term": "end user connectivity",
+        "def": "access"
+      },
+      {
+        "term": "top-of-rack",
+        "def": "spine-leaf"
+      },
+      {
+        "term": "provide routing, filtering, and WAN access",
+        "def": "distribution"
+      },
+      {
+        "term": "switch packets as fast as possible",
+        "def": "core"
+      },
+      {
+        "term": "802.1q double-tagging VLAN-hopping attack",
+        "def": "configure the native VLAN with a nondefault VLAN ID"
+      },
+      {
+        "term": "MAC flooding attack",
+        "def": "configure 802.1x authenticate"
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "title": "Drag and drop the parameters of the destination route from the left onto the routing table components they represent on ",
+    "pairs": [
+      {
+        "term": "/29",
+        "def": "Subnet Prefix"
+      },
+      {
+        "term": "0",
+        "def": "Administrative Distance"
+      },
+      {
+        "term": "0",
+        "def": "Metric/Cost"
+      }
+    ]
+  }
+]

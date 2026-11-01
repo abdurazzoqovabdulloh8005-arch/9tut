@@ -94,84 +94,67 @@ function isQuestionCorrect(q, uAns) {
   return arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
 }
 
-// SMART UZBEK TRANSLATOR FOR CISCO EXPLANATIONS
-
-// SMART AUTO-EXPLANATION & TRANSLATOR FOR ALL CCNA QUESTIONS
+// SMART UZBEK TRANSLATOR & AUTO-EXPLANATION FOR CCNA QUESTIONS (CLAUDE FORMAT)
 function generateAutoExplanation(q) {
   if (q.isDragDrop) {
     const pairsText = (q.pairs || []).map(p => `• <b>${escapeHtml(p.term)}</b> ➔ ${escapeHtml(p.def)}`).join('<br>');
-    return `<b>Ushbu mashqda quyidagi tushunchalar to'g'ri moslashtirilishi lozim:</b><br>${pairsText}`;
+    return `<b>Javob: To'g'ri moslashtirish:</b><br>${pairsText}<br><br>🔑 <b>Ilgak:</b> CCNA imtihonida tushunchalarning mosligini eslab qoling.`;
   }
 
   const correctAnswers = Array.isArray(q.answer) ? q.answer : [q.answer];
-  const correctTexts = correctAnswers.map(letter => `<b>[${letter}]</b>: <i>${escapeHtml((q.options || {})[letter] || '')}</i>`).join('<br>');
+  const ansStr = correctAnswers.join(', ');
+  const optTexts = correctAnswers.map(l => (q.options || {})[l] || '').filter(Boolean).join(' / ');
   const qLower = (q.question || '').toLowerCase();
   
-  let topicHint = "";
+  let reason = "";
+  let hook = "";
   if (qLower.includes('wireless') || qLower.includes('wlc') || qLower.includes('access point')) {
-    topicHint = "Simsiz tarmoqlarda Wireless LAN Controller (WLC) barcha Access Point (AP) larni markazlashgan holda boshqarish, xavfsizlik va radio chastotalarni avtomatik sozlash vazifasini bajaradi.";
+    reason = "WLC (Wireless LAN Controller) korxona tarmog'idagi barcha Access Point (AP) larni markazlashgan holda sozlash va boshqarish vazifasini bajaradi.";
+    hook = "WLC = AP larni markaziy boshqaruvi.";
   } else if (qLower.includes('vlan') || qLower.includes('trunk') || qLower.includes('802.1q')) {
-    topicHint = "VLAN mantiqiy tarmoq segmentatsiyasini ta'minlaydi va broadcast domenini ajratadi. 802.1Q esa switchlar o'rtasida trunk liniyasi orqali har bir freymga VLAN tegini qo'shib uzatish standartidir.";
+    reason = "VLAN mantiqiy tarmoq segmentatsiyasini ta'minlaydi. 802.1Q esa switchlar o'rtasida trunk orqali freymga VLAN tegini qo'shib uzatish standartidir.";
+    hook = "VLAN = Broadcast domenini ajratish; 802.1Q = Trunk teglash.";
   } else if (qLower.includes('spanning-tree') || qLower.includes('stp') || qLower.includes('portfast')) {
-    topicHint = "Spanning Tree Protocol (STP) kommutatsiya qatlamida halqalar (switching loop) hosil bo'lishining oldini oladi. PortFast esa faqat so'nggi qurilmalar ulangan access portlarda ishlatilib, listening va learning bosqichlarini chetlab o'tadi.";
+    reason = "Spanning Tree Protocol (STP) kommutatsiya qatlamida halqalar (loop) hosil bo'lishining oldini oladi. PortFast esa so'nggi qurilmalar portini darhol Forwarding holatiga o'tkazadi.";
+    hook = "STP = Loop'dan himoya; PortFast = Darhol Forwarding holatiga o'tish.";
   } else if (qLower.includes('ospf')) {
-    topicHint = "OSPF - bu Link-State ichki marshrutlash protokoli bo'lib, Dijkstra algoritmi va tarmoq o'tkazuvchanligi (Bandwidth) asosida hisoblanadigan Cost metriksidan foydalanadi.";
+    reason = "OSPF - bu Link-State ichki marshrutlash protokoli bo'lib, Dijkstra algoritmi va Bandwidth asosidagi Cost metriksidan foydalanadi (AD = 110).";
+    hook = "OSPF = Link-State, Cost metriksi, AD 110.";
   } else if (qLower.includes('acl') || qLower.includes('access-list')) {
-    topicHint = "Access Control List (ACL) tarmoq trafigini filtrlash uchun qo'llaniladi. Standart ACL faqat jo'natuvchi IP manzilini tekshiradi, Kengaytirilgan ACL esa manba, manzil IP va port/protokollarni (TCP/UDP) to'liq tekshiradi.";
+    reason = "Access Control List (ACL) tarmoq trafigini filtrlash uchun qo'llaniladi. Standart ACL faqat manba IP ni, Kengaytirilgan ACL esa manba/manzil IP va portlarni tekshiradi.";
+    hook = "Standart ACL = Faqat manba IP (1-99); Kengaytirilgan ACL = Manba, manzil va port (100-199).";
   } else if (qLower.includes('mac') || qLower.includes('switch')) {
-    topicHint = "Kommutator (Switch) freymlarni manba MAC manziliga qarab MAC jadvaliga yozadi va manzil MAC manziliga qarab faqat kerakli portga yo'naltiradi.";
+    reason = "Kommutator freymlarni manba MAC manziliga qarab MAC jadvaliga yozadi va manzil MAC manziliga qarab faqat tegishli portga yo'naltiradi.";
+    hook = "Switch = Manba MAC ni o'rganadi, manzil MAC ga qarab uzatadi.";
   } else if (qLower.includes('ipv6')) {
-    topicHint = "IPv6 128-bitli manzil tizimi bo'lib, har biri 16-bitdan iborat 8 ta guruhda 16-lik (hexadecimal) sanoq tizimida yoziladi va broadcast o'rniga multicastdan foydalanadi.";
+    reason = "IPv6 128-bitli manzil tizimi bo'lib, 16-lik sanoq tizimida yoziladi va broadcast o'rniga multicastdan foydalanadi.";
+    hook = "IPv6 = 128 bit, Broadcast yo'q, faqat Multicast.";
   } else if (qLower.includes('rest') || qLower.includes('api') || qLower.includes('json')) {
-    topicHint = "REST API HTTP protokoli (GET, POST, PUT, DELETE) orqali tarmoq qurilmalarini avtomatlashtirish va ma'lumotlarni JSON yoki XML formatida uzatish uchun ishlatiladi.";
+    reason = "REST API HTTP metodlari (GET, POST, PUT, DELETE) va JSON orqali tarmoq qurilmalarini dasturiy avtomatlashtirish uchun xizmat qiladi.";
+    hook = "REST API = CRUD amallari, HTTP metodlari va JSON formati.";
   } else if (qLower.includes('snmp')) {
-    topicHint = "SNMP (Simple Network Management Protocol) tarmoq qurilmalarini monitoring qilish va boshqarish protokolidir. SNMPv3 xavfsizlik va shifrlash imkoniyatlariga ega.";
+    reason = "SNMP tarmoq qurilmalarini monitoring qilish protokolidir. SNMPv3 autentifikatsiya va shifrlash imkoniyatlari (authPriv) bilan eng xavfsiz hisoblanadi.";
+    hook = "SNMPv3 = Xavfsiz shifrlash (authPriv).";
   } else if (qLower.includes('dhcp')) {
-    topicHint = "DHCP xostlarga dinamik ravishda IP manzil, subnet mask, default gateway va DNS server ma'lumotlarini taqsimlab berish uchun xizmat qiladi.";
+    reason = "DHCP xostlarga dinamik ravishda IP manzil, subnet mask, default gateway va DNS server ma'lumotlarini tarqatadi.";
+    hook = "DHCP DORA = Discover, Offer, Request, Acknowledge.";
   } else {
-    topicHint = "Cisco CCNA standarti bo'yicha berilgan savolga eng to'g'ri va optimal texnik yechim yuqorida ko'rsatilgan javob hisoblanadi.";
+    reason = "Cisco CCNA standarti bo'yicha berilgan savolga eng to'g'ri va xavfsiz texnik yechim hisoblanadi.";
+    hook = `To'g'ri variant: [${ansStr}].`;
   }
 
-  return `
-    <div style="margin-bottom:8px;"><b>To'g'ri javob:</b><br>${correctTexts}</div>
-    <div style="font-size:0.90rem; color:var(--text-main); margin-top:6px; line-height:1.55;">
-      💡 <b>Izoh va Asos:</b> ${topicHint}
-    </div>
-  `;
+  let out = `<b>Javob: ${ansStr}</b> — ${optTexts ? escapeHtml(optTexts) + '. ' : ''}${reason}`;
+  if (hook) {
+    out += `<br><br>🔑 <b>Ilgak:</b> ${hook}`;
+  }
+  return out;
 }
 
 function translateExplanationToUzbek(exp, q) {
-  if (!exp || !exp.trim()) {
-    return generateAutoExplanation(q);
+  if (q && q.explanation_uz) {
+    return q.explanation_uz;
   }
-  
-  let uz = exp.replace(/[\ufffd]/g, ' - ');
-  
-  const dict = [
-    [/Enabling the PortFast feature causes a switch or a trunk port to enter the STP forwarding-state immediately or upon a linkup event, thus bypassing the listening and learning states\./gi,
-     "PortFast funksiyasini yoqish orqali port darhol STP Forwarding (uzatish) holatiga o'tadi va Listening hamda Learning holatlarini aylanib o'tadi (bypass qiladi)."],
-    [/The switch with lowest Bridge Priority would become the root bridge for that VLAN\./gi,
-     "Eng past Bridge Priority (ustunlik) qiymatiga ega bo'lgan kommutator ushbu VLAN uchun Root Bridge (asosiy kommutator) bo'ladi."],
-    [/In this case Switch (\d+) has the lowest Bridge Priority of (\d+) so it will become the root bridge\./gi,
-     "Bu holatda Switch $1 eng kichik Bridge Priority ($2) qiymatiga ega, shuning uchun u Root Bridge bo'ladi."],
-    [/When you enable LAG or make any changes to the LAG configuration, you must immediately reboot the controller\./gi,
-     "WLC da LAG yoqilganda yoki o'zgartirilganda, kontroller darhol qayta yuklanishi (reboot qilinishi) shart."],
-    [/default gateway/gi, "asosiy shlyuz (default gateway)"],
-    [/broadcast domain/gi, "eshittirish domeni (broadcast domain)"],
-    [/collision domain/gi, "to'qnashuv domeni (collision domain)"],
-    [/root bridge/gi, "Root Bridge (asosiy kommutator)"],
-    [/forwarding state/gi, "Forwarding (uzatish) holati"],
-    [/blocking state/gi, "Blocking (bloklash) holati"],
-    [/listening state/gi, "Listening (tinglash) holati"],
-    [/learning state/gi, "Learning (o'rganish) holati"],
-    [/administrative distance/gi, "Ma'muriy masofa (Administrative Distance)"]
-  ];
-
-  dict.forEach(([pattern, repl]) => {
-    uz = uz.replace(pattern, repl);
-  });
-
-  return uz;
+  return generateAutoExplanation(q);
 }
 
 function resetInQuizDragDrop(idx) {
@@ -5306,22 +5289,18 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
 
     const ansStr = Array.isArray(q.answer) ? q.answer.join(', ') : '';
 
-    const cleanExp = (q.explanation || '').replace(/[\ufffd]/g, ' - ');
-    const uzExp = translateExplanationToUzbek(cleanExp, q);
+    const cleanExp = (q.explanation || '').replace(/[\ufffd]/g, ' - ').trim();
+    const uzExp = q.explanation_uz || translateExplanationToUzbek(cleanExp, q);
 
     const uStr = Array.isArray(userAns) && userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
 
     const headerHtml = isReview 
-
       ? (isUserCorrect 
-
           ? `<div style="color:#10b981; font-weight:800; margin-bottom:8px;">✅ Javobingiz to'g'ri!</div>` 
-
           : `<div style="color:#ef4444; font-weight:800; margin-bottom:8px;">❌ Javobingiz xato! (Siz tanlagan: [${uStr}])</div>`)
-
       : '';
 
-    const gTranslateUrl = "https://translate.google.com/?sl=en&tl=uz&text=" + encodeURIComponent(cleanExp) + "&op=translate";
+    const gTranslateUrl = cleanExp ? ("https://translate.google.com/?sl=en&tl=uz&text=" + encodeURIComponent(cleanExp) + "&op=translate") : "";
 
     expText.innerHTML = `
       ${headerHtml}
@@ -5330,21 +5309,22 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
       </div>
       
       <div class="exp-uz-card">
-        <div style="font-weight:700; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
-          <span>💡 Tushuntirish (O'zbek tilida):</span>
-          <a href="${gTranslateUrl}" target="_blank" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">🌐 Google Tarjima</a>
+        <div style="font-weight:700; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+          <span>💡 Qisqa Tushuntirish (O'zbek tilida):</span>
+          ${gTranslateUrl ? `<a href="${gTranslateUrl}" target="_blank" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">🌐 Google Tarjima</a>` : ''}
         </div>
         <div style="font-size:0.92rem; line-height:1.6; color:var(--text-main);">
-          ${escapeHtml(uzExp)}
+          ${uzExp}
         </div>
       </div>
 
+      ${cleanExp ? `
       <details style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
         <summary>📖 Asl inglizcha tushuntirish (Original English)</summary>
         <div style="margin-top:6px; padding:8px 12px; background:rgba(0,0,0,0.15); border-radius:6px; line-height:1.5;">
           ${escapeHtml(cleanExp)}
         </div>
-      </details>
+      </details>` : ''}
     `;
 
   } else {
@@ -6304,26 +6284,18 @@ function renderStudyBookList(questions) {
 
     let cueHtml = '';
 
-    if (q.explanation) {
-
+    const studyExp = q.explanation_uz || q.explanation || '';
+    if (studyExp) {
       cueHtml = `
-
         <div class="study-cue-box">
-
           <span style="font-size:1.1rem;">💡</span>
-
           <div>
-
-            <b>Nega to'g'ri? (Explanation):</b><br>
-
-            ${escapeHtml(q.explanation)}
-
+            <b>Nega to'g'ri? (Tushuntirish):</b><br>
+            <div style="margin-top:4px;">${q.explanation_uz || escapeHtml(q.explanation)}</div>
+            ${q.explanation_uz && q.explanation ? `<details style="margin-top:8px; font-size:0.8rem; color:var(--text-muted); cursor:pointer;"><summary>📖 Asl inglizcha tushuntirish</summary><div style="margin-top:4px; padding:6px 10px; background:rgba(0,0,0,0.2); border-radius:4px;">${escapeHtml(q.explanation)}</div></details>` : ''}
           </div>
-
         </div>
-
       `;
-
     }
 
     let imgHtml = '';
@@ -6416,7 +6388,7 @@ function renderCurrentFlashcard() {
 
   document.getElementById('flashcardAnswerText').innerHTML = ansDetails;
 
-  document.getElementById('flashcardExplanationText').textContent = q.explanation || '';
+  document.getElementById('flashcardExplanationText').innerHTML = q.explanation_uz || escapeHtml(q.explanation || '');
 
   const ansBox = document.getElementById('flashcardAnswerBox');
 
