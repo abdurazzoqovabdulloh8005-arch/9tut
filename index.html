@@ -9,6 +9,19 @@
   <meta name="apple-mobile-web-app-title" content="CCNA Pro">
   <title>CCNA Professional Quiz & Practical Labs</title>
   <link rel="stylesheet" href="style.css">
+  <script>
+    (function() {
+      try {
+        var s = sessionStorage.getItem('ccna_auth_session') || localStorage.getItem('ccna_auth_session');
+        if (s) {
+          var parsed = JSON.parse(s);
+          if (parsed && parsed.login) {
+            document.documentElement.classList.add('is-authenticated');
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -698,6 +711,7 @@
                   <th>F.I.SH</th>
                   <th>Login (Username)</th>
                   <th>Roli / Huquqi</th>
+                  <th>Holati</th>
                   <th>Guruhi</th>
                   <th>Ro'yxatdan O'tgan</th>
                   <th>Testlar</th>

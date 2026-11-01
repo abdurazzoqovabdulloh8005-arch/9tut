@@ -1197,7 +1197,11 @@ async function computeSha256Hex(str) {
 function getRegisteredUsers() {
   try {
     const raw = localStorage.getItem('ccna_registered_users');
-    return raw ? JSON.parse(raw) : [];
+    const users = raw ? JSON.parse(raw) : [];
+    return users.map(u => {
+      if (u.isApproved === undefined) u.isApproved = true;
+      return u;
+    });
   } catch (e) {
     return [];
   }
@@ -1380,11 +1384,16 @@ async function handleUserLogin() {
       const registeredUsers = getRegisteredUsers();
       const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
       if (found) {
+        if (found.role !== 'admin' && found.isApproved === false) {
+          showAuthError(errEl, "⏳ Sizning hisobingiz hali Administrator (Abdulloh) tomonidan tasdiqlanmagan. Iltimos, administrator tasdiqlashini kuting.");
+          return;
+        }
         match = {
           login: found.login,
           name: found.name,
           role: found.role || 'student',
-          group: found.group || 'CCNA Guruh'
+          group: found.group || 'CCNA Guruh',
+          isApproved: found.isApproved !== false
         };
       }
     }
@@ -1408,11 +1417,16 @@ async function handleUserLogin() {
       state.isAdmin = (match.role === 'admin');
 
       try {
+        // ALWAYS write to sessionStorage so refreshing tab keeps the user logged in!
+        sessionStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
+        
+        // If user chose "Meni eslab qolish" (Remember me), also save to localStorage:
         if (rememberCheckbox && rememberCheckbox.checked) {
           localStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
         } else {
-          sessionStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
+          localStorage.removeItem('ccna_auth_session');
         }
+        document.documentElement.classList.add('is-authenticated');
       } catch(e) {
         console.warn("Storage write error", e);
       }
@@ -1551,25 +1565,12 @@ async function handleUserRegister() {
     group: group,
     hash: hash,
     role: 'student',
+    isApproved: false, // Administrator tasdiqlashi shart!
     createdAt: new Date().toLocaleDateString('uz-UZ')
   };
 
   existingUsers.push(newUser);
   saveRegisteredUsers(existingUsers);
-
-  // Auto-login newly registered user
-  const sessionData = {
-    id: newUser.id,
-    login: newUser.login,
-    name: newUser.name,
-    role: 'student',
-    group: newUser.group,
-    authenticatedAt: new Date().toISOString()
-  };
-
-  state.currentUser = sessionData;
-  state.isAdmin = false;
-  localStorage.setItem('ccna_auth_session', JSON.stringify(sessionData));
 
   // Reset inputs
   nameInput.value = '';
@@ -1578,11 +1579,17 @@ async function handleUserRegister() {
   pwdInput.value = '';
   pwdConfirmInput.value = '';
 
-  switchMainTab('quiz');
+  // Switch to login tab with approval notice
+  switchAuthTab('login');
+  const loginErrEl = document.getElementById('authErrorMsg');
+  if (loginErrEl) {
+    loginErrEl.style.display = 'block';
+    loginErrEl.style.background = 'rgba(16, 185, 129, 0.15)';
+    loginErrEl.style.color = '#10b981';
+    loginErrEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+    loginErrEl.innerHTML = `✅ <b>Muvaffaqiyatli ro'yxatdan o'tdingiz, ${name}!</b><br>Xavfsizlik yuzasidan hisobingiz <b>Administrator (Abdulloh)</b> tomonidan tasdiqlanishi kerak.<br>Administrator tasdiqlagach tizimga kira olasiz.`;
+  }
   SoundEffects.playCorrect();
-  alert(`Tabriklaymiz, ${name}! Hisobingiz muvaffaqiyatli yaratildi. Testlarni boshlashingiz mumkin.`);
-  checkAuth();
-  renderPartsGrid();
 }
 
 function showAuthError(el, msg) {
@@ -1624,6 +1631,7 @@ function logoutUser() {
     state.isAdmin = false;
     localStorage.removeItem('ccna_auth_session');
     sessionStorage.removeItem('ccna_auth_session');
+    document.documentElement.classList.remove('is-authenticated');
     switchMainTab('quiz');
     checkAuth();
   }
@@ -3254,16 +3262,27 @@ function renderAdminStudentsList() {
       : 0;
 
     const isAdmin = (u.role === 'admin');
+    const isApproved = (u.isMaster || isAdmin || u.isApproved !== false);
+
     const roleBadge = isAdmin
       ? `<span style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.35); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👑 ${u.isMaster ? 'Bosh Admin' : 'Admin'}</span>`
       : `<span style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.3); padding:3px 9px; border-radius:6px; font-weight:600; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👤 Foydalanuvchi</span>`;
 
+    const statusBadge = isApproved
+      ? `<span style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">✅ Faol</span>`
+      : `<span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.4); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">⏳ Kutilmoqda</span>`;
+
     const tr = document.createElement('tr');
+    if (!isApproved) {
+      tr.style.background = 'rgba(239, 68, 68, 0.05)';
+    }
+
     tr.innerHTML = `
       <td style="font-weight:700; color:var(--text-muted);">${idx + 1}</td>
-      <td><b>${escapeHtml(u.name)}</b> ${u.isMaster ? '⭐' : ''}</td>
+      <td><b>${escapeHtml(u.name)}</b> ${u.isMaster ? '👑' : ''}</td>
       <td><code>${escapeHtml(u.login)}</code></td>
       <td>${roleBadge}</td>
+      <td>${statusBadge}</td>
       <td><span style="background:var(--bg-card); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:0.85rem;">${escapeHtml(u.group || 'Guruhsiz')}</span></td>
       <td style="font-size:0.85rem; color:var(--text-muted);">${u.createdAt || '-'}</td>
       <td><b>${quizCount} ta</b></td>
@@ -3273,12 +3292,17 @@ function renderAdminStudentsList() {
         </span>
       </td>
       <td style="text-align:center; white-space:nowrap;">
-        <button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊 Natijalar</button>
-        ${u.isMaster 
-          ? `<button class="btn-action-icon" title="Bosh Admin parolini o'zgartirish" onclick="openChangePasswordModal('abdulloh')" style="color:var(--warning); font-weight:700;">🔑 Parol</button>`
-          : `<button class="btn-action-icon" title="Parolini o'zgartirish" onclick="openChangePasswordModal('${escapeHtml(u.login)}')">🔑</button>
-             <button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
-             <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
+        ${!isApproved 
+          ? `<button class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; font-weight:700; padding:5px 12px; border-radius:6px;" title="Ruxsat berish (Tasdiqlash)" onclick="approveUser('${u.id}')">✅ Tasdiqlash</button>
+             <button class="btn-action-icon btn-action-danger" style="padding:5px 10px; border-radius:6px;" title="Rad etish / O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">❌ Rad etish</button>`
+          : `<button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊 Natijalar</button>
+             ${u.isMaster 
+               ? `<button class="btn-action-icon" title="Bosh Admin parolini o'zgartirish" onclick="openChangePasswordModal('abdulloh')" style="color:var(--warning); font-weight:700;">🔑 Parol</button>`
+               : `<button class="btn-action-icon" title="Parolini o'zgartirish" onclick="openChangePasswordModal('${escapeHtml(u.login)}')">🔑</button>
+                  <button class="btn-action-icon" title="Kirishni to'xtatish (Bloklash)" onclick="toggleUserApproval('${u.id}')" style="color:var(--text-muted);">🚫</button>
+                  <button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
+                  <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
+             }`
         }
       </td>
     `;
@@ -4193,4 +4217,32 @@ function closeImageModal() {
   if (modal) {
     modal.style.display = 'none';
   }
+}
+
+
+// ADMIN USER APPROVAL SYSTEM
+function approveUser(userId) {
+  const users = getRegisteredUsers();
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+  u.isApproved = true;
+  saveRegisteredUsers(users);
+  renderAdminStudentsList();
+  updateAdminStats();
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  alert(`✅ ${u.name} muvaffaqiyatli tasdiqlandi! Endi bu foydalanuvchi tizimga kira oladi.`);
+}
+
+function toggleUserApproval(userId) {
+  const users = getRegisteredUsers();
+  const u = users.find(x => x.id === userId);
+  if (!u) return;
+  const nextState = (u.isApproved === false);
+  const actionText = nextState ? "ruxsat bermoqchimisiz" : "kirishini bloklamoqchimisiz";
+  if (!confirm(`Haqiqatan ham ${u.name} hisobiga ${actionText}?`)) return;
+  u.isApproved = nextState;
+  saveRegisteredUsers(users);
+  renderAdminStudentsList();
+  updateAdminStats();
+  try { SoundEffects.playClick(); } catch(e) {}
 }
