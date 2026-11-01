@@ -5947,14 +5947,58 @@ function isQuestionCorrect(q, uAns) {
 }
 
 // SMART UZBEK TRANSLATOR FOR CISCO EXPLANATIONS
+
+// SMART AUTO-EXPLANATION & TRANSLATOR FOR ALL CCNA QUESTIONS
+function generateAutoExplanation(q) {
+  if (q.isDragDrop) {
+    const pairsText = (q.pairs || []).map(p => `• <b>${escapeHtml(p.term)}</b> ➔ ${escapeHtml(p.def)}`).join('<br>');
+    return `<b>Ushbu mashqda quyidagi tushunchalar to'g'ri moslashtirilishi lozim:</b><br>${pairsText}`;
+  }
+
+  const correctAnswers = Array.isArray(q.answer) ? q.answer : [q.answer];
+  const correctTexts = correctAnswers.map(letter => `<b>[${letter}]</b>: <i>${escapeHtml((q.options || {})[letter] || '')}</i>`).join('<br>');
+  const qLower = (q.question || '').toLowerCase();
+  
+  let topicHint = "";
+  if (qLower.includes('wireless') || qLower.includes('wlc') || qLower.includes('access point')) {
+    topicHint = "Simsiz tarmoqlarda Wireless LAN Controller (WLC) barcha Access Point (AP) larni markazlashgan holda boshqarish, xavfsizlik va radio chastotalarni avtomatik sozlash vazifasini bajaradi.";
+  } else if (qLower.includes('vlan') || qLower.includes('trunk') || qLower.includes('802.1q')) {
+    topicHint = "VLAN mantiqiy tarmoq segmentatsiyasini ta'minlaydi va broadcast domenini ajratadi. 802.1Q esa switchlar o'rtasida trunk liniyasi orqali har bir freymga VLAN tegini qo'shib uzatish standartidir.";
+  } else if (qLower.includes('spanning-tree') || qLower.includes('stp') || qLower.includes('portfast')) {
+    topicHint = "Spanning Tree Protocol (STP) kommutatsiya qatlamida halqalar (switching loop) hosil bo'lishining oldini oladi. PortFast esa faqat so'nggi qurilmalar ulangan access portlarda ishlatilib, listening va learning bosqichlarini chetlab o'tadi.";
+  } else if (qLower.includes('ospf')) {
+    topicHint = "OSPF - bu Link-State ichki marshrutlash protokoli bo'lib, Dijkstra algoritmi va tarmoq o'tkazuvchanligi (Bandwidth) asosida hisoblanadigan Cost metriksidan foydalanadi.";
+  } else if (qLower.includes('acl') || qLower.includes('access-list')) {
+    topicHint = "Access Control List (ACL) tarmoq trafigini filtrlash uchun qo'llaniladi. Standart ACL faqat jo'natuvchi IP manzilini tekshiradi, Kengaytirilgan ACL esa manba, manzil IP va port/protokollarni (TCP/UDP) to'liq tekshiradi.";
+  } else if (qLower.includes('mac') || qLower.includes('switch')) {
+    topicHint = "Kommutator (Switch) freymlarni manba MAC manziliga qarab MAC jadvaliga yozadi va manzil MAC manziliga qarab faqat kerakli portga yo'naltiradi.";
+  } else if (qLower.includes('ipv6')) {
+    topicHint = "IPv6 128-bitli manzil tizimi bo'lib, har biri 16-bitdan iborat 8 ta guruhda 16-lik (hexadecimal) sanoq tizimida yoziladi va broadcast o'rniga multicastdan foydalanadi.";
+  } else if (qLower.includes('rest') || qLower.includes('api') || qLower.includes('json')) {
+    topicHint = "REST API HTTP protokoli (GET, POST, PUT, DELETE) orqali tarmoq qurilmalarini avtomatlashtirish va ma'lumotlarni JSON yoki XML formatida uzatish uchun ishlatiladi.";
+  } else if (qLower.includes('snmp')) {
+    topicHint = "SNMP (Simple Network Management Protocol) tarmoq qurilmalarini monitoring qilish va boshqarish protokolidir. SNMPv3 xavfsizlik va shifrlash imkoniyatlariga ega.";
+  } else if (qLower.includes('dhcp')) {
+    topicHint = "DHCP xostlarga dinamik ravishda IP manzil, subnet mask, default gateway va DNS server ma'lumotlarini taqsimlab berish uchun xizmat qiladi.";
+  } else {
+    topicHint = "Cisco CCNA standarti bo'yicha berilgan savolga eng to'g'ri va optimal texnik yechim yuqorida ko'rsatilgan javob hisoblanadi.";
+  }
+
+  return `
+    <div style="margin-bottom:8px;"><b>To'g'ri javob:</b><br>${correctTexts}</div>
+    <div style="font-size:0.90rem; color:var(--text-main); margin-top:6px; line-height:1.55;">
+      💡 <b>Izoh va Asos:</b> ${topicHint}
+    </div>
+  `;
+}
+
 function translateExplanationToUzbek(exp, q) {
-  if (!exp) return "Ushbu savol uchun qo'shimcha tushuntirish mavjud emas.";
+  if (!exp || !exp.trim()) {
+    return generateAutoExplanation(q);
+  }
   
-  let uz = exp;
-  // Replace broken encoding symbols
-  uz = uz.replace(/[\ufffd]/g, ' - ');
+  let uz = exp.replace(/[\ufffd]/g, ' - ');
   
-  // Common CCNA technical terminology translations into clear Uzbek
   const dict = [
     [/Enabling the PortFast feature causes a switch or a trunk port to enter the STP forwarding-state immediately or upon a linkup event, thus bypassing the listening and learning states\./gi,
      "PortFast funksiyasini yoqish orqali port darhol STP Forwarding (uzatish) holatiga o'tadi va Listening hamda Learning holatlarini aylanib o'tadi (bypass qiladi)."],
@@ -5980,6 +6024,15 @@ function translateExplanationToUzbek(exp, q) {
   });
 
   return uz;
+}
+
+function resetInQuizDragDrop(idx) {
+  state.userAnswers[idx] = {};
+  state.activeInQuizTerm = null;
+  state.checkedQuestions[idx] = false;
+  renderCurrentQuestion();
+  renderPalette();
+  SoundEffects.playClick();
 }
 
 
@@ -6094,6 +6147,29 @@ function renderInQuizDragDrop(q, idx, isChecked, isReview) {
     row.appendChild(defBox);
     slotsContainer.appendChild(row);
   });
+
+  // In-card action buttons for Drag & Drop
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'in-quiz-dd-actions';
+  const hasMatches = Object.keys(userMatches).length > 0;
+  
+  if (!isChecked) {
+    actionsDiv.innerHTML = `
+      <button type="button" class="btn-primary" onclick="checkCurrentAnswer()" ${!hasMatches ? 'disabled' : ''} style="padding:9px 20px; font-weight:700; font-size:0.9rem;">
+        Tekshirish ✓
+      </button>
+      <button type="button" class="btn-secondary" onclick="resetInQuizDragDrop(${idx})" style="padding:9px 16px; font-size:0.9rem;">
+        Qayta tiklash 🔄
+      </button>
+    `;
+  } else {
+    actionsDiv.innerHTML = `
+      <button type="button" class="btn-secondary" onclick="resetInQuizDragDrop(${idx})" style="padding:9px 16px; font-size:0.9rem;">
+        Qaytadan urinib ko'rish 🔄
+      </button>
+    `;
+  }
+  ddWrapper.appendChild(actionsDiv);
 
   ddWrapper.appendChild(slotsContainer);
   listEl.appendChild(ddWrapper);
@@ -10933,12 +11009,11 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
 
   const isChecked = isReview || !!state.checkedQuestions[idx];
 
+  const userAns = state.userAnswers[idx] || (q.isDragDrop ? {} : []);
+
   if (q.isDragDrop) {
     renderInQuizDragDrop(q, idx, isChecked, isReview);
-    return;
-  }
-
-  const userAns = state.userAnswers[idx] || [];
+  } else {
 
   const isUserCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
 
@@ -11071,6 +11146,7 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
     listEl.appendChild(item);
 
   });
+  }
 
   const expBox = document.getElementById('explanationBox');
 
@@ -11107,7 +11183,7 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
       
       <div class="exp-uz-card">
         <div style="font-weight:700; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
-          <span>🇺🇿 Tushuntirish (O'zbek tilida):</span>
+          <span>💡 Tushuntirish (O'zbek tilida):</span>
           <a href="${gTranslateUrl}" target="_blank" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">🌐 Google Tarjima</a>
         </div>
         <div style="font-size:0.92rem; line-height:1.6; color:var(--text-main);">
@@ -11116,7 +11192,7 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
       </div>
 
       <details style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
-        <summary>🇬🇧 Asl inglizcha tushuntirish (Original English)</summary>
+        <summary>📖 Asl inglizcha tushuntirish (Original English)</summary>
         <div style="margin-top:6px; padding:8px 12px; background:rgba(0,0,0,0.15); border-radius:6px; line-height:1.5;">
           ${escapeHtml(cleanExp)}
         </div>
@@ -11161,7 +11237,7 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
 
     checkBtn.style.display = 'inline-flex';
 
-    checkBtn.disabled = userAns.length === 0 || isChecked;
+    checkBtn.disabled = !isQuestionAnswered(q, userAns) || isChecked;
 
     reviewExamBtn.style.display = 'none';
 
