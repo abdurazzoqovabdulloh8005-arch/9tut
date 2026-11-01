@@ -2531,9 +2531,9 @@ function updateSecurityAlertBadge() {
   if (badgeSubnav) badgeSubnav.textContent = unreadCount;
 
   if (alertBtn) {
-    if (state.isAdmin) {
+    if (state.isAdmin && unreadCount > 0) {
       alertBtn.style.display = 'inline-flex';
-      alertBtn.style.animation = unreadCount > 0 ? 'pulse 1.8s infinite' : 'none';
+      alertBtn.style.animation = 'pulse 1.8s infinite';
     } else {
       alertBtn.style.display = 'none';
     }
@@ -2742,9 +2742,9 @@ function updateSecurityAlertBadge() {
   if (badgeSubnav) badgeSubnav.textContent = unreadCount;
 
   if (alertBtn) {
-    if (state.isAdmin) {
+    if (state.isAdmin && unreadCount > 0) {
       alertBtn.style.display = 'inline-flex';
-      alertBtn.style.animation = unreadCount > 0 ? 'pulse 1.8s infinite' : 'none';
+      alertBtn.style.animation = 'pulse 1.8s infinite';
     } else {
       alertBtn.style.display = 'none';
     }
@@ -8695,12 +8695,18 @@ function formatOptionText(text) {
 
     }
 
-    const hasCliPrompt = /[A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>]/.test(trimmed) || 
-                         /\b(?:ip route|interface|switchport|router ospf|network|vlan|crypto key)\b/i.test(trimmed);
+    // Strict detection: ONLY genuine Cisco CLI prompts or actual configuration syntax!
+    // (Never match ordinary English prose that happens to mention words like interface or network)
+    const hasPrompt = /\b[A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>](?:\s*[a-zA-Z0-9]|$)/.test(trimmed);
+    const cmdStart = /^(?:interface\s+[a-zA-Z0-9\/]+|switchport\s+|ip\s+(?:route|address|dhcp|access-list|arp|verify)|router\s+(?:ospf|bgp|eigrp)|crypto\s+key|access-list\s+\d+|standby\s+\d+|spanning-tree\s+|line\s+vty)\b/i.test(trimmed);
+    const isMultilineConfig = trimmed.includes('\n') && /^(?:interface|switchport|ip|router|no shutdown|crypto|access-list)\b/im.test(trimmed);
 
-    if (hasCliPrompt) {
-      let formatted = trimmed.replace(/([^\n\r])([A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>])/g, '$1\n$2');
-      formatted = formatted.replace(/([#>])(?=[a-zA-Z0-9!])/g, '$1 ');
+    if (hasPrompt || cmdStart || isMultilineConfig) {
+      let formatted = trimmed;
+      if (hasPrompt) {
+        formatted = formatted.replace(/([^\n\r])([A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>])/g, '$1\n$2');
+        formatted = formatted.replace(/([#>])(?=[a-zA-Z0-9!])/g, '$1 ');
+      }
       return `<div class="cli-option-block">${escapeHtml(formatted)}</div>`;
     }
   }
