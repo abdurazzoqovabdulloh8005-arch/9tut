@@ -6030,7 +6030,7 @@ function renderInQuizDragDrop(q, idx, isChecked, isReview) {
   }
   const userMatches = state.userAnswers[idx];
 
-  const allTerms = q.pairs.map(p => p.term);
+  const allTerms = q.shuffledTerms || q.pairs.map(p => p.term);
   const assignedValues = Object.values(userMatches);
   const availableTerms = allTerms.filter(t => !assignedValues.includes(t));
 
@@ -6189,6 +6189,59 @@ function shuffleArray(array) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+// Savollar va javob variantlarini har bir testda tasodifiy aralashtirib berish (Shuffle questions & options)
+function prepareQuizQuestions(rawQuestions) {
+  if (!Array.isArray(rawQuestions)) return [];
+  
+  // 1. Savollar ketma-ketligini aralashtirish
+  const shuffledQuestions = shuffleArray(rawQuestions);
+  
+  // 2. Har bir savol ichidagi javob variantlari (A, B, C, D) va Drag&Drop terminlarini ham aralashtirish
+  return shuffledQuestions.map(q => {
+    const qClone = Object.assign({}, q);
+    
+    // Drag & Drop terminlar hovuzini aralashtirish
+    if (qClone.isDragDrop || (qClone.pairs && Array.isArray(qClone.pairs))) {
+      const terms = (qClone.pairs || []).map(p => p.term);
+      qClone.shuffledTerms = shuffleArray(terms);
+      return qClone;
+    }
+    
+    // Test variantlarini (A, B, C, D) aralashtirish
+    if (qClone.options && typeof qClone.options === 'object') {
+      const origKeys = Object.keys(qClone.options).sort();
+      if (origKeys.length > 1) {
+        const origAns = Array.isArray(qClone.answer) ? qClone.answer : [qClone.answer];
+        const items = origKeys.map(k => ({
+          origKey: k,
+          text: qClone.options[k],
+          isCorrect: origAns.includes(k)
+        }));
+        
+        const shuffledItems = shuffleArray(items);
+        const letterMap = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const newOptions = {};
+        const newAnswer = [];
+        
+        shuffledItems.forEach((item, idx) => {
+          const ltr = letterMap[idx];
+          newOptions[ltr] = item.text;
+          if (item.isCorrect) {
+            newAnswer.push(ltr);
+          }
+        });
+        
+        qClone.options = newOptions;
+        qClone.answer = newAnswer;
+        qClone.origAnswer = origAns;
+        qClone.origOptions = Object.assign({}, q.options);
+      }
+    }
+    
+    return qClone;
+  });
 }
 
 function scrollToQuestionTop() {
@@ -10588,8 +10641,8 @@ function startPartQuiz(part) {
 
   }
 
-  // Har bir urinishda savollar tartibi almashib (tasodifiy aralashib) tushadi!
-  questions = shuffleArray(questions);
+  // Har bir urinishda savollar ham, ularning javob variantlari (A, B, C, D) ham to'liq almashib tushadi!
+  questions = prepareQuizQuestions(questions);
 
   state.quizQuestions = questions;
 
@@ -11142,7 +11195,12 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
     const ansStr = Array.isArray(q.answer) ? q.answer.join(', ') : '';
 
     const cleanExp = (q.explanation || '').replace(/[\ufffd]/g, ' - ').trim();
-    const uzExp = q.explanation_uz || translateExplanationToUzbek(cleanExp, q);
+    let uzExp = q.explanation_uz || translateExplanationToUzbek(cleanExp, q);
+    if (q.origAnswer && Array.isArray(q.answer)) {
+      const curAnsStr = q.answer.join(', ');
+      uzExp = uzExp.replace(/^<b>Javob:\s*[^<]+<\/b>/i, `<b>Javob: ${curAnsStr}</b>`);
+      uzExp = uzExp.replace(/^Javob:\s*[^—–\-]+/i, `Javob: ${curAnsStr} `);
+    }
 
     const uStr = Array.isArray(userAns) && userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
 
@@ -11574,7 +11632,7 @@ function retryWrongQuestionsOnly() {
 
   }
 
-  state.quizQuestions = wrongQuestions;
+  state.quizQuestions = prepareQuizQuestions(wrongQuestions);
 
   state.currentIndex = 0;
 
