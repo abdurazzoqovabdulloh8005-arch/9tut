@@ -1856,6 +1856,7 @@ function initializeApp() {
 
   try { checkAuth(); } catch(e) { console.error("checkAuth", e); }
   try { startSessionSecurityMonitor(); } catch(e) {}
+  try { startChatLiveMonitor(); updateChatBadges(); } catch(e) {}
 
   try { renderPartsGrid(); } catch(e) { console.error("renderPartsGrid", e); }
 
@@ -2878,6 +2879,416 @@ function renderSecurityAlertsView() {
   }).join('');
 }
 
+
+// ========================================================
+// STUDENT <-> ADMIN LIVE CHAT ENGINE
+// ========================================================
+let activeAdminChatUser = null;
+
+function getChatMessages() {
+  try {
+    const raw = localStorage.getItem('ccna_chat_messages');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveChatMessages(msgs) {
+  try {
+    localStorage.setItem('ccna_chat_messages', JSON.stringify(msgs));
+    updateChatBadges();
+  } catch(e) {}
+}
+
+function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text) {
+  if (!text || !text.trim()) return;
+  const msgs = getChatMessages();
+  const newMsg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    fromLogin: fromLogin.toLowerCase(),
+    fromName: fromName,
+    fromRole: fromRole,
+    toLogin: toLogin.toLowerCase(),
+    toName: toName,
+    text: text.trim(),
+    timestamp: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toLocaleDateString('uz-UZ'),
+    isoTime: new Date().toISOString(),
+    isRead: false
+  };
+
+  msgs.push(newMsg);
+  saveChatMessages(msgs);
+  try { SoundEffects.playClick(); } catch(e) {}
+  return newMsg;
+}
+
+// Student Chat UI Logic
+function toggleStudentChatModal() {
+  const modal = document.getElementById('studentChatModal');
+  if (!modal) return;
+  const isHidden = (modal.style.display === 'none' || !modal.style.display);
+
+  if (isHidden) {
+    modal.style.display = 'flex';
+    renderStudentChatMessages();
+    markChatDialogueAsRead(state.currentUser ? state.currentUser.login : '', 'student');
+    const input = document.getElementById('studentChatInput');
+    if (input) setTimeout(() => input.focus(), 100);
+  } else {
+    modal.style.display = 'none';
+  }
+}
+
+function renderStudentChatMessages() {
+  const container = document.getElementById('studentChatMessagesArea');
+  if (!container || !state.currentUser) return;
+
+  const myLogin = state.currentUser.login.toLowerCase();
+  const allMsgs = getChatMessages();
+  const dialogue = allMsgs.filter(m => 
+    (m.fromLogin === myLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === myLogin)
+  );
+
+  if (dialogue.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:35px 15px; color:var(--text-muted); font-size:0.88rem;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">👋</div>
+        <b>Assalomu alaykum, ${escapeHtml(state.currentUser.name)}!</b><br>
+        Bosh Administrator (Abdulloh) bilan savol-javob qilishingiz yoki yangi qurilmadan kirishga ruxsat so'rashingiz mumkin.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dialogue.map(m => {
+    const isMe = (m.fromLogin === myLogin);
+    return `
+      <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
+        <div class="chat-bubble-content">
+          ${escapeHtml(m.text)}
+        </div>
+        <div class="chat-bubble-meta">
+          ${isMe ? 'Siz' : '👑 Abdulloh'} • ${m.timestamp}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleSendStudentMessage() {
+  const input = document.getElementById('studentChatInput');
+  if (!input || !state.currentUser) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sendChatMessage(
+    state.currentUser.login,
+    state.currentUser.name,
+    'student',
+    'abdulloh',
+    'Abdulloh',
+    text
+  );
+
+  input.value = '';
+  renderStudentChatMessages();
+}
+
+function sendStudentQuickPrompt(promptText) {
+  if (!state.currentUser) return;
+  // If requesting device permission, also include current device specs
+  let fullText = promptText;
+  if (promptText.includes('Yangi qurilma')) {
+    const dev = getDeviceFingerprint();
+    fullText = `📱 Yangi qurilmadan kirishga ruxsat bering. Qurilmam: ${dev.name}`;
+  }
+
+  sendChatMessage(
+    state.currentUser.login,
+    state.currentUser.name,
+    'student',
+    'abdulloh',
+    'Abdulloh',
+    fullText
+  );
+  renderStudentChatMessages();
+}
+
+function markChatDialogueAsRead(studentLogin, viewerRole) {
+  if (!studentLogin) return;
+  const msgs = getChatMessages();
+  let changed = false;
+
+  msgs.forEach(m => {
+    if (viewerRole === 'student') {
+      // Student viewing messages sent by admin
+      if (m.toLogin === studentLogin.toLowerCase() && !m.isRead) {
+        m.isRead = true;
+        changed = true;
+      }
+    } else if (viewerRole === 'admin') {
+      // Admin viewing messages sent by this student
+      if (m.fromLogin === studentLogin.toLowerCase() && m.toLogin === 'abdulloh' && !m.isRead) {
+        m.isRead = true;
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) saveChatMessages(msgs);
+}
+
+function updateChatBadges() {
+  const msgs = getChatMessages();
+
+  // 1. Student badge
+  if (state.currentUser && !state.isAdmin) {
+    const myLogin = state.currentUser.login.toLowerCase();
+    const unreadForMe = msgs.filter(m => m.toLogin === myLogin && !m.isRead).length;
+    const badge = document.getElementById('studentChatUnreadBadge');
+    if (badge) {
+      badge.textContent = unreadForMe;
+      badge.style.display = unreadForMe > 0 ? 'inline-block' : 'none';
+    }
+    const floatBtn = document.getElementById('studentChatFloatingBtn');
+    if (floatBtn) {
+      floatBtn.style.display = 'block';
+    }
+  } else {
+    const floatBtn = document.getElementById('studentChatFloatingBtn');
+    if (floatBtn) floatBtn.style.display = 'none';
+  }
+
+  // 2. Admin badge
+  if (state.isAdmin) {
+    const unreadForAdmin = msgs.filter(m => m.toLogin === 'abdulloh' && !m.isRead).length;
+    const adminBadge = document.getElementById('adminChatBadge');
+    if (adminBadge) adminBadge.textContent = unreadForAdmin;
+  }
+}
+
+// ADMIN CHAT MANAGEMENT
+function renderAdminChatConversations() {
+  const listEl = document.getElementById('adminChatConversationsList');
+  const searchInput = document.getElementById('adminChatSearchInput');
+  if (!listEl) return;
+
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  const users = getRegisteredUsers();
+  const msgs = getChatMessages();
+
+  // Group messages by student
+  let students = users.filter(u => u.role !== 'admin');
+  if (query) {
+    students = students.filter(s => s.name.toLowerCase().includes(query) || s.login.toLowerCase().includes(query));
+  }
+
+  if (students.length === 0) {
+    listEl.innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.86rem;">Talabalar topilmadi</div>`;
+    return;
+  }
+
+  listEl.innerHTML = students.map(s => {
+    const sLogin = s.login.toLowerCase();
+    const sMsgs = msgs.filter(m => (m.fromLogin === sLogin && m.toLogin === 'abdulloh') || (m.fromLogin === 'abdulloh' && m.toLogin === sLogin));
+    const lastMsg = sMsgs.length > 0 ? sMsgs[sMsgs.length - 1] : null;
+    const unreadCount = sMsgs.filter(m => m.fromLogin === sLogin && !m.isRead).length;
+    const isActive = (activeAdminChatUser && activeAdminChatUser.login.toLowerCase() === sLogin);
+
+    return `
+      <div class="admin-conv-item ${isActive ? 'active' : ''}" onclick="selectAdminChatUser('${escapeHtml(s.login)}')">
+        <div style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.95rem; flex-shrink:0;">
+          ${escapeHtml((s.name || 'T').charAt(0).toUpperCase())}
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(s.name)}
+            </div>
+            ${unreadCount > 0 ? `<span style="background:#ef4444; color:white; font-size:0.72rem; font-weight:800; border-radius:10px; padding:1px 6px;">${unreadCount}</span>` : ''}
+          </div>
+          <div style="font-size:0.78rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${lastMsg ? escapeHtml(lastMsg.text) : "Hozircha xabarlar yo'q"}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectAdminChatUser(studentLogin) {
+  const users = getRegisteredUsers();
+  const user = users.find(u => u.login.toLowerCase() === studentLogin.toLowerCase());
+  if (!user) return;
+
+  activeAdminChatUser = user;
+  markChatDialogueAsRead(studentLogin, 'admin');
+
+  // Update Header
+  const header = document.getElementById('adminActiveChatHeader');
+  const form = document.getElementById('adminChatReplyForm');
+  const nameEl = document.getElementById('adminChatActiveName');
+  const subEl = document.getElementById('adminChatActiveSub');
+  const avatarEl = document.getElementById('adminChatActiveAvatar');
+
+  if (header) header.style.display = 'flex';
+  if (form) form.style.display = 'flex';
+
+  if (nameEl) nameEl.textContent = user.name;
+  if (avatarEl) avatarEl.textContent = (user.name || 'T').charAt(0).toUpperCase();
+
+  const devInfo = (user.boundDevices && user.boundDevices[0]) ? user.boundDevices[0].name : "Qurilma biriktirilmagan";
+  if (subEl) subEl.textContent = `Login: ${user.login} • Guruh: ${user.group || 'Guruhsiz'} • ${devInfo}`;
+
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+
+  const replyInput = document.getElementById('adminChatReplyInput');
+  if (replyInput) setTimeout(() => replyInput.focus(), 100);
+}
+
+function renderAdminActiveChatMessages() {
+  const container = document.getElementById('adminChatMessagesArea');
+  if (!container || !activeAdminChatUser) return;
+
+  const targetLogin = activeAdminChatUser.login.toLowerCase();
+  const allMsgs = getChatMessages();
+  const dialogue = allMsgs.filter(m => 
+    (m.fromLogin === targetLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === targetLogin)
+  );
+
+  if (dialogue.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px 15px; color:var(--text-muted);">
+        <div style="font-size:2rem; margin-bottom:6px;">💬</div>
+        <b>${escapeHtml(activeAdminChatUser.name)}</b> bilan hozircha xabarlar yo'q.<br>
+        Birinchi bo'lib xabar yozishingiz mumkin.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dialogue.map(m => {
+    const isMe = (m.fromLogin === 'abdulloh');
+    return `
+      <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
+        <div class="chat-bubble-content">
+          ${escapeHtml(m.text)}
+        </div>
+        <div class="chat-bubble-meta">
+          ${isMe ? '👑 Siz (Admin)' : escapeHtml(m.fromName)} • ${m.timestamp}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleSendAdminReply() {
+  if (!activeAdminChatUser) return;
+  const input = document.getElementById('adminChatReplyInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sendChatMessage(
+    'abdulloh',
+    'Abdulloh',
+    'admin',
+    activeAdminChatUser.login,
+    activeAdminChatUser.name,
+    text
+  );
+
+  input.value = '';
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+}
+
+function adminQuickApproveDeviceFromChat() {
+  if (!activeAdminChatUser) return;
+  const users = getRegisteredUsers();
+  const u = users.find(x => x.id === activeAdminChatUser.id);
+  if (!u) return;
+
+  // Clear devices so student can bind new device
+  u.boundDevices = [];
+  u.currentSessionToken = '';
+  saveRegisteredUsers(users);
+
+  // Send automatic confirmation message into chat!
+  sendChatMessage(
+    'abdulloh',
+    'Abdulloh',
+    'admin',
+    u.login,
+    u.name,
+    "✅ Yangi qurilmangizga ruxsat berildi! Endi yangi kompyuter yoki telefoningizdan bemalol kirishingiz mumkin."
+  );
+
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  renderAdminActiveChatMessages();
+  renderAdminStudentsList();
+  alert(`✅ ${u.name} talabasiga yangi qurilmadan kirishga ruxsat berildi va chat orqali xabar yuborildi!`);
+}
+
+function adminClearCurrentChatHistory() {
+  if (!activeAdminChatUser) return;
+  if (!confirm(`Haqiqatan ham ${activeAdminChatUser.name} bilan barcha xabarlar tarixini o'chirmoqchimisiz?`)) return;
+
+  const targetLogin = activeAdminChatUser.login.toLowerCase();
+  let msgs = getChatMessages();
+  msgs = msgs.filter(m => !(
+    (m.fromLogin === targetLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === targetLogin)
+  ));
+
+  saveChatMessages(msgs);
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+}
+
+// Live monitor for real-time messages
+function startChatLiveMonitor() {
+  setInterval(() => {
+    updateChatBadges();
+
+    // If student chat modal is open, refresh silently
+    const studentModal = document.getElementById('studentChatModal');
+    if (studentModal && studentModal.style.display === 'flex') {
+      renderStudentChatMessages();
+    }
+
+    // If admin chat tab is active, refresh active dialogue
+    const adminChatView = document.getElementById('adminViewChat');
+    if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+      renderAdminActiveChatMessages();
+    }
+  }, 2500);
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ccna_chat_messages') {
+      updateChatBadges();
+      const studentModal = document.getElementById('studentChatModal');
+      if (studentModal && studentModal.style.display === 'flex') {
+        renderStudentChatMessages();
+      }
+      const adminChatView = document.getElementById('adminViewChat');
+      if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+        renderAdminActiveChatMessages();
+        renderAdminChatConversations();
+      }
+    }
+  });
+}
+
 function getRegisteredUsers() {
 
   try {
@@ -3074,7 +3485,9 @@ function checkAuth() {
 
     }
     try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
     try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
 
     // Hide duplicate standalone results button in header when logged in
 
@@ -3649,7 +4062,7 @@ async function handleUserRegister() {
     login: normalizedLogin,
 
     group: group,
-      maxDevices: parseInt((document.getElementById('modalStudentMaxDevices') || {}).value || 1, 10),
+    maxDevices: 1, // Foydalanuvchi o'zi tanlay olmaydi! Faqat Admin belgilaydi
 
     hash: hash,
 
@@ -6299,6 +6712,8 @@ function switchAdminTab(tabName) {
 
   const btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
   const btnSecurity = document.getElementById('adminTabBtnSecurity');
+  const btnChat = document.getElementById('adminTabBtnChat');
+  const viewChat = document.getElementById('adminViewChat');
   const viewSecurity = document.getElementById('adminViewSecurity');
 
   const viewStudents = document.getElementById('adminViewStudents');
@@ -6309,9 +6724,9 @@ function switchAdminTab(tabName) {
 
   const viewLeaderboard = document.getElementById('adminViewLeaderboard');
 
-  [btnStudents, btnResults, btnCharts, btnLeaderboard, btnSecurity].forEach(b => b && b.classList.remove('active'));
+  [btnStudents, btnResults, btnCharts, btnLeaderboard, btnSecurity, btnChat].forEach(b => b && b.classList.remove('active'));
 
-  [viewStudents, viewResults, viewCharts, viewLeaderboard, viewSecurity].forEach(v => v && (v.style.display = 'none'));
+  [viewStudents, viewResults, viewCharts, viewLeaderboard, viewSecurity, viewChat].forEach(v => v && (v.style.display = 'none'));
 
   if (tabName === 'students') {
 
@@ -6349,6 +6764,10 @@ function switchAdminTab(tabName) {
     if (btnSecurity) btnSecurity.classList.add('active');
     if (viewSecurity) viewSecurity.style.display = 'block';
     renderSecurityAlertsView();
+  } else if (tabName === 'chat') {
+    if (btnChat) btnChat.classList.add('active');
+    if (viewChat) viewChat.style.display = 'block';
+    renderAdminChatConversations();
   }
 
   SoundEffects.playClick();
@@ -6357,7 +6776,9 @@ function switchAdminTab(tabName) {
 
 function renderAdminDashboard() {
   try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
   try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
 
   if (!state.isAdmin) return;
 
@@ -6843,6 +7264,9 @@ async function saveStudentFromModal() {
 
     const hash = await computeSha256Hex(`${login}:${password}:${AUTH_SALT}`);
 
+    const maxDevEl = document.getElementById('modalStudentMaxDevices');
+    const maxDev = parseInt(maxDevEl ? maxDevEl.value : 1, 10) || 1;
+
     const newUser = {
 
       id: 'usr_' + Date.now(),
@@ -6852,6 +7276,8 @@ async function saveStudentFromModal() {
       login: login,
 
       group: group,
+
+      maxDevices: maxDev,
 
       hash: hash,
 

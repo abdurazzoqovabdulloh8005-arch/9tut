@@ -166,15 +166,7 @@
 
         </div>
 
-        <div class="form-group" style="margin-bottom:12px;">
-            <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">📱 Ruxsat etilgan qurilmalar soni:</label>
-            <select id="modalStudentMaxDevices" class="form-control" style="padding:10px 12px; font-size:0.92rem;">
-              <option value="1">1 ta qurilma (Standart - Tavsiya etiladi)</option>
-              <option value="2">2 ta qurilma (Noutbuk + Telefon)</option>
-              <option value="3">3 ta qurilma</option>
-              <option value="999">Cheksiz (Cheklovlarsiz)</option>
-            </select>
-          </div>
+        
 
           <div class="form-group" style="margin-bottom:12px;">
 
@@ -1270,10 +1262,13 @@
             🏆 Talabalar Reytingi (Top)
 
           </button>
+          
+          <button id="adminTabBtnChat" class="admin-subnav-btn" onclick="switchAdminTab('chat')" style="color:#0284c7; font-weight:700;">
+            💬 Talabalar bilan Chat (<span id="adminChatBadge">0</span>)
+          </button>
           <button id="adminTabBtnSecurity" class="admin-subnav-btn" onclick="switchAdminTab('security')" style="color:#ef4444; font-weight:700;">
             🚨 Xavfsizlik Auditi & Qurilmalar (<span id="adminSecurityBadge">0</span>)
           </button>
-
 
         </div>
 
@@ -1417,6 +1412,80 @@
 
         
         <!-- SUB-VIEW 5: SECURITY AUDIT & UNKNOWN DEVICE ALERTS -->
+        
+        <!-- SUB-VIEW 6: ADMIN <-> STUDENTS CHAT CENTER -->
+        <div id="adminViewChat" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+            <div>
+              <h3 style="margin:0; font-size:1.25rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                💬 Talabalar bilan Jonli Chat Markazi
+              </h3>
+              <p style="margin:4px 0 0; color:var(--text-muted); font-size:0.88rem;">
+                Har bir talaba bilan to'g'ridan-to'g'ri xabarlashish, savollarga javob berish va yangi qurilmalarga ruxsat berish
+              </p>
+            </div>
+            <div>
+              <button type="button" onclick="adminClearCurrentChatHistory()" class="btn-action-icon" style="padding:7px 13px; border-radius:8px; border-color:var(--border);" title="Tanlangan talaba bilan yozishmani tozalash">
+                🗑️ Suhbatni tozalash
+              </button>
+            </div>
+          </div>
+
+          <!-- Two-column Chat Layout -->
+          <div class="admin-chat-container">
+            <!-- Sidebar: Conversations List -->
+            <div class="admin-chat-sidebar">
+              <div style="padding:12px; border-bottom:1px solid var(--border);">
+                <input type="text" id="adminChatSearchInput" placeholder="🔍 Talaba ismi yoki login..." oninput="renderAdminChatConversations()" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-main); color:var(--text-main); font-size:0.88rem;">
+              </div>
+              <div id="adminChatConversationsList" class="admin-conversations-list"></div>
+            </div>
+
+            <!-- Main: Active Chat Dialogue -->
+            <div class="admin-chat-main">
+              <!-- Active thread header -->
+              <div id="adminActiveChatHeader" class="admin-chat-thread-header" style="display:none;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div id="adminChatActiveAvatar" style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem;">
+                    👤
+                  </div>
+                  <div>
+                    <div id="adminChatActiveName" style="font-weight:700; font-size:1rem; color:var(--text-main);">
+                      Talaba
+                    </div>
+                    <div id="adminChatActiveSub" style="font-size:0.8rem; color:var(--text-muted);">
+                      Login • Guruh • Bog'langan qurilma
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quick actions inside chat -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button type="button" id="adminChatResetDevBtn" onclick="adminQuickApproveDeviceFromChat()" class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; padding:6px 12px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px;" title="Talabaning yangi qurilmasiga darhol ruxsat berish">
+                    📱 Yangi qurilmaga ruxsat
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message list area -->
+              <div id="adminChatMessagesArea" class="admin-chat-messages-area">
+                <div style="text-align:center; padding:50px 20px; color:var(--text-muted);">
+                  <div style="font-size:2.5rem; margin-bottom:8px;">💬</div>
+                  Talaba bilan yozishmani boshlash uchun chap tomondan talabani tanlang
+                </div>
+              </div>
+
+              <!-- Admin reply footer -->
+              <form id="adminChatReplyForm" class="admin-chat-footer" style="display:none;" onsubmit="event.preventDefault(); handleSendAdminReply(); return false;">
+                <input type="text" id="adminChatReplyInput" placeholder="Talabaga javob yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+                <button type="submit" class="chat-send-btn" title="Javob yuborish">
+                  ✈️
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div id="adminViewSecurity" style="display:none;">
           <!-- Live alert banner for Admin -->
           <div id="adminSecurityLiveBanner" style="display:none; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.45); border-radius:10px; padding:12px 18px; margin-bottom:18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
@@ -1917,6 +1986,16 @@
 
         </div>
 
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">📱 Ruxsat etilgan qurilmalar soni (Device Limit):</label>
+          <select id="modalStudentMaxDevices" class="form-control" style="padding:10px 12px; font-size:0.92rem; font-weight:600;">
+            <option value="1">1 ta qurilma (Standart - Tavsiya etiladi)</option>
+            <option value="2">2 ta qurilma (Noutbuk + Telefon)</option>
+            <option value="3">3 ta qurilma</option>
+            <option value="999">Cheksiz (Cheklovlarsiz)</option>
+          </select>
+        </div>
+
         <div class="form-group" style="margin-bottom:16px;">
 
           <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">Parol <span id="modalPwdNotice" style="font-weight:400; font-size:0.75rem; color:var(--text-muted);">(Tahrirlashda bo'sh qoldirilsa o'zgarmaydi)</span></label>
@@ -2376,6 +2455,64 @@
   <script src="data.js"></script>
 
   <script src="app.js"></script>
+
+
+  <!-- ========================================== -->
+  <!-- STUDENT <-> ADMIN LIVE CHAT WIDGET & MODAL -->
+  <!-- ========================================== -->
+  <!-- 1. Floating Student Chat Trigger Button -->
+  <div id="studentChatFloatingBtn" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9000;">
+    <button type="button" class="floating-chat-bubble" onclick="toggleStudentChatModal()" title="Bosh Administrator (Abdulloh) bilan bog'lanish va savol berish">
+      <span style="font-size:1.35rem;">💬</span>
+      <span class="chat-btn-text">Ustoz bilan Chat</span>
+      <span id="studentChatUnreadBadge" style="display:none; background:#ef4444; color:white; border-radius:12px; padding:2px 8px; font-size:0.75rem; font-weight:800; margin-left:4px;">0</span>
+    </button>
+  </div>
+
+  <!-- 2. Student Chat Modal / Window -->
+  <div id="studentChatModal" class="student-chat-modal" style="display:none;">
+    <div class="chat-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; font-size:1.2rem; color:white; font-weight:800; box-shadow:0 3px 8px rgba(245,158,11,0.35);">
+          👑
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:0.96rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            Abdulloh <span style="font-size:0.75rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:2px 6px; border-radius:4px;">Bosh Admin</span>
+          </div>
+          <div style="font-size:0.76rem; color:#10b981; display:flex; align-items:center; gap:4px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+            Online • Savollar va Qurilmalar ruxsati
+          </div>
+        </div>
+      </div>
+      <button type="button" onclick="toggleStudentChatModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:4px 8px; border-radius:6px;" title="Chatni yopish">✕</button>
+    </div>
+
+    <!-- Quick prompt pills for students -->
+    <div style="padding:8px 14px; background:var(--bg-main); border-bottom:1px solid var(--border); display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;">
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('📱 Yangi qurilmadan kirishga ruxsat bering')">
+        📱 Yangi qurilma ruxsati
+      </button>
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('❓ Test savoli bo'yicha savolim bor edi')">
+        ❓ Test savoli
+      </button>
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('🔑 Parolimni yangilashda yordam bering')">
+        🔑 Parol yordami
+      </button>
+    </div>
+
+    <!-- Message scroll area -->
+    <div id="studentChatMessagesArea" class="chat-messages-area"></div>
+
+    <!-- Chat input footer -->
+    <form class="chat-input-footer" onsubmit="event.preventDefault(); handleSendStudentMessage(); return false;">
+      <input type="text" id="studentChatInput" placeholder="Xabaringizni yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+      <button type="submit" id="studentChatSendBtn" class="chat-send-btn" title="Yuborish">
+        ✈️
+      </button>
+    </form>
+  </div>
 
 </body>
 
