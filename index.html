@@ -17,9 +17,15 @@
           var parsed = JSON.parse(s);
           if (parsed && parsed.login) {
             document.documentElement.classList.add('is-authenticated');
+          } else {
+            document.documentElement.classList.remove('is-authenticated');
           }
+        } else {
+          document.documentElement.classList.remove('is-authenticated');
         }
-      } catch(e) {}
+      } catch(e) {
+        document.documentElement.classList.remove('is-authenticated');
+      }
     })();
   </script>
 </head>

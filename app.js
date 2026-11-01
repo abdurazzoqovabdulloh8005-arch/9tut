@@ -1213,8 +1213,15 @@ function saveRegisteredUsers(users) {
 
 
 function openAuthModal(defaultTab = 'login') {
+  document.documentElement.classList.remove('is-authenticated');
   const authModal = document.getElementById('authModal');
-  if (authModal) authModal.style.display = 'flex';
+  if (authModal) {
+    authModal.style.display = 'flex';
+  }
+  const mainContent = document.querySelector('main');
+  if (mainContent && !state.currentUser) {
+    mainContent.style.display = 'none';
+  }
   switchAuthTab(defaultTab);
 }
 
@@ -1310,11 +1317,20 @@ function checkAuth() {
   } else {
     state.currentUser = null;
     state.isAdmin = false;
+    document.documentElement.classList.remove('is-authenticated');
+
+    try {
+      localStorage.removeItem('ccna_auth_session');
+      sessionStorage.removeItem('ccna_auth_session');
+    } catch(e) {}
+
     switchMainTab('quiz');
 
     const loginBtn = document.getElementById('openAuthModalBtn');
     if (loginBtn) loginBtn.style.display = 'inline-flex';
-    if (authModal) authModal.style.display = 'flex';
+    if (authModal) {
+      authModal.style.display = 'flex';
+    }
     if (mainContent) mainContent.style.display = 'none';
     if (navTabs) navTabs.style.visibility = 'hidden';
     if (userBadge) userBadge.style.display = 'none';
