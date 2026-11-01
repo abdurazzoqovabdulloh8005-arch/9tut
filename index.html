@@ -1478,11 +1478,18 @@
               </div>
 
               <!-- Admin reply footer -->
-              <form id="adminChatReplyForm" class="admin-chat-footer" style="display:none;" onsubmit="event.preventDefault(); handleSendAdminReply(); return false;">
-                <input type="text" id="adminChatReplyInput" placeholder="Talabaga javob yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
-                <button type="submit" class="chat-send-btn" title="Javob yuborish">
-                  ✈️
-                </button>
+              <form id="adminChatReplyForm" class="admin-chat-footer" style="display:none; flex-direction:column; gap:6px;" onsubmit="event.preventDefault(); handleSendAdminReply(); return false;">
+                <div id="adminChatImgPreview" style="display:none; padding:4px 8px; background:var(--bg-main); border-radius:6px; font-size:0.8rem; align-items:center; gap:8px;">
+                  <img id="adminPreviewThumb" style="width:32px; height:32px; border-radius:4px; object-fit:cover;">
+                  <span style="flex:1; color:var(--text-main);">📷 Rasm biriktirildi</span>
+                  <button type="button" onclick="cancelAdminImageAttach()" style="background:none; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">✕</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; width:100%;">
+                  <input type="file" id="adminChatImageInput" accept="image/*" style="display:none;" onchange="handleAdminImageSelect(event)">
+                  <button type="button" class="btn-chat-attach" onclick="document.getElementById('adminChatImageInput').click()" title="📷 Rasm biriktirish">📷</button>
+                  <input type="text" id="adminChatReplyInput" placeholder="Talabaga javob yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+                  <button type="submit" class="btn-primary" style="border-radius:20px; padding:8px 18px; font-weight:700;">Javob ✈️</button>
+                </div>
               </form>
             </div>
           </div>
@@ -2508,11 +2515,18 @@
     <div id="studentChatMessagesArea" class="chat-messages-area"></div>
 
     <!-- Chat input footer -->
-    <form class="chat-input-footer" onsubmit="event.preventDefault(); handleSendStudentMessage(); return false;">
-      <input type="text" id="studentChatInput" placeholder="Xabaringizni yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
-      <button type="submit" id="studentChatSendBtn" class="chat-send-btn" title="Yuborish">
-        ✈️
-      </button>
+    <form id="studentChatForm" style="display:flex; flex-direction:column; gap:6px; padding:12px 16px; border-top:1px solid var(--border);" onsubmit="event.preventDefault(); handleSendStudentMessage(); return false;">
+      <div id="studentChatImgPreview" style="display:none; padding:4px 8px; background:var(--bg-main); border-radius:6px; font-size:0.8rem; align-items:center; gap:8px;">
+        <img id="studentPreviewThumb" style="width:32px; height:32px; border-radius:4px; object-fit:cover;">
+        <span style="flex:1; color:var(--text-main);">📷 Rasm biriktirildi</span>
+        <button type="button" onclick="cancelStudentImageAttach()" style="background:none; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="studentChatImageInput" accept="image/*" style="display:none;" onchange="handleStudentImageSelect(event)">
+        <button type="button" class="btn-chat-attach" onclick="document.getElementById('studentChatImageInput').click()" title="📷 Rasm biriktirish">📷</button>
+        <input type="text" id="studentChatInput" placeholder="Xabaringizni yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+        <button type="submit" id="studentChatSendBtn" class="btn-primary" style="border-radius:20px; padding:8px 18px; font-weight:700;">Yuborish ✈️</button>
+      </div>
     </form>
   </div>
 
