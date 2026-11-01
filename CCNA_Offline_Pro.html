@@ -2846,6 +2846,245 @@ html.is-authenticated .nav-tabs {
   border-radius: 6px;
 }
 
+
+/* ========================================================
+   STUDENT <-> ADMIN LIVE CHAT SYSTEM STYLES
+   ======================================================== */
+.floating-chat-bubble {
+  background: linear-gradient(135deg, #0076ce 0%, #0284c7 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 22px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 25px rgba(0, 118, 206, 0.45);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.floating-chat-bubble:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 14px 30px rgba(0, 118, 206, 0.6);
+}
+
+.student-chat-modal {
+  position: fixed;
+  bottom: 85px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 110px);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  z-index: 9005;
+  overflow: hidden;
+  animation: slideUpFade 0.25s ease-out;
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-header {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quick-chat-pill {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.quick-chat-pill:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.chat-messages-area {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-main);
+}
+
+.chat-bubble-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 82%;
+}
+.chat-bubble-row.sent {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.chat-bubble-row.received {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.chat-bubble-content {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.91rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.chat-bubble-row.sent .chat-bubble-content {
+  background: linear-gradient(135deg, #0076ce 0%, #0284c7 100%);
+  color: #ffffff;
+  border-bottom-right-radius: 3px;
+  box-shadow: 0 3px 10px rgba(0, 118, 206, 0.25);
+}
+.chat-bubble-row.received .chat-bubble-content {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-bubble-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  padding: 0 4px;
+}
+
+.chat-input-footer {
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chat-send-btn {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.chat-send-btn:hover {
+  transform: scale(1.08);
+  background: #0284c7;
+}
+
+/* ADMIN PANEL CHAT LAYOUT */
+.admin-chat-container {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  height: 640px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.admin-chat-sidebar {
+  width: 320px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+}
+.admin-conversations-list {
+  flex: 1;
+  overflow-y: auto;
+}
+.admin-conv-item {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s ease;
+}
+.admin-conv-item:hover, .admin-conv-item.active {
+  background: rgba(0, 118, 206, 0.08);
+}
+.admin-conv-item.active {
+  border-left: 3px solid var(--primary);
+}
+
+.admin-chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+}
+.admin-chat-thread-header {
+  padding: 12px 18px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-chat-messages-area {
+  flex: 1;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-chat-footer {
+  padding: 12px 18px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .admin-chat-container {
+    flex-direction: column;
+    height: auto;
+  }
+  .admin-chat-sidebar {
+    width: 100%;
+    height: 250px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-chat-main {
+    height: 400px;
+  }
+}
+
 </style>
 
   <script>
@@ -2994,15 +3233,7 @@ html.is-authenticated .nav-tabs {
 
         </div>
 
-        <div class="form-group" style="margin-bottom:12px;">
-            <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">📱 Ruxsat etilgan qurilmalar soni:</label>
-            <select id="modalStudentMaxDevices" class="form-control" style="padding:10px 12px; font-size:0.92rem;">
-              <option value="1">1 ta qurilma (Standart - Tavsiya etiladi)</option>
-              <option value="2">2 ta qurilma (Noutbuk + Telefon)</option>
-              <option value="3">3 ta qurilma</option>
-              <option value="999">Cheksiz (Cheklovlarsiz)</option>
-            </select>
-          </div>
+        
 
           <div class="form-group" style="margin-bottom:12px;">
 
@@ -4098,10 +4329,13 @@ html.is-authenticated .nav-tabs {
             🏆 Talabalar Reytingi (Top)
 
           </button>
+          
+          <button id="adminTabBtnChat" class="admin-subnav-btn" onclick="switchAdminTab('chat')" style="color:#0284c7; font-weight:700;">
+            💬 Talabalar bilan Chat (<span id="adminChatBadge">0</span>)
+          </button>
           <button id="adminTabBtnSecurity" class="admin-subnav-btn" onclick="switchAdminTab('security')" style="color:#ef4444; font-weight:700;">
             🚨 Xavfsizlik Auditi & Qurilmalar (<span id="adminSecurityBadge">0</span>)
           </button>
-
 
         </div>
 
@@ -4245,6 +4479,80 @@ html.is-authenticated .nav-tabs {
 
         
         <!-- SUB-VIEW 5: SECURITY AUDIT & UNKNOWN DEVICE ALERTS -->
+        
+        <!-- SUB-VIEW 6: ADMIN <-> STUDENTS CHAT CENTER -->
+        <div id="adminViewChat" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+            <div>
+              <h3 style="margin:0; font-size:1.25rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                💬 Talabalar bilan Jonli Chat Markazi
+              </h3>
+              <p style="margin:4px 0 0; color:var(--text-muted); font-size:0.88rem;">
+                Har bir talaba bilan to'g'ridan-to'g'ri xabarlashish, savollarga javob berish va yangi qurilmalarga ruxsat berish
+              </p>
+            </div>
+            <div>
+              <button type="button" onclick="adminClearCurrentChatHistory()" class="btn-action-icon" style="padding:7px 13px; border-radius:8px; border-color:var(--border);" title="Tanlangan talaba bilan yozishmani tozalash">
+                🗑️ Suhbatni tozalash
+              </button>
+            </div>
+          </div>
+
+          <!-- Two-column Chat Layout -->
+          <div class="admin-chat-container">
+            <!-- Sidebar: Conversations List -->
+            <div class="admin-chat-sidebar">
+              <div style="padding:12px; border-bottom:1px solid var(--border);">
+                <input type="text" id="adminChatSearchInput" placeholder="🔍 Talaba ismi yoki login..." oninput="renderAdminChatConversations()" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-main); color:var(--text-main); font-size:0.88rem;">
+              </div>
+              <div id="adminChatConversationsList" class="admin-conversations-list"></div>
+            </div>
+
+            <!-- Main: Active Chat Dialogue -->
+            <div class="admin-chat-main">
+              <!-- Active thread header -->
+              <div id="adminActiveChatHeader" class="admin-chat-thread-header" style="display:none;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div id="adminChatActiveAvatar" style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem;">
+                    👤
+                  </div>
+                  <div>
+                    <div id="adminChatActiveName" style="font-weight:700; font-size:1rem; color:var(--text-main);">
+                      Talaba
+                    </div>
+                    <div id="adminChatActiveSub" style="font-size:0.8rem; color:var(--text-muted);">
+                      Login • Guruh • Bog'langan qurilma
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Quick actions inside chat -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button type="button" id="adminChatResetDevBtn" onclick="adminQuickApproveDeviceFromChat()" class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; padding:6px 12px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px;" title="Talabaning yangi qurilmasiga darhol ruxsat berish">
+                    📱 Yangi qurilmaga ruxsat
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message list area -->
+              <div id="adminChatMessagesArea" class="admin-chat-messages-area">
+                <div style="text-align:center; padding:50px 20px; color:var(--text-muted);">
+                  <div style="font-size:2.5rem; margin-bottom:8px;">💬</div>
+                  Talaba bilan yozishmani boshlash uchun chap tomondan talabani tanlang
+                </div>
+              </div>
+
+              <!-- Admin reply footer -->
+              <form id="adminChatReplyForm" class="admin-chat-footer" style="display:none;" onsubmit="event.preventDefault(); handleSendAdminReply(); return false;">
+                <input type="text" id="adminChatReplyInput" placeholder="Talabaga javob yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+                <button type="submit" class="chat-send-btn" title="Javob yuborish">
+                  ✈️
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div id="adminViewSecurity" style="display:none;">
           <!-- Live alert banner for Admin -->
           <div id="adminSecurityLiveBanner" style="display:none; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.45); border-radius:10px; padding:12px 18px; margin-bottom:18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
@@ -4743,6 +5051,16 @@ html.is-authenticated .nav-tabs {
 
           <input type="text" id="modalStudentGroup" class="form-control" placeholder="Masalan: CCNA-01 yoki Telekom" required>
 
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.88rem; margin-bottom:4px; display:block;">📱 Ruxsat etilgan qurilmalar soni (Device Limit):</label>
+          <select id="modalStudentMaxDevices" class="form-control" style="padding:10px 12px; font-size:0.92rem; font-weight:600;">
+            <option value="1">1 ta qurilma (Standart - Tavsiya etiladi)</option>
+            <option value="2">2 ta qurilma (Noutbuk + Telefon)</option>
+            <option value="3">3 ta qurilma</option>
+            <option value="999">Cheksiz (Cheklovlarsiz)</option>
+          </select>
         </div>
 
         <div class="form-group" style="margin-bottom:16px;">
@@ -7074,6 +7392,7 @@ function initializeApp() {
 
   try { checkAuth(); } catch(e) { console.error("checkAuth", e); }
   try { startSessionSecurityMonitor(); } catch(e) {}
+  try { startChatLiveMonitor(); updateChatBadges(); } catch(e) {}
 
   try { renderPartsGrid(); } catch(e) { console.error("renderPartsGrid", e); }
 
@@ -8096,6 +8415,416 @@ function renderSecurityAlertsView() {
   }).join('');
 }
 
+
+// ========================================================
+// STUDENT <-> ADMIN LIVE CHAT ENGINE
+// ========================================================
+let activeAdminChatUser = null;
+
+function getChatMessages() {
+  try {
+    const raw = localStorage.getItem('ccna_chat_messages');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveChatMessages(msgs) {
+  try {
+    localStorage.setItem('ccna_chat_messages', JSON.stringify(msgs));
+    updateChatBadges();
+  } catch(e) {}
+}
+
+function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text) {
+  if (!text || !text.trim()) return;
+  const msgs = getChatMessages();
+  const newMsg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    fromLogin: fromLogin.toLowerCase(),
+    fromName: fromName,
+    fromRole: fromRole,
+    toLogin: toLogin.toLowerCase(),
+    toName: toName,
+    text: text.trim(),
+    timestamp: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toLocaleDateString('uz-UZ'),
+    isoTime: new Date().toISOString(),
+    isRead: false
+  };
+
+  msgs.push(newMsg);
+  saveChatMessages(msgs);
+  try { SoundEffects.playClick(); } catch(e) {}
+  return newMsg;
+}
+
+// Student Chat UI Logic
+function toggleStudentChatModal() {
+  const modal = document.getElementById('studentChatModal');
+  if (!modal) return;
+  const isHidden = (modal.style.display === 'none' || !modal.style.display);
+
+  if (isHidden) {
+    modal.style.display = 'flex';
+    renderStudentChatMessages();
+    markChatDialogueAsRead(state.currentUser ? state.currentUser.login : '', 'student');
+    const input = document.getElementById('studentChatInput');
+    if (input) setTimeout(() => input.focus(), 100);
+  } else {
+    modal.style.display = 'none';
+  }
+}
+
+function renderStudentChatMessages() {
+  const container = document.getElementById('studentChatMessagesArea');
+  if (!container || !state.currentUser) return;
+
+  const myLogin = state.currentUser.login.toLowerCase();
+  const allMsgs = getChatMessages();
+  const dialogue = allMsgs.filter(m => 
+    (m.fromLogin === myLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === myLogin)
+  );
+
+  if (dialogue.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:35px 15px; color:var(--text-muted); font-size:0.88rem;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">👋</div>
+        <b>Assalomu alaykum, ${escapeHtml(state.currentUser.name)}!</b><br>
+        Bosh Administrator (Abdulloh) bilan savol-javob qilishingiz yoki yangi qurilmadan kirishga ruxsat so'rashingiz mumkin.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dialogue.map(m => {
+    const isMe = (m.fromLogin === myLogin);
+    return `
+      <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
+        <div class="chat-bubble-content">
+          ${escapeHtml(m.text)}
+        </div>
+        <div class="chat-bubble-meta">
+          ${isMe ? 'Siz' : '👑 Abdulloh'} • ${m.timestamp}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleSendStudentMessage() {
+  const input = document.getElementById('studentChatInput');
+  if (!input || !state.currentUser) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sendChatMessage(
+    state.currentUser.login,
+    state.currentUser.name,
+    'student',
+    'abdulloh',
+    'Abdulloh',
+    text
+  );
+
+  input.value = '';
+  renderStudentChatMessages();
+}
+
+function sendStudentQuickPrompt(promptText) {
+  if (!state.currentUser) return;
+  // If requesting device permission, also include current device specs
+  let fullText = promptText;
+  if (promptText.includes('Yangi qurilma')) {
+    const dev = getDeviceFingerprint();
+    fullText = `📱 Yangi qurilmadan kirishga ruxsat bering. Qurilmam: ${dev.name}`;
+  }
+
+  sendChatMessage(
+    state.currentUser.login,
+    state.currentUser.name,
+    'student',
+    'abdulloh',
+    'Abdulloh',
+    fullText
+  );
+  renderStudentChatMessages();
+}
+
+function markChatDialogueAsRead(studentLogin, viewerRole) {
+  if (!studentLogin) return;
+  const msgs = getChatMessages();
+  let changed = false;
+
+  msgs.forEach(m => {
+    if (viewerRole === 'student') {
+      // Student viewing messages sent by admin
+      if (m.toLogin === studentLogin.toLowerCase() && !m.isRead) {
+        m.isRead = true;
+        changed = true;
+      }
+    } else if (viewerRole === 'admin') {
+      // Admin viewing messages sent by this student
+      if (m.fromLogin === studentLogin.toLowerCase() && m.toLogin === 'abdulloh' && !m.isRead) {
+        m.isRead = true;
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) saveChatMessages(msgs);
+}
+
+function updateChatBadges() {
+  const msgs = getChatMessages();
+
+  // 1. Student badge
+  if (state.currentUser && !state.isAdmin) {
+    const myLogin = state.currentUser.login.toLowerCase();
+    const unreadForMe = msgs.filter(m => m.toLogin === myLogin && !m.isRead).length;
+    const badge = document.getElementById('studentChatUnreadBadge');
+    if (badge) {
+      badge.textContent = unreadForMe;
+      badge.style.display = unreadForMe > 0 ? 'inline-block' : 'none';
+    }
+    const floatBtn = document.getElementById('studentChatFloatingBtn');
+    if (floatBtn) {
+      floatBtn.style.display = 'block';
+    }
+  } else {
+    const floatBtn = document.getElementById('studentChatFloatingBtn');
+    if (floatBtn) floatBtn.style.display = 'none';
+  }
+
+  // 2. Admin badge
+  if (state.isAdmin) {
+    const unreadForAdmin = msgs.filter(m => m.toLogin === 'abdulloh' && !m.isRead).length;
+    const adminBadge = document.getElementById('adminChatBadge');
+    if (adminBadge) adminBadge.textContent = unreadForAdmin;
+  }
+}
+
+// ADMIN CHAT MANAGEMENT
+function renderAdminChatConversations() {
+  const listEl = document.getElementById('adminChatConversationsList');
+  const searchInput = document.getElementById('adminChatSearchInput');
+  if (!listEl) return;
+
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  const users = getRegisteredUsers();
+  const msgs = getChatMessages();
+
+  // Group messages by student
+  let students = users.filter(u => u.role !== 'admin');
+  if (query) {
+    students = students.filter(s => s.name.toLowerCase().includes(query) || s.login.toLowerCase().includes(query));
+  }
+
+  if (students.length === 0) {
+    listEl.innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.86rem;">Talabalar topilmadi</div>`;
+    return;
+  }
+
+  listEl.innerHTML = students.map(s => {
+    const sLogin = s.login.toLowerCase();
+    const sMsgs = msgs.filter(m => (m.fromLogin === sLogin && m.toLogin === 'abdulloh') || (m.fromLogin === 'abdulloh' && m.toLogin === sLogin));
+    const lastMsg = sMsgs.length > 0 ? sMsgs[sMsgs.length - 1] : null;
+    const unreadCount = sMsgs.filter(m => m.fromLogin === sLogin && !m.isRead).length;
+    const isActive = (activeAdminChatUser && activeAdminChatUser.login.toLowerCase() === sLogin);
+
+    return `
+      <div class="admin-conv-item ${isActive ? 'active' : ''}" onclick="selectAdminChatUser('${escapeHtml(s.login)}')">
+        <div style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.95rem; flex-shrink:0;">
+          ${escapeHtml((s.name || 'T').charAt(0).toUpperCase())}
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700; font-size:0.88rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(s.name)}
+            </div>
+            ${unreadCount > 0 ? `<span style="background:#ef4444; color:white; font-size:0.72rem; font-weight:800; border-radius:10px; padding:1px 6px;">${unreadCount}</span>` : ''}
+          </div>
+          <div style="font-size:0.78rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${lastMsg ? escapeHtml(lastMsg.text) : "Hozircha xabarlar yo'q"}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectAdminChatUser(studentLogin) {
+  const users = getRegisteredUsers();
+  const user = users.find(u => u.login.toLowerCase() === studentLogin.toLowerCase());
+  if (!user) return;
+
+  activeAdminChatUser = user;
+  markChatDialogueAsRead(studentLogin, 'admin');
+
+  // Update Header
+  const header = document.getElementById('adminActiveChatHeader');
+  const form = document.getElementById('adminChatReplyForm');
+  const nameEl = document.getElementById('adminChatActiveName');
+  const subEl = document.getElementById('adminChatActiveSub');
+  const avatarEl = document.getElementById('adminChatActiveAvatar');
+
+  if (header) header.style.display = 'flex';
+  if (form) form.style.display = 'flex';
+
+  if (nameEl) nameEl.textContent = user.name;
+  if (avatarEl) avatarEl.textContent = (user.name || 'T').charAt(0).toUpperCase();
+
+  const devInfo = (user.boundDevices && user.boundDevices[0]) ? user.boundDevices[0].name : "Qurilma biriktirilmagan";
+  if (subEl) subEl.textContent = `Login: ${user.login} • Guruh: ${user.group || 'Guruhsiz'} • ${devInfo}`;
+
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+
+  const replyInput = document.getElementById('adminChatReplyInput');
+  if (replyInput) setTimeout(() => replyInput.focus(), 100);
+}
+
+function renderAdminActiveChatMessages() {
+  const container = document.getElementById('adminChatMessagesArea');
+  if (!container || !activeAdminChatUser) return;
+
+  const targetLogin = activeAdminChatUser.login.toLowerCase();
+  const allMsgs = getChatMessages();
+  const dialogue = allMsgs.filter(m => 
+    (m.fromLogin === targetLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === targetLogin)
+  );
+
+  if (dialogue.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px 15px; color:var(--text-muted);">
+        <div style="font-size:2rem; margin-bottom:6px;">💬</div>
+        <b>${escapeHtml(activeAdminChatUser.name)}</b> bilan hozircha xabarlar yo'q.<br>
+        Birinchi bo'lib xabar yozishingiz mumkin.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = dialogue.map(m => {
+    const isMe = (m.fromLogin === 'abdulloh');
+    return `
+      <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
+        <div class="chat-bubble-content">
+          ${escapeHtml(m.text)}
+        </div>
+        <div class="chat-bubble-meta">
+          ${isMe ? '👑 Siz (Admin)' : escapeHtml(m.fromName)} • ${m.timestamp}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleSendAdminReply() {
+  if (!activeAdminChatUser) return;
+  const input = document.getElementById('adminChatReplyInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  sendChatMessage(
+    'abdulloh',
+    'Abdulloh',
+    'admin',
+    activeAdminChatUser.login,
+    activeAdminChatUser.name,
+    text
+  );
+
+  input.value = '';
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+}
+
+function adminQuickApproveDeviceFromChat() {
+  if (!activeAdminChatUser) return;
+  const users = getRegisteredUsers();
+  const u = users.find(x => x.id === activeAdminChatUser.id);
+  if (!u) return;
+
+  // Clear devices so student can bind new device
+  u.boundDevices = [];
+  u.currentSessionToken = '';
+  saveRegisteredUsers(users);
+
+  // Send automatic confirmation message into chat!
+  sendChatMessage(
+    'abdulloh',
+    'Abdulloh',
+    'admin',
+    u.login,
+    u.name,
+    "✅ Yangi qurilmangizga ruxsat berildi! Endi yangi kompyuter yoki telefoningizdan bemalol kirishingiz mumkin."
+  );
+
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  renderAdminActiveChatMessages();
+  renderAdminStudentsList();
+  alert(`✅ ${u.name} talabasiga yangi qurilmadan kirishga ruxsat berildi va chat orqali xabar yuborildi!`);
+}
+
+function adminClearCurrentChatHistory() {
+  if (!activeAdminChatUser) return;
+  if (!confirm(`Haqiqatan ham ${activeAdminChatUser.name} bilan barcha xabarlar tarixini o'chirmoqchimisiz?`)) return;
+
+  const targetLogin = activeAdminChatUser.login.toLowerCase();
+  let msgs = getChatMessages();
+  msgs = msgs.filter(m => !(
+    (m.fromLogin === targetLogin && m.toLogin === 'abdulloh') ||
+    (m.fromLogin === 'abdulloh' && m.toLogin === targetLogin)
+  ));
+
+  saveChatMessages(msgs);
+  renderAdminActiveChatMessages();
+  renderAdminChatConversations();
+}
+
+// Live monitor for real-time messages
+function startChatLiveMonitor() {
+  setInterval(() => {
+    updateChatBadges();
+
+    // If student chat modal is open, refresh silently
+    const studentModal = document.getElementById('studentChatModal');
+    if (studentModal && studentModal.style.display === 'flex') {
+      renderStudentChatMessages();
+    }
+
+    // If admin chat tab is active, refresh active dialogue
+    const adminChatView = document.getElementById('adminViewChat');
+    if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+      renderAdminActiveChatMessages();
+    }
+  }, 2500);
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ccna_chat_messages') {
+      updateChatBadges();
+      const studentModal = document.getElementById('studentChatModal');
+      if (studentModal && studentModal.style.display === 'flex') {
+        renderStudentChatMessages();
+      }
+      const adminChatView = document.getElementById('adminViewChat');
+      if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+        renderAdminActiveChatMessages();
+        renderAdminChatConversations();
+      }
+    }
+  });
+}
+
 function getRegisteredUsers() {
 
   try {
@@ -8292,7 +9021,9 @@ function checkAuth() {
 
     }
     try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
     try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
 
     // Hide duplicate standalone results button in header when logged in
 
@@ -8867,7 +9598,7 @@ async function handleUserRegister() {
     login: normalizedLogin,
 
     group: group,
-      maxDevices: parseInt((document.getElementById('modalStudentMaxDevices') || {}).value || 1, 10),
+    maxDevices: 1, // Foydalanuvchi o'zi tanlay olmaydi! Faqat Admin belgilaydi
 
     hash: hash,
 
@@ -11517,6 +12248,8 @@ function switchAdminTab(tabName) {
 
   const btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
   const btnSecurity = document.getElementById('adminTabBtnSecurity');
+  const btnChat = document.getElementById('adminTabBtnChat');
+  const viewChat = document.getElementById('adminViewChat');
   const viewSecurity = document.getElementById('adminViewSecurity');
 
   const viewStudents = document.getElementById('adminViewStudents');
@@ -11527,9 +12260,9 @@ function switchAdminTab(tabName) {
 
   const viewLeaderboard = document.getElementById('adminViewLeaderboard');
 
-  [btnStudents, btnResults, btnCharts, btnLeaderboard, btnSecurity].forEach(b => b && b.classList.remove('active'));
+  [btnStudents, btnResults, btnCharts, btnLeaderboard, btnSecurity, btnChat].forEach(b => b && b.classList.remove('active'));
 
-  [viewStudents, viewResults, viewCharts, viewLeaderboard, viewSecurity].forEach(v => v && (v.style.display = 'none'));
+  [viewStudents, viewResults, viewCharts, viewLeaderboard, viewSecurity, viewChat].forEach(v => v && (v.style.display = 'none'));
 
   if (tabName === 'students') {
 
@@ -11567,6 +12300,10 @@ function switchAdminTab(tabName) {
     if (btnSecurity) btnSecurity.classList.add('active');
     if (viewSecurity) viewSecurity.style.display = 'block';
     renderSecurityAlertsView();
+  } else if (tabName === 'chat') {
+    if (btnChat) btnChat.classList.add('active');
+    if (viewChat) viewChat.style.display = 'block';
+    renderAdminChatConversations();
   }
 
   SoundEffects.playClick();
@@ -11575,7 +12312,9 @@ function switchAdminTab(tabName) {
 
 function renderAdminDashboard() {
   try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
   try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateChatBadges(); } catch(e) {}
 
   if (!state.isAdmin) return;
 
@@ -12061,6 +12800,9 @@ async function saveStudentFromModal() {
 
     const hash = await computeSha256Hex(`${login}:${password}:${AUTH_SALT}`);
 
+    const maxDevEl = document.getElementById('modalStudentMaxDevices');
+    const maxDev = parseInt(maxDevEl ? maxDevEl.value : 1, 10) || 1;
+
     const newUser = {
 
       id: 'usr_' + Date.now(),
@@ -12070,6 +12812,8 @@ async function saveStudentFromModal() {
       login: login,
 
       group: group,
+
+      maxDevices: maxDev,
 
       hash: hash,
 
@@ -15013,6 +15757,64 @@ function drawTrendChart(results) {
 
 
 </script>
+
+
+  <!-- ========================================== -->
+  <!-- STUDENT <-> ADMIN LIVE CHAT WIDGET & MODAL -->
+  <!-- ========================================== -->
+  <!-- 1. Floating Student Chat Trigger Button -->
+  <div id="studentChatFloatingBtn" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9000;">
+    <button type="button" class="floating-chat-bubble" onclick="toggleStudentChatModal()" title="Bosh Administrator (Abdulloh) bilan bog'lanish va savol berish">
+      <span style="font-size:1.35rem;">💬</span>
+      <span class="chat-btn-text">Ustoz bilan Chat</span>
+      <span id="studentChatUnreadBadge" style="display:none; background:#ef4444; color:white; border-radius:12px; padding:2px 8px; font-size:0.75rem; font-weight:800; margin-left:4px;">0</span>
+    </button>
+  </div>
+
+  <!-- 2. Student Chat Modal / Window -->
+  <div id="studentChatModal" class="student-chat-modal" style="display:none;">
+    <div class="chat-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; font-size:1.2rem; color:white; font-weight:800; box-shadow:0 3px 8px rgba(245,158,11,0.35);">
+          👑
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:0.96rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            Abdulloh <span style="font-size:0.75rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:2px 6px; border-radius:4px;">Bosh Admin</span>
+          </div>
+          <div style="font-size:0.76rem; color:#10b981; display:flex; align-items:center; gap:4px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+            Online • Savollar va Qurilmalar ruxsati
+          </div>
+        </div>
+      </div>
+      <button type="button" onclick="toggleStudentChatModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem; padding:4px 8px; border-radius:6px;" title="Chatni yopish">✕</button>
+    </div>
+
+    <!-- Quick prompt pills for students -->
+    <div style="padding:8px 14px; background:var(--bg-main); border-bottom:1px solid var(--border); display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;">
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('📱 Yangi qurilmadan kirishga ruxsat bering')">
+        📱 Yangi qurilma ruxsati
+      </button>
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('❓ Test savoli bo'yicha savolim bor edi')">
+        ❓ Test savoli
+      </button>
+      <button type="button" class="quick-chat-pill" onclick="sendStudentQuickPrompt('🔑 Parolimni yangilashda yordam bering')">
+        🔑 Parol yordami
+      </button>
+    </div>
+
+    <!-- Message scroll area -->
+    <div id="studentChatMessagesArea" class="chat-messages-area"></div>
+
+    <!-- Chat input footer -->
+    <form class="chat-input-footer" onsubmit="event.preventDefault(); handleSendStudentMessage(); return false;">
+      <input type="text" id="studentChatInput" placeholder="Xabaringizni yozing..." autocomplete="off" style="flex:1; padding:10px 14px; border:1px solid var(--border); border-radius:20px; background:var(--bg-main); color:var(--text-main); font-size:0.92rem; outline:none;">
+      <button type="submit" id="studentChatSendBtn" class="chat-send-btn" title="Yuborish">
+        ✈️
+      </button>
+    </form>
+  </div>
 
 </body>
 
