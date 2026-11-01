@@ -2083,23 +2083,21 @@ pre.code-block {
 
   .nav-tabs {
     width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    flex-wrap: nowrap;
-    gap: 4px;
-    padding: 3px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .nav-tabs::-webkit-scrollbar {
-    display: none;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 5px !important;
+    overflow-x: visible !important;
+    white-space: normal !important;
   }
 
   .nav-tab {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    font-size: 0.8rem;
+    flex: 1 1 auto;
+    min-width: max-content;
+    padding: 7px 11px;
+    font-size: 0.82rem;
+    justify-content: center;
+    white-space: nowrap;
   }
 
   .header-actions {
@@ -2510,4 +2508,50 @@ html.is-authenticated .nav-tabs {
   font-weight: 700;
   font-size: 0.88rem;
   color: var(--text-main);
+}
+
+
+/* ========================================================
+   RESPONSIVE HEADER & NAVIGATION POLISH
+   ======================================================== */
+@media (max-width: 1150px) {
+  .header-container {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .nav-tabs {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 5px !important;
+  }
+  .nav-tab {
+    flex: 1 1 auto;
+    min-width: max-content;
+    padding: 7px 12px;
+    font-size: 0.84rem;
+    justify-content: center;
+    text-align: center;
+  }
+  .header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+.admin-subnav-bar {
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+.admin-subnav-btn {
+  flex: 1 1 auto;
+  min-width: fit-content;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 14px;
 }

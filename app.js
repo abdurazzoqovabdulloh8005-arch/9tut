@@ -1294,6 +1294,11 @@ function checkAuth() {
     if (adminNav) {
       adminNav.style.display = state.isAdmin ? 'inline-flex' : 'none';
     }
+    // Hide duplicate standalone results button in header when logged in
+    const headerAdminBtn = document.getElementById('adminLoginBtn');
+    if (headerAdminBtn) {
+      headerAdminBtn.style.display = 'none';
+    }
 
     // STRICT SECURITY: If not admin, close adminSection immediately!
     if (!state.isAdmin) {
