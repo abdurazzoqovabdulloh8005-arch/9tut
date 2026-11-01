@@ -1,3 +1,21 @@
+
+function shuffleArray(array) {
+  if (!Array.isArray(array)) return [];
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function scrollToQuestionTop() {
+  const target = document.getElementById('quizTestingArea') || document.getElementById('questionCard');
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 // CCNA Professional Offline Quiz & Practical Trainer
 
 // Advanced Features: Study & Memory Trainer, Question Palette, Exam Review Screen,
@@ -1838,7 +1856,9 @@ const PARTS_CONFIG = [
 
   { key: 'new questions.docx', title: 'New Questions', count: 279, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
 
-  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1167, desc: 'Barcha 1167 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
+  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 29, desc: 'Cisco rasmiy interaktiv Drag & Drop moslashtirish mashqlari (29 ta)', isDragDrop: true },
+
+  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1193, desc: 'Barcha 1193 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
 
 ];
 
@@ -4336,6 +4356,14 @@ function renderPartsGrid() {
 
 function startPartQuiz(part) {
 
+  if (part.isDragDrop || part.key === 'dragdrop') {
+    switchTab('study');
+    if (typeof switchStudyView === 'function') {
+      switchStudyView('dragdrop');
+    }
+    return;
+  }
+
   if (!state.currentUser && !state.isAdmin) {
 
     checkAuth();
@@ -4371,6 +4399,9 @@ function startPartQuiz(part) {
     return;
 
   }
+
+  // Har bir urinishda savollar tartibi almashib (tasodifiy aralashib) tushadi!
+  questions = shuffleArray(questions);
 
   state.quizQuestions = questions;
 
@@ -4726,9 +4757,16 @@ function renderCurrentQuestion() {
 
   bookmarkBtn.innerHTML = isBookmarked ? '⭐ Saqlangan' : '☆ Saqlash';
 
-  const multiAnswer = q.answer.length > 1;
-
-  const multiNotice = multiAnswer ? ` <b style="color:var(--warning)">[Bir nechta to'g'ri javob bor: ${q.answer.length} ta]</b>` : '';
+  const multiMatch = (q.question || '').match(/\(choose\s+(two|three|four|five|2|3|4|5)\)/i);
+  let expectedCount = (q.answer && q.answer.length > 1) ? q.answer.length : 1;
+  if (multiMatch) {
+    const wordMap = { 'two': 2, 'three': 3, 'four': 4, 'five': 5, '2': 2, '3': 3, '4': 4, '5': 5 };
+    expectedCount = wordMap[multiMatch[1].toLowerCase()] || expectedCount;
+  }
+  const multiAnswer = (expectedCount > 1) || (q.answer && q.answer.length > 1);
+  const multiNotice = multiAnswer 
+    ? `<div class="multi-choice-badge">☑️ <b>Diqqat: Ushbu savolda ${expectedCount} ta to'g'ri javobni tanlashingiz kerak!</b></div>` 
+    : '';
 
   
 
@@ -4882,7 +4920,7 @@ function renderCurrentQuestion() {
 
       item.addEventListener('click', () => {
 
-        toggleOption(letter, multiAnswer);
+        toggleOption(letter, multiAnswer, expectedCount);
 
         SoundEffects.playClick();
 
@@ -5000,7 +5038,7 @@ function renderCurrentQuestion() {
 
 }
 
-function toggleOption(letter, isMulti) {
+function toggleOption(letter, isMulti, maxAllowed) {
 
   const idx = state.currentIndex;
 
@@ -5019,6 +5057,12 @@ function toggleOption(letter, isMulti) {
       state.userAnswers[idx].splice(pos, 1);
 
     } else {
+
+      if (maxAllowed && state.userAnswers[idx].length >= maxAllowed) {
+
+        state.userAnswers[idx].shift(); // Remove oldest to allow smooth selection of new choice
+
+      }
 
       state.userAnswers[idx].push(letter);
 
@@ -5108,6 +5152,8 @@ function nextQuestion() {
 
     renderCurrentQuestion();
 
+    scrollToQuestionTop();
+
     SoundEffects.playClick();
 
   } else {
@@ -5169,6 +5215,8 @@ function prevQuestion() {
     state.currentIndex--;
 
     renderCurrentQuestion();
+
+    scrollToQuestionTop();
 
     SoundEffects.playClick();
 
@@ -8647,6 +8695,14 @@ function formatOptionText(text) {
 
     }
 
+    const hasCliPrompt = /[A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>]/.test(trimmed) || 
+                         /\b(?:ip route|interface|switchport|router ospf|network|vlan|crypto key)\b/i.test(trimmed);
+
+    if (hasCliPrompt) {
+      let formatted = trimmed.replace(/([^\n\r])([A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>])/g, '$1\n$2');
+      formatted = formatted.replace(/([#>])(?=[a-zA-Z0-9!])/g, '$1 ');
+      return `<div class="cli-option-block">${escapeHtml(formatted)}</div>`;
+    }
   }
 
   return escapeHtml(text);

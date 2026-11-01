@@ -1385,7 +1385,8 @@
       "E": "SSH"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "The service-port interface controls communications through and is statically mapped by the system to the service port. The service port can be used for out-of-band management.The service port can obtain an IPv4 address using DHCP, or it can be assigned a static IPv4 address, but a default gateway cannot be assigned to the service-port interface. Static IPv4 routes can be defined through the controller for remote network access to the service port.If the service port is in use, the management interface must be on a different supernet from the service-port interface.\nThe service-port interface supports the following protocols:+ SSH and Telnet+ HTTP and HTTPS+ SNMP+ FTP, TFTP, and SFTP+ Syslog+ ICMP (ping)+ NTPNote: TACACS+ and RADIUS are not supported through the service port.",
     "source": "Part 6.docx",
@@ -2165,7 +2166,8 @@
       "E": "Enabled interfaces come up and move to the forwarding state immediately"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "Portfast does two things for us:+ Interfaces with portfast enabled that come up will go to forwarding mode immediately, the interface will skip the listening and learning state.+ A switch will never generate a topology change notification for an interface that has portfast enabled.",
     "source": "Part 7.docx",
@@ -2876,7 +2878,8 @@
       "E": "CA that grants certificates"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "PKI (or Public Key Infrastructure) is the framework of encryption and cybersecurity that protects communications between the server (your website) and the client (the users). Think about all the information, people, and services that your team communicates and works with. PKI is essential in building a trusted and secure business environment by being able to verify and exchange data between various servers and users.\nThe components of a PKI include:+ public key+ private key+ Certificate Authority (CA)+ Certificate Store+ Certificate Revocation List (CRL)+ Hardware Security Module\nCertificate Authority (CA)The CA generally handles all aspects of the certificate management for a PKI, including the phases of certificate lifecycle management.A CA issues certificates to be used to confirm that the subject imprinted on the certificate is the owner of the public key. In a PKI system, the client generates a public-private key pair. The public key and information to be imprinted on the certificate are sent to the CA. The CA then creates a digital certificate consisting of the user’s public key and certificate attributes. The certificate is signed by the CA with its private key.\nCertificate Revocation List (CRL)A CRL is a list of certificates that have been revoked by the CA that issued them before they were set to expire. This is a helpful security feature if a device is stolen that contains a certificate. A RADIUS server only rejects a connection request from a device if the device’s certificate serial number is contained in the CRL. The Certificate Authority is the one that maintains this list, and the RADIUS server periodically downloads this list by sending a query to the CA. There are two types of CRLs: A Delta CRL and a Base CRL.\nReference: https://www.securew2.com/blog/public-key-infrastructure-explained",
     "source": "Part 8.docx",
@@ -3062,7 +3065,8 @@
       "E": "interface vlan 155ip address 10.70.155.65 255.255.255.224"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "In order to support 24 (<25) hosts we need 5 bits 0 in the subnet mask so the last octet of the subnet mask must be 1110 0000 -> 255.255.255.224. In the answer above there are two IP address with subnet mask 255.255.255.224. They are:+ 10.70.147.17 255.255.255.224: This IP address belongs to subnet 10.70.147.0/27 but 10.70.147.17 is not the first available address in this subnet (the first available address in this subnet is 10.70.147.1)+ 10.70.155.65 255.255.255.224: This IP address belongs to subnet 10.70.155.64/27 and 10.70.155.65 is the first available address in this subnet -> Answer E is correct.\nIn order to support 472 (<512 = 29) hosts we need 9 bits 0 in the subnet mask -> 255.255.254.0. In the answer above there are two IP address with subnet mask 255.255.254.0. They are:+ 10.70.148.1 255.255.254.0: This IP address belongs to subnet 10.70.148.0/23 and it is the first available IP address in this subnet+ 10.70.159.1 255.255.254.0: This IP address belongs to subnet 10.70.158.0/23. It is not the first available IP address in this subnet (the first available IP address is 10.70.158.1).\n-> Answer C is correct.",
     "source": "Part 8.docx",
@@ -3175,7 +3179,8 @@
       "E": "crypto key generate rsa"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "Steps to configure SSH:1. Configure the router hostname using command “hostname”.2. Configure the domain name using command “ip domain-name”.3. Generate public and private keys using command “crypto key generate rsa”.4. Create a user in the local database using command “username…secret”.5. Allow only SSH access on VTY lines using command “transport input ssh”.\nReference: https://ipwithease.com/how-to-configure-ssh-version-2-on-cisco-router/\nNote: We only use the “ip ssh pubkey-chain” to perform RSA-Based Authentication.",
     "source": "Part 8.docx",
@@ -3195,7 +3200,8 @@
       "E": "listening"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "Enabling the PortFast feature causes a switch or a trunk port to enter the STP forwarding-state immediately or upon a linkup event, thus bypassing the listening and learning states.",
     "source": "Part 8.docx",
@@ -3749,7 +3755,8 @@
       "E": "transport input ssh"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "“Encrypted connections” here imply SSH, not Telnet so this question wants to ask to only accept SSH connections.\nFrom the output of “show crypto key mypubkey rsa” command, we learn that current there is no RSA key generated so answer B is surely correct. This command is necessary to generate the RSA key. Although this answer is missing the “modulus” keyword (the full command should be “crypto key generate rsa modulus 1024″) but maybe it is just a typo.\nAlthough answer A is also necessary but we are not sure if any username has been configured or not so it is not totally correct.",
     "source": "Part 9.docx",
@@ -3945,7 +3952,8 @@
       "E": "Match the destination MAC address to the MAC address table."
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "For perspective, the following list details some of the more common actions that a networking device does that fit into the data plane:+ De-encapsulating and re-encapsulating a packet in a data-link frame (routers, Layer 3 switches)+ Adding or removing an 802.1Q trunking header (routers and switches)+ Matching an Ethernet frame’s destination Media Access Control (MAC) address to the MAC address table (Layer 2 switches)+ Matching an IP packet’s destination IP address to the IP routing table (routers, Layer 3 switches)+ Encrypting the data and adding a new IP header (for virtual private network [VPN] processing)+ Changing the source or destination IP address (for Network Address Translation [NAT] processing)+ Discarding a message due to a filter (access control lists [ACLs], port security)\nReference: https://www.ciscopress.com/articles/article.asp?p=2995354&seqNum=2",
     "source": "Part 9.docx",
@@ -5694,7 +5702,8 @@
       "E": "5XX"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "HTTP defines these standard status codes that can be used to convey the results of a client’s request. The status codes are divided into five categories.1xx: Informational – Communicates transfer protocol-level information.2xx: Success – Indicates that the client’s request was accepted successfully.3xx: Redirection – Indicates that the client must take some additional action in order to complete their request.4xx: Client Error – This category of error status codes points the finger at clients.5xx: Server Error – The server takes responsibility for these error status codes.",
     "source": "Part 10.docx",
@@ -6016,7 +6025,8 @@
       "E": "SW(config-if)#switchport port-security violation restrict"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "The requirement said MAC addresses must be learned dynamically so we cannot assign a specific MAC address or use the “sticky” keyword -> Answer A and answer C are not correct. Also the requirement said “MAC addresses” in plural so we set the maximum to 2 -> Answer B is correct.\n“Log messages must be generated without disabling the interface” -> use “restrict” keyword for violation, not “shutdown” keyword -> Answer E is correct.\nThe “sticky” keyword does not mean the MAC addresses will be learned dynamically. It means the learned MAC addresses would be put into the running-config only.The question asks “MAC addresses must be learned dynamically” means we don’t configure static MAC learning only.\nNote:\nYou can configure the interface for one of these violation modes, based on the action to be taken if a violation occurs:+ Restrict – A port security violation restricts data, causes the SecurityViolation counter to increment, and causes an SNMP Notification to be generated.+ Shutdown – A port security violation causes the interface to shut down immediately. When a secure port is in the error-disabled state, you can bring it out of this state by entering the errdisable recovery cause psecure_violation global configuration command or you can manually reenable it by entering the shutdown and no shut down interface configuration commands. This is the default mode.",
     "source": "Part 10.docx",
@@ -6128,7 +6138,8 @@
       "E": "::ffff:10.14.101.1/96"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "To provide connectivity between two routers on a shared link, global unicast addresses or link-local addresses are typically used. Answer D is correct as this is a global unicast address, valid for router-to-router communication on a shared link.\nAnswer A is not correct as it has two double colons “::”. This answer also has another error in “1204b” which has 5 hexadecimal numbers in an octet (an IPv6 octet only has a maximum of 4 hexadecimal numbers). But in the exam please check this answer carefully. If its syntax is correct then this is the correct answer.\nFF02::0001:FF00:0000 is an IPv6 multicast address that is part of the solicited-node multicast group (starts with FF02::1:FF/104). This group is automatically created for each configured IPv6 address on an interface. When a device needs to send an IPv6 packet to a specific device, it first sends a Neighbor Solicitation message to the solicited-node multicast address for the destination IPv6 address. The router receiving this message responds with a Neighbor Advertisement message containing its MAC address.\nThe address ff06:bb43:cc13:dd16:1bb:ff14:7545:234d is a site-local IPv6 multicast address.\nMulticast addresses are used for group communication, not direct connectivity between two routers so answer B and answer C are not correct.\nNote: An IPv6 Multicast address is always started with FF (in hex).\nNote about ::ffff IPv6 address:\nIPv4-mapped IPv6 address uses this alternative format. This type of address is used to represent IPv4 nodes as IPv6 addresses. It allows IPv6 applications to communicate directly with IPv4 applications. For example, 0:0:0:0:0:ffff:192.1.56.10 and ::ffff:192.1.56.10/96 (shortened format).\nReference: https://www.ibm.com/docs/en/i/7.2?topic=concepts-ipv6-address-formats",
     "source": "Part 10.docx",
@@ -6486,7 +6497,8 @@
       "E": "crypto key generate rsa modulus 2048"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "The command “crypto key generate rsa modulus 2048” generate a 2048 bit RSA key pair (doubling the modulus size from 1024).",
     "source": "Part 10.docx",
@@ -7089,7 +7101,8 @@
       "E": "Inform"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "The two additional messages are added in SNMP2 (compared to SNMPv1)\nGetBulkRequest The GetBulkRequest message enables an SNMP manager to access large chunks of data. GetBulkRequest allows an agent to respond with as much information as will fit in the response PDU. Agents that cannot provide values for all variables in a list will send partial information.\nInformRequest The InformRequest message allows NMS stations to share trap information. (Traps are issued by SNMP agents when a device change occurs.) InformRequest messages are generally used between NMS stations, not between NMS stations and agents.",
     "source": "Part 11.docx",
@@ -7194,7 +7207,8 @@
       "E": "The forwarding table has overflowed"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "However, other events in the network might cause the switch MAC address table to be flushed more frequently than the configured aging time. One such event is due to spanning-tree topology changes in the network.\nTopology changes reduce the MAC address table aging time from the default time of 300 seconds to 15 seconds in the case of 802.1D Spanning Tree Protocol (STP) to freshen stale MAC address table entries -> Answer B is correct.\nIf the Layer 2 forwarding table or the MAC address table is full and it can not save any more MAC address, its enters into a fail-open mode and start behaving like a network Hub. Frames are flooded to all ports, similar to broadcast type of communication. The MAC flooding attack uses this feature of the switch to steal information -> Answer E is correct.",
     "source": "Part 11.docx",
@@ -7458,7 +7472,8 @@
       "E": "RADIUS"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "You can configure 802.1X authentication between a lightweight access point and a Cisco switch.\nReference: https://www.cisco.com/c/en/us/td/docs/wireless/controller/7-6/configuration-guide/b_cg76/b_cg76_chapter_01101000.pdf",
     "source": "Part 11.docx",
@@ -7649,7 +7664,8 @@
       "E": "ip route 0.0.0.0 0.0.0.0 198.51.100.1ip route 0.0.0.0 0.0.0.0 203.0.113.1"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "Answer A is not correct as it uses floating static route with an AD of 2 for the second static route so traffic cannot be load-balancing.\nAn administrative distance of 255 is considered unreachable, and static routes with an administrative distance of 255 are never entered into the routing table -> Answer D is not correct.\nNow let’s explain more detail about the command “ip route 128.0.0.0 128.0.0.0 …”. It is same as “ip route 0.0.0.0 128.0.0.0 …” command or we can call it “0.0.0.0/1” route. Because of the “longest-prefix match” rule, it is preferred to the default static “0.0.0.0/0” route. So 0.0.0.0/0 route would not be used.\nNow we can why answer C is not correct as the route “ip route 128.0.0.0 128.0.0.0 203.0.113.1” is always preferred to “ip route 0.0.0.0 128.0.0.0 198.51.100.1”.\nAnswer B is correct as we have two “0.0.0.0/1” routes (“0.0.0.0 128.0.0.0” and “128.0.0.0 128.0.0.0” are totally the same)",
     "source": "Part 11.docx",
@@ -7777,7 +7793,8 @@
       "E": "DMVPN"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "Cisco DMVPN can be deployed in conjunction with Cisco IOS Firewall and Cisco IOS IPS, as well as quality of service (QoS), IP Multicast, split tunneling, and routing-based failover mechanisms. Large-scale, highly available Cisco DMVPN deployments are made possible by load balancing multiple Cisco DMVPN hubs.\nReference: https://www.cisco.com/c/en/us/products/collateral/security/dynamic-multipoint-vpn-dmvpn/data_sheet_c78-468520.html\nGet VPNs provide large scale, connectionless, tunnel free transmission protection taking advantage of existing routing infrastructure and can be used with MPLS, IP, Frame relay and ATM networks.\nReference: https://ipwithease.com/flexvpn-vs-getvpn/\nNote:\nSite-to-Site VPN is a simple VPN that connects a central site and a remote site, or a hub and spoke VPN that connects a central site with multiple remote sites -> It is not suitable for large-scale deployments.\nWith clientless VPN, a tunnel is established from a web browser on the remote user’s device to the outside interface of the VPN gateway’s SSL component -> It is not suitable for large-scale deployments.\nIPSec remote access is used to connect remote-access clients, such as a PC or small office, home office (SOHO) device.",
     "source": "Part 11.docx",
@@ -9106,7 +9123,8 @@
       "E": "console"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "The service port is used for out-of-band management of the controller and system recovery and maintenance in the event of a network failure.\nReference: https://www.firewall.cx/cisco-technical-knowledgebase/cisco-wireless/1077-cisco-wireless-controllers-interfaces-ports-functionality.html\nThe console port is used for out-of-band management, system recovery, and early boot operations.\nReference: https://www.geeksforgeeks.org/physical-infrastructure-connections-of-wlan-components/",
     "source": "Part 12.docx",
@@ -9287,7 +9305,8 @@
       "E": "Enable the Enable Session Timeout option and set the value to 3600."
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "By default, client sessions with the WLAN are limited to 1800 seconds (30 minutes). Once that session time expires, a client will be required to re-authenticate. This setting is controlled by the Enable Session Timeout check box and the Timeout field.",
     "source": "Part 12.docx",
@@ -10952,7 +10971,8 @@
       "E": "ip access-list standard Managementpermit 203.0.113.0 0.0.0.255"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "When applying access-list to line vty we must use “access-class”, not “access-group”.\nThe access-list command “permit tcp any range 22 23 203.0.113.0 0.0.0.255” means permit TCP traffic from any source with range 22 (SSH) and 23 (Telnet) to the destination 203.0.113.0/24 (not from source 203.0.113.0/24) so answer A is not correct.\nAnswer C is not correct as it used wrong wildcard mask 255.255.255.0. It should be 0.0.0.255.\nAnswer D is not correct as other traffic will be dropped but the questions asks “Other traffic passing through the switch must transit without interruption”.\n==================== New Questions (added on 12th-Oct-2023) ====================",
     "source": "Part 13.docx",
@@ -12517,7 +12537,8 @@
       "E": "interface Gi0/1ipv6 address 2001:db8:0F1B:FCCB:ACCE:FCED:ABCD:FA00:/127"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "We need to assign the LAN interface (gi0/0) with “eui-64” keyword and and correct IPv6 network (2001:db8:0:AFFF::/64) -> Answer B is correct.\nIPv6 addresses are 128 bits long, but in this question we have /127 subnet mask. So there are only two addresses:\n2001:db8:0F1B:FCCB:ACCE:FCED:ABCD:FA00 (Network Address)2001:db8:0F1B:FCCB:ACCE:FCED:ABCD:FA01 (Usable Host Address)\n-> Therefore surely answer D is not correct as it is out-of-range of this network. Some devices may support /127 subnet mask and we can assign both above addresses for (point-to-point) devices.\nNote: In IPv6, there is no concept of a broadcast address as in IPv4. Instead, IPv6 uses multicast addresses for similar purposes.",
     "source": "Part 14.docx",
@@ -12571,7 +12592,8 @@
       "E": "assign dynamic IP configurations to hosts in a network"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "Benefits of DHCP\nCentralized IP Address Management: DHCP centralizes the management of IP address allocation and configuration parameters for switches. Administrators can configure and control IP address assignment policies, lease durations, and other network parameters from a central DHCP server, ensuring consistency and simplifying network administration for switches.\nReference: https://www.versitron.com/blogs/post/the-role-of-dhcp-in-efficient-ip-address-management",
     "source": "Part 14.docx",
@@ -12763,10 +12785,12 @@
       "A": "ip dhcp snooping\n!\ninterface Port-channel1\nswitchport port-security maximum 1\nswitchport port-security",
       "B": "ip dhcp snooping vlan 1-4094\nip dhcp snooping\n!\ninterface Port-channel1\nip dhcp snooping trust",
       "C": "ip dhcp snooping vlan 1-4094\n!\ninterface Port-channel1\nswitchport protected\nswitchport port-security maximum 1",
-      "D": "ip arp inspection trust\n!\ninterface Port-channel1\nswitchport port-security maximum 4094\nswitchport port-security\nip verify source mac-check"
+      "D": "ip arp inspection trust\n!\ninterface Port-channel1\nswitchport port-security maximum 4094\nswitchport port-security\nip verify source mac-check",
+      "E": "ip arp inspection vlan 1-4094\n!\ninterface Port-channel1\nip arp inspection trust"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "We need to configure the uplink (Po1) to the distribution switch in “trust” state.",
     "source": "Part 14.docx",
@@ -12858,7 +12882,8 @@
       "E": "172.31.255.100"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "The following IPv4 address ranges are reserved by the IANA for private internets, and are not publicly routable on the global internet:+ 10.0.0.0/8 IP addresses: 10.0.0.0 – 10.255.255.255 -> Answer A is correct.+ 172.16.0.0/12 IP addresses: 172.16.0.0 – 172.31.255.255 -> Answer E is correct.+ 192.168.0.0/16 IP addresses: 192.168.0.0 – 192.168.255.255",
     "source": "Part 14.docx",
@@ -12982,7 +13007,8 @@
       "E": "Enable the MAC Filtering option"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "We need to choose “Layer 2 Mac Filtering” so that only clients with specific MAC addresses are allowed to join. And the “WPA2 Policy” option to instruct WLC to use WPA2 only with one of WPA2 Encryption (AES or TKIP).",
     "source": "Part 15.docx",
@@ -13468,7 +13494,8 @@
       "E": "Select the WPA2 Policy and AES check boxes."
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "We need to choose “PSK” from Auth Key Mgmt:\nNext choose “ASCII” from PSK Format and type the password:",
     "source": "Part 15.docx",
@@ -13596,7 +13623,8 @@
       "E": "It inserts a new IPsec header with new IP address."
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "In tunnel mode, IPsec encrypts the entire original IP packet, including the header and data. It then adds a new IP header so the packet can be routed through the network to its destination, providing a higher level of security and privacy.",
     "source": "Part 15.docx",
@@ -14575,7 +14603,8 @@
       "E": "The root port is FastEthernet 2/1"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "This bridge is not the root bridge because it does not have the statement “This bridge is the root”. When the local switch is not the root bridge, the port it shows would be the root port to the root bridge. Therefore in this case FastEthernet2/1 is the root port that is connected to the root bridge.",
     "source": "Part 15.docx",
@@ -15288,7 +15317,8 @@
       "E": "Policing is performed in the inbound and outbound directions."
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "+ Policing: is used to control the rate of traffic flowing across an interface. During a bandwidth exceed (crossed the maximum configured rate), the excess traffic is generally dropped or remarked. The result of traffic policing is an output rate that appears as a saw-tooth with crests and troughs. Traffic policing can be applied to inbound and outbound interfaces. Unlike traffic shaping, QoS policing avoids delays due to queuing. Policing is configured in bytes.\n+ Shaping: retains excess packets in a queue and then schedules the excess for later transmission over increments of time. When traffic reaches the maximum configured rate, additional packets are queued instead of being dropped to proceed later. Traffic shaping is applicable only on outbound interfaces as buffering and queuing happens only on outbound interfaces. Shaping is configured in bits per second.",
     "source": "Part 16.docx",
@@ -16153,7 +16183,8 @@
       "E": "offers agentless deployment"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "Ansible uses an agentless architecture to manage network devices. Agentless means that the managed device does not need any code (agent) to be installed on it. Therefore Ansible uses SSH (NETCONF over SSH in particular) to “push” changes and extract information to managed devices -> Answer B and answer E are correct.\nAnsible playbooks are written in YAML, making them human-readable and easy to maintain -> Answer D is correct.\nTherefore in fact we have three correct answers. But answer D and answer E are the most obvious ones so we should choose them.",
     "source": "Part 16.docx",
@@ -16415,7 +16446,8 @@
       "E": "input errors"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "Whenever the physical transmission has problems, the receiving device might receive a frame whose bits have changed values. These frames do not pass the error detection logic as implemented in the FCS field in the Ethernet trailer. The receiving device discards the frame and counts it as some kind of input error. Cisco switches list this error as a CRC error. Cyclic redundancy check (CRC) is a term related to how the FCS math detects an error.\nThe “input errors” includes runts, giants, no buffer, CRC, frame, overrun, and ignored counts.\nThe output below show the interface counters with the “show interface s0/0/0” command:\nRouter#show interface s0/0/0\nSerial0/0/0 is up, line protocol is up\nHardware is M4T\nDescription: Link to R2\nInternet address is 10.1.1.1/30\nMTU 1500 bytes, BW 1544 Kbit, DLY 20000 usec,\nreliability 255/255, txload 1/255, rxload 1/255\n--output omitted--\n5 minute output rate 0 bits/sec, 0 packets/sec\n268 packets input, 24889 bytes, 0 no buffer\nReceived 0 broadcasts, 0 runts, 0 giants, 0 throttles\n0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored, 0 abort\n251 packets output, 23498 bytes, 0 underruns\n0 output errors, 0 collisions, 0 interface resets\n0 output buffer failures, 0 output buffers swapped out\n0 carrier transitions     DCD=up  DSR=up  DTR=up  RTS=up  CTS=up",
     "source": "new questions.docx",
@@ -16630,7 +16662,8 @@
       "E": "Ensure timely data transfer between layers"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "Considerations at the core layer include+ Providing high-speed switching (i.e., fast transport)+ Providing reliability and fault tolerance+ Scaling by using faster, and not more, equipment+ Avoiding CPU-intensive packet manipulation caused by security, inspection, quality of service (QoS) classification, or other processes\nReference:  HYPERLINK \"https://www.ciscopress.com/articles/article.asp?p=2202410&seqNum=4\" \\t \"_blank\" https://www.ciscopress.com/articles/article.asp?p=2202410&seqNum=4",
     "source": "new questions.docx",
@@ -16931,7 +16964,8 @@
       "E": "The interface is error-disabled"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "The down/down state indicates a Layer 1 problem -> “Protocol mismatch” answer is a Layer 2 problem so it is not correct.\nDuplex should be matched on both side but it is not a must -> Therefore “duplex mismatch” is not a correct answer.\nThe most common Layer 1 problems are faulty or incorrect cabling or hardware failure but none of them is in the answer choices.\nIf the port is error-disabled, we will see it in down/down state so this answer is correct.\nSW#sh int f1/0/1FastEthernet1/0/1 is down, line protocol is down (err-disabled)\nThere are only two answers left, which are “speed mismatch” and “interface is shut down”. According to the table below (from the old and retired ICND1 100-101 Official Cert Guide), speed mismatch is also a cause of down/down state.\nNote:+ Speed must match between two ends. We tested speed mismatch on real device but we only received “up/down” state.+ If “interface is shut down” then we will see the “administratively down/down”, not “down/down” state. But the “down/down” state would be seen on the far end interface.",
     "source": "new questions.docx",
@@ -17313,7 +17347,8 @@
       "E": "The root port is FastEthernet 2/1"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "This bridge is not the root bridge because it does not have the statement “This bridge is the root”. When the local switch is not the root bridge, the port it shows would be the root port to the root bridge. Therefore in this case FastEthernet2/1 is the root port that is connected to the root bridge.",
     "source": "new questions.docx",
@@ -17475,7 +17510,8 @@
       "E": "EtherChannel allows redundancy in case one or more links in the EtherChannel fail"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "In fact answer B is also correct as STP considers Etherchannel links as one physical link so this question should have three correct answers. But answer B is not as obvious as the other two answers so we should choose them.\nAnswer C is not correct as “Commonly up to 16 links can be assigned to an EtherChannel, but only 8 can be active at a time”.\nReference:  HYPERLINK \"https://www.ciscopress.com/articles/article.asp?p=2348266&seqNum=3\" https://www.ciscopress.com/articles/article.asp?p=2348266&seqNum=3\nSo it should be 8 physical ports, not 16.",
     "source": "new questions.docx",
@@ -18593,7 +18629,8 @@
       "E": "configure both interfaces with the same area ID"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "We don’t need to configure hello and dead timers for OSPF neighbor as OSPF can auto negotiate the network type (with the same hello and dead timers on both sides). We just have to make sure both interfaces are running OSPF and they are in the same area ID.\nHYPERLINK \"javascript:void(0);\" Comments (11)Comments",
     "source": "new questions.docx",
@@ -19400,7 +19437,8 @@
       "E": "It encourages users to create stronger passwords"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "A password manager only helps you remember your chosen passwords without typing them by yourself. It automatically fills into the password textbox for you so it does not provides a second authentication factor. An example of second authentication factor is an one time password (OTP) sent to your phone after typing your password and you have to type this OTP to authenticate.\nBy using a password manager, you are encouraged to create a complex password because you don’t need to remember it.",
     "source": "new questions.docx",
@@ -19628,7 +19666,8 @@
       "E": "Configure the ipv6 route 2012::/126 2023:2 command on the Washington router"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "The short syntax of static IPv6 route is:\nipv6 route <destination-IPv6-address> {next-hop-IPv6-address | exit-interface}",
     "source": "new questions.docx",
@@ -19648,7 +19687,8 @@
       "E": "ipv6 route 2000::1/128 2023::3 5"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "Floating static routes are static routes that have an administrative distance greater than the administrative distance (AD) of another static route or dynamic routes. By default a static route has an AD of 1 then floating static route must have the AD greater than 1. Floating static route has a manually configured administrative distance greater than that of the primary route and therefore would not be in the routing table until the primary route fails.",
     "source": "new questions.docx",
@@ -19721,7 +19761,8 @@
       "E": "FF02::2"
     },
     "answer": [
-      "D"
+      "D",
+      "E"
     ],
     "explanation": "When an interface is configured with IPv6 address, it automatically joins the all nodes (FF02::1) and solicited-node (FF02::1:FFxx:xxxx) multicast groups. The all-node group is used to communicate with all interfaces on the local link, and the solicited-nodes multicast group is required for link-layer address resolution. Routers also join a third multicast group, the all-routers group (FF02::2).",
     "source": "new questions.docx",
@@ -20268,7 +20309,8 @@
       "E": "hexadecimal"
     },
     "answer": [
-      "A"
+      "A",
+      "E"
     ],
     "explanation": "When configuring a WLAN with WPA2 Preshared Key (PSK), we can choose the encryption key format as either ASCII or HEX.\nReference:  HYPERLINK \"https://www.cisco.com/c/en/us/td/docs/wireless/controller/9800/config-guide/b_wl_16_10_cg/multi-preshared-key.pdf\" \\t \"_blank\" https://www.cisco.com/c/en/us/td/docs/wireless/controller/9800/config-guide/b_wl_16_10_cg/multi-preshared-key.pdf",
     "source": "new questions.docx",
@@ -20908,7 +20950,8 @@
       "E": "manual bindings"
     },
     "answer": [
-      "C"
+      "C",
+      "E"
     ],
     "explanation": "The following example shows how to configure a DHCP Server on a Cisco router:\nConfiguration\nDescription\nRouter(config)#ip dhcp pool CLIENTS\nCreate a DHCP Pool named CLIENTS\nRouter(dhcp-config)#network 10.1.1.0 /24\nSpecifies the subnet and mask of the DHCP address pool\nRouter(dhcp-config)#default-router 10.1.1.1\nSet the default gateway of the DHCP Clients\nRouter(dhcp-config)#dns-server 10.1.1.1\nConfigure a Domain Name Server (DNS)\nRouter(dhcp-config)#domain-name 9tut.com\nConfigure a domain-name\nRouter(dhcp-config)#lease 0 12\nDuration of the lease (the time during which a client computer can use an assigned IP address). The syntax is “lease {days[hours] [minutes] | infinite}”. In this case the lease is 12 hours. The default is a one-day lease.Before the lease expires, the client typically needs to renew its address lease assignment with the server\nRouter(dhcp-config)#exit\nRouter(config)# ip dhcp excluded-address 10.1.1.1 10.1.1.10\nThe IP range that a DHCP Server should not assign to DHCP Clients. Notice this command is configured under global configuration mode\nManual bindings are IP addresses that have been manually mapped to the MAC addresses of hosts that are found in the DHCP database.\nAll DHCP clients send a client identifier (DHCP option 61) in the DHCP packet. To configure manual bindings, you must enter the client-identifier DHCP pool configuration command with the appropriate hexadecimal values identifying the DHCP client. For example:\nip dhcp pool SERVERhost 172.16.200.100 255.255.255.0client-identifier 01aa.bbcc.0003.00default-router 172.16.200.1!\nTherefore two requirements for DHCP binding is the IP address and the hardware address (MAC address) of the client. Notice that in the above example “aabb.cc00.0300” is the MAC address of the client while prefix “01” represents the Ethernet media type.\nNote: In fact, this question should ask “When implementing a router as a DHCP server, which one of these features must be configured?”. Because we only need to configure either an “address pool” or “manual binding”.",
     "source": "new questions.docx",
@@ -20996,7 +21039,8 @@
       "E": "XML"
     },
     "answer": [
-      "B"
+      "B",
+      "E"
     ],
     "explanation": "The Application Policy Infrastructure Controller (APIC) REST API is a programmatic interface that uses REST architecture. The API accepts and returns HTTP (not enabled by default) or HTTPS messages that contain JavaScript Object Notation (JSON) or Extensible Markup Language (XML) documents.\nReference:  HYPERLINK \"https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/2-x/rest_cfg/2_1_x/b_Cisco_APIC_REST_API_Configuration_Guide/b_Cisco_APIC_REST_API_Configuration_Guide_chapter_01.html\" \\t \"_blank\" https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/2-x/rest_cfg/2_1_x/b_Cisco_APIC_REST_API_Configuration_Guide/b_Cisco_APIC_REST_API_Configuration_Guide_chapter_01.html",
     "source": "new questions.docx",
