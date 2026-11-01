@@ -3104,14 +3104,16 @@ function switchAdminTab(tabName) {
 
   const btnStudents = document.getElementById('adminTabBtnStudents');
   const btnResults = document.getElementById('adminTabBtnResults');
+  const btnCharts = document.getElementById('adminTabBtnCharts');
   const btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
 
   const viewStudents = document.getElementById('adminViewStudents');
   const viewResults = document.getElementById('adminViewResults');
+  const viewCharts = document.getElementById('adminViewCharts');
   const viewLeaderboard = document.getElementById('adminViewLeaderboard');
 
-  [btnStudents, btnResults, btnLeaderboard].forEach(b => b && b.classList.remove('active'));
-  [viewStudents, viewResults, viewLeaderboard].forEach(v => v && (v.style.display = 'none'));
+  [btnStudents, btnResults, btnCharts, btnLeaderboard].forEach(b => b && b.classList.remove('active'));
+  [viewStudents, viewResults, viewCharts, viewLeaderboard].forEach(v => v && (v.style.display = 'none'));
 
   if (tabName === 'students') {
     if (btnStudents) btnStudents.classList.add('active');
@@ -3121,6 +3123,10 @@ function switchAdminTab(tabName) {
     if (btnResults) btnResults.classList.add('active');
     if (viewResults) viewResults.style.display = 'block';
     renderAdminResultsList();
+  } else if (tabName === 'charts') {
+    if (btnCharts) btnCharts.classList.add('active');
+    if (viewCharts) viewCharts.style.display = 'block';
+    renderAdminCharts();
   } else if (tabName === 'leaderboard') {
     if (btnLeaderboard) btnLeaderboard.classList.add('active');
     if (viewLeaderboard) viewLeaderboard.style.display = 'block';
@@ -3167,6 +3173,8 @@ function renderAdminDashboard() {
     renderAdminStudentsList();
   } else if (currentAdminSubTab === 'results') {
     renderAdminResultsList();
+  } else if (currentAdminSubTab === 'charts') {
+    renderAdminCharts();
   } else {
     renderAdminLeaderboard();
   }
@@ -4253,3 +4261,491 @@ function toggleUserApproval(userId) {
   updateAdminStats();
   try { SoundEffects.playClick(); } catch(e) {}
 }
+
+
+// ========================================================
+// ADMIN ANALYTICS & INTERACTIVE CHARTS
+// ========================================================
+function renderAdminCharts() {
+  if (!state.isAdmin) return;
+
+  const results = state.results || [];
+  const users = getRegisteredUsers();
+
+  // 1. Top Insights
+  const topScoreEl = document.getElementById('chartTopScore');
+  const topStudentEl = document.getElementById('chartTopStudent');
+  const activeCountEl = document.getElementById('chartActiveCount');
+  const activeStudentEl = document.getElementById('chartActiveStudent');
+  const passRateEl = document.getElementById('chartPassRate');
+  const passCountEl = document.getElementById('chartPassCount');
+  const approvedRatioEl = document.getElementById('chartApprovedRatio');
+  const pendingNoticeEl = document.getElementById('chartPendingNotice');
+
+  if (results.length > 0) {
+    const maxResult = results.reduce((max, r) => ((r.percent || 0) > (max.percent || 0) ? r : max), results[0]);
+    if (topScoreEl) topScoreEl.textContent = (maxResult.percent || 0) + '%';
+    if (topStudentEl) topStudentEl.textContent = `${maxResult.studentName || 'Talaba'} (${maxResult.part || 'Part'})`;
+
+    const activityMap = {};
+    results.forEach(r => {
+      const key = r.studentName || r.login || "Noma'lum";
+      activityMap[key] = (activityMap[key] || 0) + 1;
+    });
+    let topStudent = '-', maxTests = 0;
+    for (const [st, count] of Object.entries(activityMap)) {
+      if (count > maxTests) {
+        maxTests = count;
+        topStudent = st;
+      }
+    }
+    if (activeCountEl) activeCountEl.textContent = maxTests + ' ta test';
+    if (activeStudentEl) activeStudentEl.textContent = topStudent;
+
+    const passCount = results.filter(r => (r.percent || 0) >= 82.5).length;
+    const passRate = Math.round((passCount / results.length) * 100);
+    if (passRateEl) passRateEl.textContent = passRate + '%';
+    if (passCountEl) passCountEl.textContent = `${passCount} / ${results.length} ta o'tdi`;
+  } else {
+    if (topScoreEl) topScoreEl.textContent = '0%';
+    if (topStudentEl) topStudentEl.textContent = "Hozircha testlar yo'q";
+    if (activeCountEl) activeCountEl.textContent = '0 ta';
+    if (activeStudentEl) activeStudentEl.textContent = 'Kutilmoqda';
+    if (passRateEl) passRateEl.textContent = '0%';
+    if (passCountEl) passCountEl.textContent = '0 ta';
+  }
+
+  const approvedCount = users.filter(u => u.isApproved !== false).length;
+  const pendingCount = users.filter(u => u.isApproved === false).length;
+  if (approvedRatioEl) approvedRatioEl.textContent = `${approvedCount} ta faol`;
+  if (pendingNoticeEl) {
+    pendingNoticeEl.textContent = pendingCount > 0 
+      ? `⏳ ${pendingCount} ta tasdiq kutilmoqda` 
+      : '✅ Barcha hisoblar faol';
+  }
+
+  // 2. Draw Charts with slight delay to ensure container width is computed
+  setTimeout(() => {
+    drawPartScoresChart(results);
+    drawDonutChart(results);
+    drawTrendChart(results);
+    renderGroupBars(results, users);
+  }, 30);
+}
+
+function drawPartScoresChart(results) {
+  const canvas = document.getElementById('adminPartScoresCanvas');
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const width = rect.width || 700;
+  const height = 300;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const parts = [];
+  for (let i = 1; i <= 10; i++) parts.push('Part ' + i);
+
+  const partData = parts.map(p => {
+    const matching = results.filter(r => r.part && r.part.toLowerCase().includes(p.toLowerCase()));
+    if (matching.length === 0) return { name: p, avg: 0, count: 0 };
+    const avg = Math.round(matching.reduce((acc, r) => acc + (r.percent || 0), 0) / matching.length);
+    return { name: p, avg, count: matching.length };
+  });
+
+  const padLeft = 45;
+  const padRight = 20;
+  const padTop = 30;
+  const padBottom = 40;
+  const plotWidth = width - padLeft - padRight;
+  const plotHeight = height - padTop - padBottom;
+
+  // Background Grid Lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+
+  const gridSteps = [0, 25, 50, 75, 100];
+  gridSteps.forEach(val => {
+    const y = padTop + plotHeight - (val / 100) * plotHeight;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(width - padRight, y);
+    ctx.stroke();
+    ctx.fillText(val + '%', padLeft - 8, y);
+  });
+
+  // Gold 82.5% Pass Line
+  const passY = padTop + plotHeight - (82.5 / 100) * plotHeight;
+  ctx.save();
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, passY);
+  ctx.lineTo(width - padRight, passY);
+  ctx.stroke();
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('82.5% Pass (Cisco)', padLeft + 6, passY - 8);
+  ctx.restore();
+
+  // Draw Bars
+  const colWidth = plotWidth / partData.length;
+  const barWidth = Math.max(16, Math.min(colWidth * 0.58, 44));
+
+  partData.forEach((item, idx) => {
+    const x = padLeft + idx * colWidth + (colWidth - barWidth) / 2;
+    const barHeight = (item.avg / 100) * plotHeight;
+    const y = padTop + plotHeight - barHeight;
+
+    if (item.count > 0) {
+      const grad = ctx.createLinearGradient(0, y, 0, padTop + plotHeight);
+      if (item.avg >= 82.5) {
+        grad.addColorStop(0, '#10b981');
+        grad.addColorStop(1, '#059669');
+      } else if (item.avg >= 70) {
+        grad.addColorStop(0, '#f59e0b');
+        grad.addColorStop(1, '#d97706');
+      } else {
+        grad.addColorStop(0, '#ef4444');
+        grad.addColorStop(1, '#dc2626');
+      }
+
+      ctx.fillStyle = grad;
+      const r = Math.min(6, barWidth / 2);
+      ctx.beginPath();
+      ctx.moveTo(x, padTop + plotHeight);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + barWidth - r, y);
+      ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + r);
+      ctx.lineTo(x + barWidth, padTop + plotHeight);
+      ctx.closePath();
+      ctx.fill();
+
+      // Top label: score
+      ctx.fillStyle = item.avg >= 82.5 ? '#10b981' : (item.avg >= 70 ? '#f59e0b' : '#ef4444');
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(item.avg + '%', x + barWidth / 2, y - 8);
+
+      // Count badge
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(item.count + ' ta', x + barWidth / 2, y - 20);
+    } else {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(x, padTop + plotHeight - 12, barWidth, 12);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('-', x + barWidth / 2, padTop + plotHeight - 16);
+      ctx.restore();
+    }
+
+    // X-axis label
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('P' + (idx + 1), x + barWidth / 2, height - padBottom + 16);
+  });
+}
+
+function drawDonutChart(results) {
+  const canvas = document.getElementById('adminDonutCanvas');
+  const legendEl = document.getElementById('adminDonutLegend');
+  const centerTextEl = document.getElementById('donutTotalText');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const size = 200;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, size, size);
+
+  const total = results.length;
+  if (centerTextEl) centerTextEl.textContent = total;
+
+  const categories = [
+    { label: "A'lo (90-100%)", min: 90, max: 100, color: '#10b981', count: 0 },
+    { label: "O'tgan (82.5-89%)", min: 82.5, max: 89.99, color: '#0076ce', count: 0 },
+    { label: "O'rtacha (70-82%)", min: 70, max: 82.49, color: '#f59e0b', count: 0 },
+    { label: "Qayta tayyorlanish (<70%)", min: 0, max: 69.99, color: '#ef4444', count: 0 }
+  ];
+
+  results.forEach(r => {
+    const p = r.percent || 0;
+    for (const cat of categories) {
+      if (p >= cat.min && p <= cat.max) {
+        cat.count++;
+        break;
+      }
+    }
+  });
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const outerR = 82;
+  const innerR = 54;
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.arc(cx, cy, innerR, Math.PI * 2, 0, true);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fill();
+    if (legendEl) {
+      legendEl.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">Hozircha natijalar yo'q</span>`;
+    }
+    return;
+  }
+
+  let startAngle = -Math.PI / 2;
+  categories.forEach(cat => {
+    if (cat.count === 0) return;
+    const sliceAngle = (cat.count / total) * Math.PI * 2;
+    const endAngle = startAngle + sliceAngle;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startAngle, endAngle);
+    ctx.arc(cx, cy, innerR, endAngle, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = cat.color;
+    ctx.shadowColor = cat.color;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = '#151e32';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    startAngle = endAngle;
+  });
+
+  if (legendEl) {
+    legendEl.innerHTML = categories.map(cat => {
+      const pct = total > 0 ? Math.round((cat.count / total) * 100) : 0;
+      return `
+        <div class="donut-legend-item">
+          <div class="donut-legend-label">
+            <span class="legend-dot" style="background:${cat.color};"></span>
+            <span>${cat.label}</span>
+          </div>
+          <div class="donut-legend-count"><b>${cat.count} ta</b> (${pct}%)</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function drawTrendChart(results) {
+  const canvas = document.getElementById('adminTrendCanvas');
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const width = rect.width || 380;
+  const height = 220;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const padLeft = 40;
+  const padRight = 20;
+  const padTop = 25;
+  const padBottom = 35;
+  const plotWidth = width - padLeft - padRight;
+  const plotHeight = height - padTop - padBottom;
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+
+  [0, 50, 100].forEach(val => {
+    const y = padTop + plotHeight - (val / 100) * plotHeight;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(width - padRight, y);
+    ctx.stroke();
+    ctx.fillText(val + '%', padLeft - 6, y);
+  });
+
+  const passY = padTop + plotHeight - (82.5 / 100) * plotHeight;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, passY);
+  ctx.lineTo(width - padRight, passY);
+  ctx.stroke();
+  ctx.restore();
+
+  if (results.length === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("Natijalar kutilmoqda...", width / 2, height / 2);
+    return;
+  }
+
+  const recent = results.slice(-12);
+  const stepX = recent.length > 1 ? plotWidth / (recent.length - 1) : plotWidth / 2;
+
+  const points = recent.map((r, idx) => {
+    const x = recent.length === 1 ? padLeft + plotWidth / 2 : padLeft + idx * stepX;
+    const y = padTop + plotHeight - ((r.percent || 0) / 100) * plotHeight;
+    return { x, y, percent: r.percent || 0, name: r.studentName || 'Talaba' };
+  });
+
+  if (points.length > 1) {
+    const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotHeight);
+    areaGrad.addColorStop(0, 'rgba(0, 118, 206, 0.35)');
+    areaGrad.addColorStop(1, 'rgba(0, 118, 206, 0.0)');
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, padTop + plotHeight);
+    ctx.lineTo(points[0].x, points[0].y);
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const cx = (p0.x + p1.x) / 2;
+      ctx.bezierCurveTo(cx, p0.y, cx, p1.y, p1.x, p1.y);
+    }
+
+    ctx.lineTo(points[points.length - 1].x, padTop + plotHeight);
+    ctx.closePath();
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const cx = (p0.x + p1.x) / 2;
+      ctx.bezierCurveTo(cx, p0.y, cx, p1.y, p1.x, p1.y);
+    }
+    ctx.strokeStyle = '#0076ce';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#0076ce';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  points.forEach((pt, i) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = pt.percent >= 82.5 ? '#10b981' : '#f59e0b';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = pt.percent >= 82.5 ? '#10b981' : '#f59e0b';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(pt.percent + '%', pt.x, pt.y - 8);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('#' + (i + 1), pt.x, height - padBottom + 14);
+  });
+}
+
+function renderGroupBars(results, users) {
+  const container = document.getElementById('adminGroupBarsList');
+  if (!container) return;
+
+  const groupsSet = new Set();
+  users.forEach(u => groupsSet.add(u.group || 'Guruhsiz'));
+  results.forEach(r => groupsSet.add(r.studentGroup || 'Guruhsiz'));
+
+  const groups = Array.from(groupsSet);
+  if (groups.length === 0) {
+    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">Guruhlar ma'lumotlari kutilmoqda</span>`;
+    return;
+  }
+
+  const groupStats = groups.map(g => {
+    const groupUsers = users.filter(u => (u.group || 'Guruhsiz') === g);
+    const groupResults = results.filter(r => (r.studentGroup || 'Guruhsiz') === g);
+    const avg = groupResults.length > 0
+      ? Math.round(groupResults.reduce((acc, r) => acc + (r.percent || 0), 0) / groupResults.length)
+      : 0;
+    return {
+      name: g,
+      userCount: groupUsers.length,
+      testCount: groupResults.length,
+      avg
+    };
+  });
+
+  groupStats.sort((a, b) => b.avg - a.avg || b.testCount - a.testCount);
+
+  container.innerHTML = groupStats.map(gs => {
+    let barColor = '#10b981';
+    if (gs.avg < 70) barColor = '#ef4444';
+    else if (gs.avg < 82.5) barColor = '#f59e0b';
+
+    return `
+      <div class="group-bar-row">
+        <div class="group-bar-label" title="${escapeHtml(gs.name)}">
+          🏢 ${escapeHtml(gs.name)}
+          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">${gs.userCount} ta talaba, ${gs.testCount} ta test</div>
+        </div>
+        <div class="group-bar-track">
+          <div class="group-bar-fill" style="width:${gs.avg}%; background:${barColor};"></div>
+        </div>
+        <div class="group-bar-val" style="color:${barColor};">
+          ${gs.avg}%
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.addEventListener('resize', () => {
+  if (state.isAdmin && currentAdminSubTab === 'charts') {
+    renderAdminCharts();
+  }
+});

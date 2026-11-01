@@ -681,6 +681,9 @@
           <button id="adminTabBtnResults" class="admin-subnav-btn" onclick="switchAdminTab('results')">
             📊 Barcha Test Natijalari (<span id="adminResultsBadge">0</span>)
           </button>
+          <button id="adminTabBtnCharts" class="admin-subnav-btn" onclick="switchAdminTab('charts')">
+            📈 Grafik Tahlillar & Statistika
+          </button>
           <button id="adminTabBtnLeaderboard" class="admin-subnav-btn" onclick="switchAdminTab('leaderboard')">
             🏆 Talabalar Reytingi (Top)
           </button>
@@ -775,6 +778,110 @@
               </thead>
               <tbody id="adminLeaderboardTableBody"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 4: GRAPHICAL ANALYTICS & CHARTS -->
+        <div id="adminViewCharts" style="display:none;">
+          <!-- Quick Insights Row -->
+          <div class="admin-charts-insights-grid">
+            <div class="admin-insight-card">
+              <div class="insight-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">🏆</div>
+              <div>
+                <div class="insight-title">Eng Yuqori Natija</div>
+                <div class="insight-value" id="chartTopScore">-</div>
+                <div class="insight-desc" id="chartTopStudent">-</div>
+              </div>
+            </div>
+            <div class="admin-insight-card">
+              <div class="insight-icon" style="background:rgba(0, 118, 206, 0.15); color:#0076ce;">⚡</div>
+              <div>
+                <div class="insight-title">Eng Faol Talaba</div>
+                <div class="insight-value" id="chartActiveCount">-</div>
+                <div class="insight-desc" id="chartActiveStudent">-</div>
+              </div>
+            </div>
+            <div class="admin-insight-card">
+              <div class="insight-icon" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b;">🎯</div>
+              <div>
+                <div class="insight-title">O'tish Ko'rsatkichi (≥82.5%)</div>
+                <div class="insight-value" id="chartPassRate">0%</div>
+                <div class="insight-desc" id="chartPassCount">0 ta muvaffaqiyatli</div>
+              </div>
+            </div>
+            <div class="admin-insight-card">
+              <div class="insight-icon" style="background:rgba(139, 92, 246, 0.15); color:#8b5cf6;">🛡️</div>
+              <div>
+                <div class="insight-title">Hisoblar Moderatsiyasi</div>
+                <div class="insight-value" id="chartApprovedRatio">-</div>
+                <div class="insight-desc" id="chartPendingNotice">Tasdiq kutilmoqda</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Charts Grid -->
+          <div class="admin-charts-grid">
+            <!-- Chart 1: Bar Chart of Part Scores -->
+            <div class="admin-chart-box full-width">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📊 CCNA Bo'limlari (Part 1 - 10) Bo'yicha O'zlashtirish</h3>
+                  <p class="chart-subtitle">Har bir Part bo'yicha o'rtacha ball (%) va testlar soni (Oltin chiziq: 82.5% Cisco o'tish chegarasi)</p>
+                </div>
+                <div class="chart-badge-legend">
+                  <span><span class="legend-dot" style="background:#10b981;"></span> ≥82.5% O'tgan</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#f59e0b;"></span> 70-82% O'rtacha</span>
+                  <span style="margin-left:10px;"><span class="legend-dot" style="background:#ef4444;"></span> &lt;70% Qayta tayyorlanish</span>
+                </div>
+              </div>
+              <div class="canvas-container" style="position:relative; width:100%; height:320px;">
+                <canvas id="adminPartScoresCanvas"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 2: Donut Chart of Result Distribution -->
+            <div class="admin-chart-box">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">🍩 Natijalar Taqsimoti</h3>
+                  <p class="chart-subtitle">Ballar toifalari bo'yicha ulushlar</p>
+                </div>
+              </div>
+              <div class="donut-chart-wrapper">
+                <div style="position:relative; width:200px; height:200px;">
+                  <canvas id="adminDonutCanvas" width="200" height="200"></canvas>
+                  <div id="adminDonutCenterText" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
+                    <span style="font-size:1.6rem; font-weight:800; color:var(--text-main);" id="donutTotalText">0</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Jami Test</span>
+                  </div>
+                </div>
+                <div id="adminDonutLegend" class="donut-legend-list"></div>
+              </div>
+            </div>
+
+            <!-- Chart 3: Progress Trend Area Chart -->
+            <div class="admin-chart-box">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">📈 Natijalar Dinamikasi</h3>
+                  <p class="chart-subtitle">Oxirgi topshirilgan testlar bo'yicha ballar o'sishi</p>
+                </div>
+              </div>
+              <div class="canvas-container" style="position:relative; width:100%; height:220px;">
+                <canvas id="adminTrendCanvas"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart 4: Group Performance Bars -->
+            <div class="admin-chart-box full-width">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">👥 Guruhlar Bo'yicha O'rtacha Ko'rsatkichlar</h3>
+                  <p class="chart-subtitle">Talabalar guruhlari kesimida faollik va o'rtacha ballar reytingi</p>
+                </div>
+              </div>
+              <div id="adminGroupBarsList" style="display:flex; flex-direction:column; gap:14px; padding:6px 0;"></div>
+            </div>
           </div>
         </div>
 
