@@ -2308,3 +2308,15 @@ input, button, select {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(2, 132, 199, 0.08));
   border-color: rgba(16, 185, 129, 0.35);
 }
+
+
+/* Fast Auth State Rules (Zero Flicker On Page Refresh) */
+html.is-authenticated #authModal {
+  display: none !important;
+}
+html.is-authenticated main {
+  display: block !important;
+}
+html.is-authenticated .nav-tabs {
+  visibility: visible !important;
+}
