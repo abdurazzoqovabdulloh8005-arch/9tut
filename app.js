@@ -936,16 +936,16 @@ const PARTS_CONFIG = [
 
 // Initialize
 function initializeApp() {
-  initTheme();
-  initSoundButton();
-  initNavigation();
-  initHotkeys();
-  checkAuth();
-  renderPartsGrid();
-  initStudyModule();
-  initLabs();
-  initCliSimulator();
-  initBookmarksView();
+  try { initTheme(); } catch(e) { console.error("initTheme", e); }
+  try { initSoundButton(); } catch(e) { console.error("initSoundButton", e); }
+  try { initNavigation(); } catch(e) { console.error("initNavigation", e); }
+  try { initHotkeys(); } catch(e) { console.error("initHotkeys", e); }
+  try { checkAuth(); } catch(e) { console.error("checkAuth", e); }
+  try { renderPartsGrid(); } catch(e) { console.error("renderPartsGrid", e); }
+  try { initStudyModule(); } catch(e) { console.error("initStudyModule", e); }
+  try { initLabs(); } catch(e) { console.error("initLabs", e); }
+  try { initCliSimulator(); } catch(e) { console.error("initCliSimulator", e); }
+  try { initBookmarksView(); } catch(e) { console.error("initBookmarksView", e); }
 }
 
 if (document.readyState === 'loading') {
@@ -1664,54 +1664,66 @@ function renderPartsGrid() {
   if (!grid) return;
 
   grid.innerHTML = '';
-  const currentStudentName = state.currentUser ? state.currentUser.name : '';
+  const currentStudentName = (state.currentUser && state.currentUser.name) 
+    ? String(state.currentUser.name).trim().toLowerCase() 
+    : '';
 
   PARTS_CONFIG.forEach(part => {
-    let lastResult = null;
-    if (currentStudentName) {
-      const partResults = state.results.filter(r => 
-        r.studentName.toLowerCase() === currentStudentName.toLowerCase() && 
-        (r.partTitle === part.title || r.partKey === part.key)
-      );
-      if (partResults.length > 0) {
-        lastResult = partResults[partResults.length - 1];
+    try {
+      let lastResult = null;
+      if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
+        const partResults = state.results.filter(r => {
+          if (!r || !r.studentName) return false;
+          const rName = String(r.studentName).trim().toLowerCase();
+          if (rName !== currentStudentName) return false;
+          const rTitle = r.partTitle ? String(r.partTitle).toLowerCase() : '';
+          const rKey = r.partKey ? String(r.partKey).toLowerCase() : '';
+          const pTitle = part.title.toLowerCase();
+          const pKey = part.key.toLowerCase();
+          return rTitle.includes(pTitle) || rKey === pKey || (r.part && String(r.part).toLowerCase().includes(pTitle));
+        });
+        if (partResults.length > 0) {
+          lastResult = partResults[partResults.length - 1];
+        }
       }
-    }
 
-    const card = document.createElement('div');
-    card.className = `part-card ${part.featured ? 'featured' : ''}`;
+      const card = document.createElement('div');
+      card.className = `part-card ${part.featured ? 'featured' : ''}`;
 
-    let scoreBadge = '';
-    if (lastResult) {
-      const isPass = lastResult.percent >= 82.5;
-      scoreBadge = `
-        <span class="part-last-score" style="color: ${isPass ? 'var(--success)' : 'var(--danger)'}">
-          ${isPass ? '✅' : '⚠️'} Natija: <b>${lastResult.percent}%</b> (${lastResult.correct}/${lastResult.total})
-        </span>
-      `;
-    } else {
-      scoreBadge = `<span class="part-last-score" style="color:var(--text-muted)">Topshirilmagan</span>`;
-    }
+      let scoreBadge = '';
+      if (lastResult) {
+        const isPass = (lastResult.percent || 0) >= 82.5;
+        scoreBadge = `
+          <span class="part-last-score" style="color: ${isPass ? 'var(--success)' : 'var(--danger)'}">
+            ${isPass ? '✅' : '⚠️'} Natija: <b>${lastResult.percent}%</b> (${lastResult.correct}/${lastResult.total})
+          </span>
+        `;
+      } else {
+        scoreBadge = `<span class="part-last-score" style="color:var(--text-muted)">Topshirilmagan</span>`;
+      }
 
-    card.innerHTML = `
-      <div>
-        <div class="part-card-header">
-          <div class="part-card-title">📁 ${part.title}</div>
-          <span class="part-card-count">${part.count} ta savol</span>
+      card.innerHTML = `
+        <div>
+          <div class="part-card-header">
+            <div class="part-card-title">📁 ${escapeHtml(part.title)}</div>
+            <span class="part-card-count">${part.count} ta savol</span>
+          </div>
+          <p class="part-card-desc">${escapeHtml(part.desc || '')}</p>
         </div>
-        <p class="part-card-desc">${part.desc}</p>
-      </div>
-      <div class="part-card-footer">
-        ${scoreBadge}
-        <button class="btn-primary" style="padding:7px 16px; font-size:0.85rem;">Boshlash 🚀</button>
-      </div>
-    `;
+        <div class="part-card-footer">
+          ${scoreBadge}
+          <button class="btn-primary" style="padding:7px 16px; font-size:0.85rem;">Boshlash 🚀</button>
+        </div>
+      `;
 
-    card.addEventListener('click', () => {
-      startPartQuiz(part);
-    });
+      card.addEventListener('click', () => {
+        startPartQuiz(part);
+      });
 
-    grid.appendChild(card);
+      grid.appendChild(card);
+    } catch(err) {
+      console.warn("Error rendering part card", part, err);
+    }
   });
 }
 
