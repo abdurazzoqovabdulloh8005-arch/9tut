@@ -2555,3 +2555,272 @@ html.is-authenticated .nav-tabs {
   text-align: center;
   padding: 8px 14px;
 }
+
+
+/* ========================================================
+   HIGH-TECH ED-TECH ANALYTICS & CHARTS SYSTEM
+   ======================================================== */
+.charts-view-switcher {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-card);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.charts-view-pill {
+  flex: 1 1 auto;
+  min-width: 140px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.charts-view-pill:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+.charts-view-pill.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 118, 206, 0.35);
+}
+
+/* Gauge Meter Card */
+.gauge-card-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.gauge-wrapper {
+  position: relative;
+  width: 260px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gauge-score-text {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text-main);
+  margin-top: 10px;
+}
+.gauge-pass-badge {
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Heatmap Mastery Matrix Table */
+.heatmap-container {
+  overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+}
+.heatmap-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  font-size: 0.84rem;
+}
+.heatmap-table th {
+  padding: 10px 8px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+.heatmap-table th.th-student {
+  text-align: left;
+  min-width: 170px;
+  padding-left: 12px;
+}
+.heatmap-table td {
+  padding: 8px 6px;
+  text-align: center;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: all 0.2s;
+  cursor: default;
+}
+.heatmap-table td.td-student {
+  text-align: left;
+  padding-left: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+.heatmap-table tr:hover td.td-student {
+  background: rgba(0, 118, 206, 0.12);
+}
+.cell-mastered {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+.cell-medium {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+.cell-low {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+.cell-empty {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  font-weight: 400;
+}
+.cell-mastered:hover, .cell-medium:hover, .cell-low:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+
+/* Student Podium (Leaderboard Top 3) */
+.podium-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  padding: 30px 10px 10px;
+  min-height: 250px;
+}
+.podium-col {
+  flex: 1;
+  max-width: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.podium-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+}
+.podium-avatar .crown {
+  position: absolute;
+  top: -16px;
+  font-size: 1.3rem;
+}
+.podium-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+.podium-score {
+  font-size: 1.15rem;
+  font-weight: 900;
+  margin: 2px 0 8px;
+}
+.podium-block {
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.podium-1 {
+  height: 120px;
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+.podium-2 {
+  height: 90px;
+  background: linear-gradient(180deg, #94a3b8, #64748b);
+}
+.podium-3 {
+  height: 70px;
+  background: linear-gradient(180deg, #b45309, #78350f);
+}
+
+/* Modern Group Performance Cards */
+.groups-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.group-performance-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.group-performance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.group-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.group-card-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.group-card-badge {
+  font-weight: 800;
+  font-size: 0.92rem;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
