@@ -5987,6 +5987,24 @@ const CloudSync = {
     }
   },
 
+  // Pull cloud master admin configuration
+  async syncMasterAdmin() {
+    if (!this.isAvailable()) return getMasterAdmin();
+    try {
+      const cloudMaster = await this.get('master_admin');
+      if (cloudMaster && typeof cloudMaster === 'object' && cloudMaster.hash) {
+        localStorage.setItem('ccna_master_admin_custom', JSON.stringify(cloudMaster));
+        return cloudMaster;
+      } else {
+        const localMaster = getMasterAdmin();
+        if (localMaster && localMaster.isPasswordChanged) {
+          this.saveAll('master_admin', localMaster);
+        }
+      }
+    } catch(e) {}
+    return getMasterAdmin();
+  },
+
   // Pull cloud users and merge into localStorage
   async syncUsers() {
     if (!this.isAvailable()) return getRegisteredUsers();
@@ -6058,6 +6076,7 @@ const CloudSync = {
 
   async syncAll() {
     await Promise.allSettled([
+      this.syncMasterAdmin(),
       this.syncUsers(),
       this.syncChat(),
       this.syncAlerts()
@@ -8550,9 +8569,12 @@ function getMasterAdmin() {
 }
 
 function saveMasterAdmin(adminObj) {
-
-  localStorage.setItem('ccna_master_admin_custom', JSON.stringify(adminObj));
-
+  try {
+    localStorage.setItem('ccna_master_admin_custom', JSON.stringify(adminObj));
+    if (typeof CloudSync !== 'undefined') {
+      CloudSync.saveAll('master_admin', adminObj);
+    }
+  } catch(e) {}
 }
 
 function sha256_pure_js(ascii) {
@@ -10045,76 +10067,50 @@ async function handleUserLogin() {
 
     // 1. Dynamic Master Admin & User Check
 
-    let match = null;
+    // 1. Sync latest Master Admin & Users from Cloud Database
+    if (typeof CloudSync !== 'undefined') {
+      try {
+        await Promise.allSettled([
+          CloudSync.syncMasterAdmin(),
+          CloudSync.syncUsers()
+        ]);
+      } catch(e) {}
+    }
 
+    let match = null;
     const master = getMasterAdmin();
 
-    // Direct failsafe check for Master Admin first (instant)
-
-    if (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase()) {
-
-      const isDefaultMatch = (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005');
-
-      if (isDefaultMatch) {
-
-        if (master.isPasswordChanged) {
-
-          master.isPasswordChanged = false;
-
-          master.hash = 'a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2';
-
-          saveMasterAdmin(master);
-
-        }
-
-        match = {
-
-          login: 'abdulloh',
-
-          name: 'Abdulloh',
-
-          role: 'admin',
-
-          group: 'Administrator'
-
-        };
-
-      }
-
-    }
-
     let computedHash = "";
-
     try {
-
       const credentialString = `${normalizedLogin}:${rawPassword}:${AUTH_SALT}`;
-
       computedHash = computeSha256Hex(credentialString);
-
     } catch (e) {
-
       console.warn("Hash calc error:", e);
-
     }
 
-    if (!match && (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase())) {
-
-      if (computedHash === master.hash || computedHash === 'a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2') {
-
-        match = {
-
-          login: 'abdulloh',
-
-          name: 'Abdulloh',
-
-          role: 'admin',
-
-          group: 'Administrator'
-
-        };
-
+    // Master Admin Authentication
+    if (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase()) {
+      if (master.isPasswordChanged) {
+        // Parol o'zgartirilgan bo'lsa: FAQAT yangi parol qabul qilinadi!
+        if (computedHash === master.hash) {
+          match = {
+            login: 'abdulloh',
+            name: master.name || 'Abdulloh',
+            role: 'admin',
+            group: 'Administrator'
+          };
+        }
+      } else {
+        // Standart holatda: Abdulloh8005 yoki standart hash
+        if (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005' || computedHash === master.hash) {
+          match = {
+            login: 'abdulloh',
+            name: 'Abdulloh',
+            role: 'admin',
+            group: 'Administrator'
+          };
+        }
       }
-
     }
 
     if (!match) {
