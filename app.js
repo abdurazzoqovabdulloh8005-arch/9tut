@@ -2337,7 +2337,6 @@ function computeSha256Hex(str) {
 
 }
 
-
 // ========================================================
 // ADVANCED ANTI-ACCOUNT-SHARING & DEVICE BINDING SYSTEM
 // ========================================================
@@ -2456,6 +2455,427 @@ function adminResetUserDevice(studentId) {
   try { SoundEffects.playCorrect(); } catch(e) {}
   renderAdminStudentsList();
   alert(`✅ ${u.name} talabasining qurilmasi muvaffaqiyatli uzildi! Endi talaba istalgan yangi kompyuter yoki telefondan kira oladi.`);
+}
+
+// ========================================================
+// SECURITY AUDIT & UNKNOWN DEVICE ALERT SYSTEM
+// ========================================================
+function getSecurityAlerts() {
+  try {
+    const raw = localStorage.getItem('ccna_security_alerts');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveSecurityAlerts(alerts) {
+  try {
+    localStorage.setItem('ccna_security_alerts', JSON.stringify(alerts.slice(0, 60))); // Keep last 60
+    updateSecurityAlertBadge();
+  } catch(e) {}
+}
+
+function logSecurityDeviceAlert(alertData) {
+  const alerts = getSecurityAlerts();
+  const newAlert = {
+    id: 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    timestamp: new Date().toLocaleString('uz-UZ'),
+    userId: alertData.userId,
+    userName: alertData.userName,
+    userLogin: alertData.userLogin,
+    userGroup: alertData.userGroup || 'Guruhsiz',
+    attemptedDevice: alertData.attemptedDevice,
+    existingDevice: alertData.existingDevice || null,
+    type: alertData.type || 'BLOCKED_UNKNOWN_DEVICE',
+    message: alertData.message,
+    isRead: false,
+    status: 'PENDING'
+  };
+
+  alerts.unshift(newAlert);
+  saveSecurityAlerts(alerts);
+  return newAlert;
+}
+
+function updateSecurityAlertBadge() {
+  const alerts = getSecurityAlerts();
+  const unreadCount = alerts.filter(a => !a.isRead).length;
+
+  const badgeHeader = document.getElementById('securityAlertCountBadge');
+  const badgeSubnav = document.getElementById('adminSecurityBadge');
+  const alertBtn = document.getElementById('adminAlertBellBtn');
+
+  if (badgeHeader) badgeHeader.textContent = unreadCount;
+  if (badgeSubnav) badgeSubnav.textContent = unreadCount;
+
+  if (alertBtn) {
+    if (state.isAdmin) {
+      alertBtn.style.display = 'inline-flex';
+      alertBtn.style.animation = unreadCount > 0 ? 'pulse 1.8s infinite' : 'none';
+    } else {
+      alertBtn.style.display = 'none';
+    }
+  }
+
+  // Toast notification for admin on login or live event
+  const banner = document.getElementById('adminSecurityLiveBanner');
+  if (banner && state.isAdmin) {
+    if (unreadCount > 0) {
+      banner.style.display = 'flex';
+      const text = document.getElementById('adminSecurityBannerText');
+      if (text) text.textContent = `🚨 Diqqat, Abdulloh! ${unreadCount} ta hisobga noma'lum yangi qurilmadan kirish urinishi aniqlandi!`;
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+}
+
+// Admin Action: Approve new device directly from security alert
+function adminApproveNewDeviceFromAlert(alertId) {
+  const alerts = getSecurityAlerts();
+  const alertIdx = alerts.findIndex(a => a.id === alertId);
+  if (alertIdx === -1) return;
+  const alertItem = alerts[alertIdx];
+
+  const users = getRegisteredUsers();
+  const userIdx = users.findIndex(u => u.login.toLowerCase() === alertItem.userLogin.toLowerCase());
+  if (userIdx === -1) {
+    alert("Foydalanuvchi topilmadi!");
+    return;
+  }
+
+  const u = users[userIdx];
+  if (!confirm(`Haqiqatan ham ${u.name} talabasiga ushbu yangi qurilmadan (${alertItem.attemptedDevice.name}) kirishiga ruxsat bermoqchimisiz?`)) {
+    return;
+  }
+
+  u.boundDevices = [{
+    id: alertItem.attemptedDevice.id,
+    name: alertItem.attemptedDevice.name,
+    os: alertItem.attemptedDevice.os,
+    browser: alertItem.attemptedDevice.browser,
+    screen: alertItem.attemptedDevice.screen,
+    boundAt: new Date().toLocaleString('uz-UZ'),
+    lastActive: new Date().toLocaleString('uz-UZ')
+  }];
+  u.currentSessionToken = '';
+  saveRegisteredUsers(users);
+
+  alertItem.isRead = true;
+  alertItem.status = 'APPROVED';
+  saveSecurityAlerts(alerts);
+
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  renderSecurityAlertsView();
+  renderAdminStudentsList();
+  alert(`✅ Muvaffaqiyatli! ${u.name} endi o'zining yangi qurilmasidan bemalol kira oladi.`);
+}
+
+// Admin Action: Dismiss / Delete alert
+function adminDismissAlert(alertId) {
+  let alerts = getSecurityAlerts();
+  alerts = alerts.filter(a => a.id !== alertId);
+  saveSecurityAlerts(alerts);
+  renderSecurityAlertsView();
+  try { SoundEffects.playClick(); } catch(e) {}
+}
+
+// Admin Action: Clear all security alerts
+function adminClearAllAlerts() {
+  if (!confirm("Barcha xavfsizlik va qurilma jurnallarini tozalamoqchimisiz?")) return;
+  saveSecurityAlerts([]);
+  renderSecurityAlertsView();
+  try { SoundEffects.playCorrect(); } catch(e) {}
+}
+
+function openSecurityAlertsModal() {
+  switchMainTab('admin');
+  switchAdminTab('security');
+}
+
+function renderSecurityAlertsView() {
+  const container = document.getElementById('adminSecurityAlertsList');
+  const countEl = document.getElementById('securityTotalAlertsCount');
+  const blockedCountEl = document.getElementById('securityBlockedCount');
+  if (!container) return;
+
+  const alerts = getSecurityAlerts();
+  if (countEl) countEl.textContent = alerts.length;
+  if (blockedCountEl) blockedCountEl.textContent = alerts.filter(a => a.type === 'BLOCKED_UNKNOWN_DEVICE').length;
+
+  if (alerts.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:45px 20px; color:var(--text-muted); background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
+        <div style="font-size:3rem; margin-bottom:10px;">🛡️</div>
+        <h4 style="font-size:1.15rem; color:var(--text-main); margin-bottom:5px;">Hammasi xavfsiz va tinch!</h4>
+        <p style="font-size:0.88rem;">Hozircha hech qanday noma'lum qurilmadan shubhali kirish urinishlari qayd etilmadi.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Mark all as read when viewed by admin
+  alerts.forEach(a => a.isRead = true);
+  saveSecurityAlerts(alerts);
+
+  container.innerHTML = alerts.map((a, idx) => {
+    const isApproved = a.status === 'APPROVED';
+    const isBlocked = a.type === 'BLOCKED_UNKNOWN_DEVICE';
+    const cardBg = isApproved ? 'rgba(16, 185, 129, 0.08)' : (isBlocked ? 'rgba(239, 68, 68, 0.08)' : 'rgba(59, 130, 246, 0.08)');
+    const cardBorder = isApproved ? 'rgba(16, 185, 129, 0.3)' : (isBlocked ? 'rgba(239, 68, 68, 0.35)' : 'rgba(59, 130, 246, 0.3)');
+    const badgeColor = isApproved ? '#10b981' : (isBlocked ? '#ef4444' : '#3b82f6');
+    const badgeText = isApproved ? '✅ RUXSAT BERILDI' : (isBlocked ? '🚫 BLOKLANDI (LIMIT)' : "ℹ️ MA'LUMOT");
+
+    return `
+      <div style="background:${cardBg}; border:1px solid ${cardBorder}; border-radius:12px; padding:16px 18px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+        <div style="flex:1; min-width:280px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <span style="background:${badgeColor}22; color:${badgeColor}; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px; border:1px solid ${badgeColor}44;">
+              ${badgeText}
+            </span>
+            <span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${a.timestamp}</span>
+          </div>
+
+          <div style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin-bottom:4px;">
+            👤 ${escapeHtml(a.userName)} <span style="font-size:0.85rem; font-weight:400; color:var(--text-muted);">(Login: <code>${escapeHtml(a.userLogin)}</code> • ${escapeHtml(a.userGroup)})</span>
+          </div>
+
+          <div style="font-size:0.92rem; color:var(--text-main); margin-bottom:8px;">
+            ⚠️ <b>Shubhali / Yangi Qurilma:</b> <span style="font-weight:700; color:${badgeColor};">${escapeHtml(a.attemptedDevice.name)}</span>
+          </div>
+
+          ${a.existingDevice ? `
+            <div style="font-size:0.82rem; color:var(--text-muted); background:var(--bg-main); padding:6px 10px; border-radius:6px; display:inline-block; border:1px solid var(--border);">
+              🔒 Avvalgi ruxsat etilgan qurilmasi: <b>${escapeHtml(a.existingDevice.name)}</b> (${a.existingDevice.boundAt || '-'})
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          ${!isApproved && isBlocked ? `
+            <button type="button" class="btn-action-icon" onclick="adminApproveNewDeviceFromAlert('${a.id}')" style="background:#10b981; color:white; border-color:#059669; padding:8px 14px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" title="Talabaga ushbu yangi qurilmadan kirishiga ruxsat berish">
+              ✅ Yangi qurilmaga ruxsat berish
+            </button>
+          ` : ''}
+          <button type="button" class="btn-action-icon btn-action-danger" onclick="adminDismissAlert('${a.id}')" style="padding:8px 12px; border-radius:8px;" title="Ushbu ogohlantirishni o'chirish">
+            🗑️ O'chirish
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
+// ========================================================
+// SECURITY AUDIT & UNKNOWN DEVICE ALERT SYSTEM
+// ========================================================
+function getSecurityAlerts() {
+  try {
+    const raw = localStorage.getItem('ccna_security_alerts');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveSecurityAlerts(alerts) {
+  try {
+    localStorage.setItem('ccna_security_alerts', JSON.stringify(alerts.slice(0, 60))); // Keep last 60
+    updateSecurityAlertBadge();
+  } catch(e) {}
+}
+
+function logSecurityDeviceAlert(alertData) {
+  const alerts = getSecurityAlerts();
+  const newAlert = {
+    id: 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    timestamp: new Date().toLocaleString('uz-UZ'),
+    userId: alertData.userId,
+    userName: alertData.userName,
+    userLogin: alertData.userLogin,
+    userGroup: alertData.userGroup || 'Guruhsiz',
+    attemptedDevice: alertData.attemptedDevice,
+    existingDevice: alertData.existingDevice || null,
+    type: alertData.type || 'BLOCKED_UNKNOWN_DEVICE',
+    message: alertData.message,
+    isRead: false,
+    status: 'PENDING'
+  };
+
+  alerts.unshift(newAlert);
+  saveSecurityAlerts(alerts);
+  return newAlert;
+}
+
+function updateSecurityAlertBadge() {
+  const alerts = getSecurityAlerts();
+  const unreadCount = alerts.filter(a => !a.isRead).length;
+
+  const badgeHeader = document.getElementById('securityAlertCountBadge');
+  const badgeSubnav = document.getElementById('adminSecurityBadge');
+  const alertBtn = document.getElementById('adminAlertBellBtn');
+
+  if (badgeHeader) badgeHeader.textContent = unreadCount;
+  if (badgeSubnav) badgeSubnav.textContent = unreadCount;
+
+  if (alertBtn) {
+    if (state.isAdmin) {
+      alertBtn.style.display = 'inline-flex';
+      alertBtn.style.animation = unreadCount > 0 ? 'pulse 1.8s infinite' : 'none';
+    } else {
+      alertBtn.style.display = 'none';
+    }
+  }
+
+  // Toast notification for admin on login or live event
+  const banner = document.getElementById('adminSecurityLiveBanner');
+  if (banner && state.isAdmin) {
+    if (unreadCount > 0) {
+      banner.style.display = 'flex';
+      const text = document.getElementById('adminSecurityBannerText');
+      if (text) text.textContent = `🚨 Diqqat, Abdulloh! ${unreadCount} ta hisobga noma'lum yangi qurilmadan kirish urinishi aniqlandi!`;
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+}
+
+// Admin Action: Approve new device directly from security alert
+function adminApproveNewDeviceFromAlert(alertId) {
+  const alerts = getSecurityAlerts();
+  const alertIdx = alerts.findIndex(a => a.id === alertId);
+  if (alertIdx === -1) return;
+  const alertItem = alerts[alertIdx];
+
+  const users = getRegisteredUsers();
+  const userIdx = users.findIndex(u => u.login.toLowerCase() === alertItem.userLogin.toLowerCase());
+  if (userIdx === -1) {
+    alert("Foydalanuvchi topilmadi!");
+    return;
+  }
+
+  const u = users[userIdx];
+  if (!confirm(`Haqiqatan ham ${u.name} talabasiga ushbu yangi qurilmadan (${alertItem.attemptedDevice.name}) kirishiga ruxsat bermoqchimisiz?`)) {
+    return;
+  }
+
+  u.boundDevices = [{
+    id: alertItem.attemptedDevice.id,
+    name: alertItem.attemptedDevice.name,
+    os: alertItem.attemptedDevice.os,
+    browser: alertItem.attemptedDevice.browser,
+    screen: alertItem.attemptedDevice.screen,
+    boundAt: new Date().toLocaleString('uz-UZ'),
+    lastActive: new Date().toLocaleString('uz-UZ')
+  }];
+  u.currentSessionToken = '';
+  saveRegisteredUsers(users);
+
+  alertItem.isRead = true;
+  alertItem.status = 'APPROVED';
+  saveSecurityAlerts(alerts);
+
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  renderSecurityAlertsView();
+  renderAdminStudentsList();
+  alert(`✅ Muvaffaqiyatli! ${u.name} endi o'zining yangi qurilmasidan bemalol kira oladi.`);
+}
+
+// Admin Action: Dismiss / Delete alert
+function adminDismissAlert(alertId) {
+  let alerts = getSecurityAlerts();
+  alerts = alerts.filter(a => a.id !== alertId);
+  saveSecurityAlerts(alerts);
+  renderSecurityAlertsView();
+  try { SoundEffects.playClick(); } catch(e) {}
+}
+
+// Admin Action: Clear all security alerts
+function adminClearAllAlerts() {
+  if (!confirm("Barcha xavfsizlik va qurilma jurnallarini tozalamoqchimisiz?")) return;
+  saveSecurityAlerts([]);
+  renderSecurityAlertsView();
+  try { SoundEffects.playCorrect(); } catch(e) {}
+}
+
+function openSecurityAlertsModal() {
+  switchMainTab('admin');
+  switchAdminTab('security');
+}
+
+function renderSecurityAlertsView() {
+  const container = document.getElementById('adminSecurityAlertsList');
+  const countEl = document.getElementById('securityTotalAlertsCount');
+  const blockedCountEl = document.getElementById('securityBlockedCount');
+  if (!container) return;
+
+  const alerts = getSecurityAlerts();
+  if (countEl) countEl.textContent = alerts.length;
+  if (blockedCountEl) blockedCountEl.textContent = alerts.filter(a => a.type === 'BLOCKED_UNKNOWN_DEVICE').length;
+
+  if (alerts.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:45px 20px; color:var(--text-muted); background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
+        <div style="font-size:3rem; margin-bottom:10px;">🛡️</div>
+        <h4 style="font-size:1.15rem; color:var(--text-main); margin-bottom:5px;">Hammasi xavfsiz va tinch!</h4>
+        <p style="font-size:0.88rem;">Hozircha hech qanday noma'lum qurilmadan shubhali kirish urinishlari qayd etilmadi.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Mark all as read when viewed by admin
+  alerts.forEach(a => a.isRead = true);
+  saveSecurityAlerts(alerts);
+
+  container.innerHTML = alerts.map((a, idx) => {
+    const isApproved = a.status === 'APPROVED';
+    const isBlocked = a.type === 'BLOCKED_UNKNOWN_DEVICE';
+    const cardBg = isApproved ? 'rgba(16, 185, 129, 0.08)' : (isBlocked ? 'rgba(239, 68, 68, 0.08)' : 'rgba(59, 130, 246, 0.08)');
+    const cardBorder = isApproved ? 'rgba(16, 185, 129, 0.3)' : (isBlocked ? 'rgba(239, 68, 68, 0.35)' : 'rgba(59, 130, 246, 0.3)');
+    const badgeColor = isApproved ? '#10b981' : (isBlocked ? '#ef4444' : '#3b82f6');
+    const badgeText = isApproved ? '✅ RUXSAT BERILDI' : (isBlocked ? '🚫 BLOKLANDI (LIMIT)' : "ℹ️ MA'LUMOT");
+
+    return `
+      <div style="background:${cardBg}; border:1px solid ${cardBorder}; border-radius:12px; padding:16px 18px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+        <div style="flex:1; min-width:280px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <span style="background:${badgeColor}22; color:${badgeColor}; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px; border:1px solid ${badgeColor}44;">
+              ${badgeText}
+            </span>
+            <span style="font-size:0.8rem; color:var(--text-muted);">🕒 ${a.timestamp}</span>
+          </div>
+
+          <div style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin-bottom:4px;">
+            👤 ${escapeHtml(a.userName)} <span style="font-size:0.85rem; font-weight:400; color:var(--text-muted);">(Login: <code>${escapeHtml(a.userLogin)}</code> • ${escapeHtml(a.userGroup)})</span>
+          </div>
+
+          <div style="font-size:0.92rem; color:var(--text-main); margin-bottom:8px;">
+            ⚠️ <b>Shubhali / Yangi Qurilma:</b> <span style="font-weight:700; color:${badgeColor};">${escapeHtml(a.attemptedDevice.name)}</span>
+          </div>
+
+          ${a.existingDevice ? `
+            <div style="font-size:0.82rem; color:var(--text-muted); background:var(--bg-main); padding:6px 10px; border-radius:6px; display:inline-block; border:1px solid var(--border);">
+              🔒 Avvalgi ruxsat etilgan qurilmasi: <b>${escapeHtml(a.existingDevice.name)}</b> (${a.existingDevice.boundAt || '-'})
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          ${!isApproved && isBlocked ? `
+            <button type="button" class="btn-action-icon" onclick="adminApproveNewDeviceFromAlert('${a.id}')" style="background:#10b981; color:white; border-color:#059669; padding:8px 14px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px;" title="Talabaga ushbu yangi qurilmadan kirishiga ruxsat berish">
+              ✅ Yangi qurilmaga ruxsat berish
+            </button>
+          ` : ''}
+          <button type="button" class="btn-action-icon btn-action-danger" onclick="adminDismissAlert('${a.id}')" style="padding:8px 12px; border-radius:8px;" title="Ushbu ogohlantirishni o'chirish">
+            🗑️ O'chirish
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function getRegisteredUsers() {
@@ -2653,6 +3073,8 @@ function checkAuth() {
       adminNav.style.display = state.isAdmin ? 'inline-flex' : 'none';
 
     }
+    try { updateSecurityAlertBadge(); } catch(e) {}
+    try { updateSecurityAlertBadge(); } catch(e) {}
 
     // Hide duplicate standalone results button in header when logged in
 
@@ -2905,7 +3327,31 @@ async function handleUserLogin() {
             // Check max devices limit (Default: 1 device)
             if (userRec.boundDevices.length >= userRec.maxDevices) {
               const existingDev = userRec.boundDevices[0] || { name: "Boshqa qurilma", boundAt: "-" };
-              showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu hisob allaqachon ruxsat etilgan qurilmaga biriktirilgan:\n• ${existingDev.name}\n• Bog'langan vaqt: ${existingDev.boundAt || '-'}\n\nBitta hisobdan bir vaqtda faqat ${userRec.maxDevices} ta qurilmada foydalanish mumkin! Yangi qurilmadan kirish uchun Administrator (Abdulloh)ga murojaat qiling.`);
+              
+              
+              // Log Security Audit Alert for Admin (Abdulloh)
+              logSecurityDeviceAlert({
+                userId: userRec.id,
+                userName: userRec.name,
+                userLogin: userRec.login,
+                userGroup: userRec.group,
+                attemptedDevice: currentDev,
+                existingDevice: existingDev,
+                type: 'BLOCKED_UNKNOWN_DEVICE',
+                message: "Noma'lum yangi qurilmadan kirishga urinish bloklandi."
+              });
+// Log Security Audit Alert for Admin (Abdulloh)
+              logSecurityDeviceAlert({
+                userId: userRec.id,
+                userName: userRec.name,
+                userLogin: userRec.login,
+                userGroup: userRec.group,
+                attemptedDevice: currentDev,
+                existingDevice: existingDev,
+                type: 'BLOCKED_UNKNOWN_DEVICE',
+                message: "Noma'lum yangi qurilmadan kirishga urinish bloklandi."
+              });
+showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu hisob allaqachon ruxsat etilgan qurilmaga biriktirilgan:\n• ${existingDev.name}\n• Bog'langan vaqt: ${existingDev.boundAt || '-'}\n\nBitta hisobdan bir vaqtda faqat ${userRec.maxDevices} ta qurilmada foydalanish mumkin! Yangi qurilmadan kirish uchun Administrator (Abdulloh)ga murojaat qiling.`);
               try { SoundEffects.playWrong(); } catch(e) {}
               return;
             } else {
@@ -5852,6 +6298,8 @@ function switchAdminTab(tabName) {
   const btnCharts = document.getElementById('adminTabBtnCharts');
 
   const btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
+  const btnSecurity = document.getElementById('adminTabBtnSecurity');
+  const viewSecurity = document.getElementById('adminViewSecurity');
 
   const viewStudents = document.getElementById('adminViewStudents');
 
@@ -5861,9 +6309,9 @@ function switchAdminTab(tabName) {
 
   const viewLeaderboard = document.getElementById('adminViewLeaderboard');
 
-  [btnStudents, btnResults, btnCharts, btnLeaderboard].forEach(b => b && b.classList.remove('active'));
+  [btnStudents, btnResults, btnCharts, btnLeaderboard, btnSecurity].forEach(b => b && b.classList.remove('active'));
 
-  [viewStudents, viewResults, viewCharts, viewLeaderboard].forEach(v => v && (v.style.display = 'none'));
+  [viewStudents, viewResults, viewCharts, viewLeaderboard, viewSecurity].forEach(v => v && (v.style.display = 'none'));
 
   if (tabName === 'students') {
 
@@ -5897,6 +6345,10 @@ function switchAdminTab(tabName) {
 
     renderAdminLeaderboard();
 
+  } else if (tabName === 'security') {
+    if (btnSecurity) btnSecurity.classList.add('active');
+    if (viewSecurity) viewSecurity.style.display = 'block';
+    renderSecurityAlertsView();
   }
 
   SoundEffects.playClick();
@@ -5904,6 +6356,8 @@ function switchAdminTab(tabName) {
 }
 
 function renderAdminDashboard() {
+  try { updateSecurityAlertBadge(); } catch(e) {}
+  try { updateSecurityAlertBadge(); } catch(e) {}
 
   if (!state.isAdmin) return;
 
