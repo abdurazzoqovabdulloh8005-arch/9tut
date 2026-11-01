@@ -1,8 +1,8 @@
 {
   "name": "ccna-quiz-online",
   "version": "2.2.0",
+  "type": "module",
   "description": "CCNA Professional Quiz & Practical Trainer",
-  "main": "app.js",
   "scripts": {
     "build": "node -v"
   },
