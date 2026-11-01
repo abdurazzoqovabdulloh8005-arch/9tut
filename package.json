@@ -1,0 +1,12 @@
+{
+  "name": "ccna-quiz-online",
+  "version": "2.2.0",
+  "description": "CCNA Professional Quiz & Practical Trainer",
+  "main": "app.js",
+  "scripts": {
+    "build": "node -v"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

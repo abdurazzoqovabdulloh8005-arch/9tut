@@ -70,6 +70,149 @@ function cancelAdminImageAttach() {
   if (preview) preview.style.display = 'none';
 }
 
+// ========================================================
+// CLOUD SYNC ENGINE (NETLIFY SERVERLESS BLOBS DATABASE)
+// Synchronizes registered students, admin approvals, chat,
+// and security device alerts across all computers and phones!
+// ========================================================
+const CloudSync = {
+  endpoint: '/api/sync',
+
+  isAvailable() {
+    return typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http');
+  },
+
+  async get(key) {
+    if (!this.isAvailable()) return null;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=${key}&_t=${Date.now()}`);
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch(e) {}
+    return null;
+  },
+
+  async saveAll(key, data) {
+    if (!this.isAvailable()) return false;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_all', data })
+      });
+      return resp.ok;
+    } catch(e) {
+      return false;
+    }
+  },
+
+  async upsertUser(user) {
+    if (!this.isAvailable()) return false;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'upsert_user', user })
+      });
+      return resp.ok;
+    } catch(e) {
+      return false;
+    }
+  },
+
+  async append(key, item) {
+    if (!this.isAvailable()) return false;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'append', item })
+      });
+      return resp.ok;
+    } catch(e) {
+      return false;
+    }
+  },
+
+  // Pull cloud users and merge into localStorage
+  async syncUsers() {
+    if (!this.isAvailable()) return getRegisteredUsers();
+    try {
+      const cloudUsers = await this.get('users');
+      if (Array.isArray(cloudUsers)) {
+        const localRaw = localStorage.getItem('ccna_registered_users');
+        const localUsers = localRaw ? JSON.parse(localRaw) : [];
+        const userMap = new Map();
+        
+        // 1. Add local users first
+        localUsers.forEach(u => {
+          if (u && u.login) userMap.set(u.login.toLowerCase(), u);
+        });
+
+        // 2. Cloud users override/add (authoritative source)
+        cloudUsers.forEach(u => {
+          if (u && u.login) userMap.set(u.login.toLowerCase(), u);
+        });
+
+        const merged = Array.from(userMap.values());
+        localStorage.setItem('ccna_registered_users', JSON.stringify(merged));
+
+        // If local had new users not yet in cloud, seed the cloud
+        if (merged.length > cloudUsers.length) {
+          this.saveAll('users', merged);
+        }
+        return merged;
+      }
+    } catch(e) {
+      console.warn("CloudSync syncUsers error:", e);
+    }
+    return getRegisteredUsers();
+  },
+
+  // Pull cloud chat and merge
+  async syncChat() {
+    if (!this.isAvailable()) return;
+    try {
+      const cloudChat = await this.get('chat');
+      if (Array.isArray(cloudChat) && cloudChat.length > 0) {
+        const localRaw = localStorage.getItem('ccna_chat_messages');
+        const localChat = localRaw ? JSON.parse(localRaw) : [];
+        const chatMap = new Map();
+        localChat.forEach(m => chatMap.set(m.id, m));
+        cloudChat.forEach(m => chatMap.set(m.id, m));
+        const merged = Array.from(chatMap.values()).sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+        localStorage.setItem('ccna_chat_messages', JSON.stringify(merged));
+      }
+    } catch(e) {}
+  },
+
+  // Pull cloud security alerts and merge
+  async syncAlerts() {
+    if (!this.isAvailable()) return;
+    try {
+      const cloudAlerts = await this.get('alerts');
+      if (Array.isArray(cloudAlerts) && cloudAlerts.length > 0) {
+        const localRaw = localStorage.getItem('ccna_security_alerts');
+        const localAlerts = localRaw ? JSON.parse(localRaw) : [];
+        const alertMap = new Map();
+        localAlerts.forEach(a => alertMap.set(a.id, a));
+        cloudAlerts.forEach(a => alertMap.set(a.id, a));
+        const merged = Array.from(alertMap.values()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        localStorage.setItem('ccna_security_alerts', JSON.stringify(merged.slice(0, 80)));
+      }
+    } catch(e) {}
+  },
+
+  async syncAll() {
+    await Promise.allSettled([
+      this.syncUsers(),
+      this.syncChat(),
+      this.syncAlerts()
+    ]);
+  }
+};
+
 
 // UNIVERSAL QUESTION VALIDATION HELPERS (Handles both Multi-Choice & Drag & Drop)
 function isQuestionAnswered(q, uAns) {
@@ -2246,6 +2389,12 @@ const PARTS_CONFIG = [
 
 function initializeApp() {
 
+  if (typeof CloudSync !== 'undefined') {
+    CloudSync.syncAll().then(() => {
+      try { updateSecurityAlertBadge(); updateChatBadges(); } catch(e) {}
+    }).catch(e => console.warn("CloudSync initial sync:", e));
+  }
+
   try { initTheme(); } catch(e) { console.error("initTheme", e); }
 
   try { initSoundButton(); } catch(e) { console.error("initSoundButton", e); }
@@ -3298,6 +3447,9 @@ function saveChatMessages(msgs) {
   try {
     localStorage.setItem('ccna_chat_messages', JSON.stringify(msgs));
     updateChatBadges();
+    if (typeof CloudSync !== 'undefined') {
+      CloudSync.saveAll('chat', msgs);
+    }
   } catch(e) {}
 }
 
@@ -3321,6 +3473,9 @@ function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text, i
 
   msgs.push(newMsg);
   saveChatMessages(msgs);
+  if (typeof CloudSync !== 'undefined') {
+    CloudSync.append('chat', newMsg);
+  }
   try { SoundEffects.playClick(); } catch(e) {}
   return newMsg;
 }
@@ -3663,7 +3818,10 @@ function adminClearCurrentChatHistory() {
 
 // Live monitor for real-time messages
 function startChatLiveMonitor() {
-  setInterval(() => {
+  setInterval(async () => {
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      await CloudSync.syncChat();
+    }
     updateChatBadges();
 
     // If student chat modal is open, refresh silently
@@ -3676,8 +3834,21 @@ function startChatLiveMonitor() {
     const adminChatView = document.getElementById('adminViewChat');
     if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
       renderAdminActiveChatMessages();
+      renderAdminChatConversations();
     }
-  }, 2500);
+
+    // If admin is active, also sync registered users and security alerts in background!
+    if (state.isAdmin && typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      await CloudSync.syncUsers();
+      await CloudSync.syncAlerts();
+      updateSecurityAlertBadge();
+      const studentsTbody = document.getElementById('adminStudentsTableBody');
+      const adminViewStudents = document.getElementById('adminViewStudents');
+      if (studentsTbody && adminViewStudents && adminViewStudents.style.display === 'block') {
+        renderAdminStudentsList();
+      }
+    }
+  }, 3200);
 
   window.addEventListener('storage', (e) => {
     if (e.key === 'ccna_chat_messages') {
@@ -3720,9 +3891,12 @@ function getRegisteredUsers() {
 }
 
 function saveRegisteredUsers(users) {
-
-  localStorage.setItem('ccna_registered_users', JSON.stringify(users));
-
+  try {
+    localStorage.setItem('ccna_registered_users', JSON.stringify(users));
+    if (typeof CloudSync !== 'undefined') {
+      CloudSync.saveAll('users', users);
+    }
+  } catch(e) {}
 }
 
 function openAuthModal(defaultTab = 'login') {
@@ -4093,8 +4267,12 @@ async function handleUserLogin() {
 
     if (!match) {
 
-      // 2. Check registered users (admins or students)
+      // 2. Sync from cloud first so if student was recently approved, they can log in!
+      if (typeof CloudSync !== 'undefined') {
+        try { await CloudSync.syncUsers(); } catch(e) {}
+      }
 
+      // Check registered users (admins or students)
       const registeredUsers = getRegisteredUsers();
 
       const found = registeredUsers.find(u => u.login.toLowerCase() === normalizedLogin && u.hash === computedHash);
@@ -4483,6 +4661,9 @@ async function handleUserRegister() {
   existingUsers.push(newUser);
 
   saveRegisteredUsers(existingUsers);
+  if (typeof CloudSync !== 'undefined') {
+    CloudSync.upsertUser(newUser);
+  }
 
   // Reset inputs
 
