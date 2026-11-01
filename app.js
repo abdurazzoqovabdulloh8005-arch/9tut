@@ -4,11 +4,7 @@
 
 // Hotkeys, Audio Synthesis, CCNA Certificate Generator & Interactive Multi-scenario CLI.
 
-
-
 const ADMIN_DEFAULT_PASS = 'admin123';
-
-
 
 // Web Audio API Sound Synthesizer (Zero external files needed)
 
@@ -17,8 +13,6 @@ const SoundEffects = {
   enabled: localStorage.getItem('ccna_sound_enabled') !== 'false',
 
   ctx: null,
-
-
 
   init() {
 
@@ -29,8 +23,6 @@ const SoundEffects = {
     }
 
   },
-
-
 
   playCorrect() {
 
@@ -69,8 +61,6 @@ const SoundEffects = {
     } catch (e) {}
 
   },
-
-
 
   playIncorrect() { this.playWrong(); },
 
@@ -112,8 +102,6 @@ const SoundEffects = {
 
   },
 
-
-
   playClick() {
 
     if (!this.enabled) return;
@@ -151,8 +139,6 @@ const SoundEffects = {
   }
 
 };
-
-
 
 // CCNA Keywords & Quick Association Matrix (Trigger -> Answer)
 
@@ -228,8 +214,6 @@ const CCNA_KEYWORD_MATRIX = [
 
 ];
 
-
-
 // Application State
 
 const state = {
@@ -243,8 +227,6 @@ const state = {
   results: JSON.parse(localStorage.getItem('ccna_results') || '[]'),
 
   students: JSON.parse(localStorage.getItem('ccna_students') || '[]'),
-
-
 
   // Active quiz state
 
@@ -270,8 +252,6 @@ const state = {
 
   lastFinishedResult: null,
 
-
-
   // Study & Memory Trainer state
 
   study: {
@@ -288,13 +268,9 @@ const state = {
 
   },
 
-
-
   bookmarks: JSON.parse(localStorage.getItem('ccna_bookmarks') || '[]'),
 
   selectedLabIndex: 0,
-
-
 
   // CLI Simulator scenarios
 
@@ -1832,8 +1808,6 @@ const state = {
 
 };
 
-
-
 // Parts Configuration
 
 const PARTS_CONFIG = [
@@ -1868,8 +1842,6 @@ const PARTS_CONFIG = [
 
 ];
 
-
-
 // Initialize
 
 function initializeApp() {
@@ -1883,6 +1855,7 @@ function initializeApp() {
   try { initHotkeys(); } catch(e) { console.error("initHotkeys", e); }
 
   try { checkAuth(); } catch(e) { console.error("checkAuth", e); }
+  try { startSessionSecurityMonitor(); } catch(e) {}
 
   try { renderPartsGrid(); } catch(e) { console.error("renderPartsGrid", e); }
 
@@ -1896,8 +1869,6 @@ function initializeApp() {
 
 }
 
-
-
 if (document.readyState === 'loading') {
 
   document.addEventListener('DOMContentLoaded', initializeApp);
@@ -1907,8 +1878,6 @@ if (document.readyState === 'loading') {
   initializeApp();
 
 }
-
-
 
 // SOUND CONTROLS
 
@@ -1924,8 +1893,6 @@ function initSoundButton() {
 
 }
 
-
-
 function toggleSound() {
 
   SoundEffects.enabled = !SoundEffects.enabled;
@@ -1938,8 +1905,6 @@ function toggleSound() {
 
 }
 
-
-
 // THEME
 
 function initTheme() {
@@ -1951,8 +1916,6 @@ function initTheme() {
   updateThemeIcon(saved);
 
 }
-
-
 
 function toggleTheme() {
 
@@ -1970,8 +1933,6 @@ function toggleTheme() {
 
 }
 
-
-
 function updateThemeIcon(theme) {
 
   const btn = document.getElementById('themeToggleBtn');
@@ -1980,8 +1941,6 @@ function updateThemeIcon(theme) {
 
 }
 
-
-
 // HOTKEYS
 
 function initHotkeys() {
@@ -1989,8 +1948,6 @@ function initHotkeys() {
   window.addEventListener('keydown', (e) => {
 
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-
 
     // Study Flashcard Hotkey (Space to flip)
 
@@ -2022,8 +1979,6 @@ function initHotkeys() {
 
     }
 
-
-
     // Quiz Testing Hotkeys
 
     const testingArea = document.getElementById('quizTestingArea');
@@ -2032,11 +1987,7 @@ function initHotkeys() {
 
     if (document.getElementById('questionCard').style.display === 'none') return;
 
-
-
     const key = e.key.toUpperCase();
-
-
 
     if (['A', 'B', 'C', 'D', 'E', 'F'].includes(key)) {
 
@@ -2090,8 +2041,6 @@ function initHotkeys() {
 
 }
 
-
-
 // NAVIGATION & TAB SWITCHING
 
 function switchMainTab(target) {
@@ -2101,8 +2050,6 @@ function switchMainTab(target) {
     target = 'quiz';
 
   }
-
-
 
   const tabs = document.querySelectorAll('.nav-tab');
 
@@ -2114,15 +2061,11 @@ function switchMainTab(target) {
 
   state.currentTab = target;
 
-
-
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
   const activeContent = document.getElementById(target + 'Section');
 
   if (activeContent) activeContent.classList.add('active');
-
-
 
   if (target === 'admin') {
 
@@ -2140,8 +2083,6 @@ function switchMainTab(target) {
 
 }
 
-
-
 function initNavigation() {
 
   const tabs = document.querySelectorAll('.nav-tab');
@@ -2152,8 +2093,6 @@ function initNavigation() {
 
       const target = tab.getAttribute('data-tab');
 
-
-
       if (target === 'admin' && !state.isAdmin) {
 
         openAdminPrompt();
@@ -2161,8 +2100,6 @@ function initNavigation() {
         return;
 
       }
-
-
 
       switchMainTab(target);
 
@@ -2174,13 +2111,9 @@ function initNavigation() {
 
 }
 
-
-
 // AUTH (SECURE SHA-256 AUTHENTICATION & MULTI-USER REGISTRATION)
 
 const AUTH_SALT = "CCNA_PORTAL_SECURE_AUTH_v2024";
-
-
 
 // Master Admin account (Plaintext password is NEVER stored! Only salted SHA-256 hash)
 
@@ -2214,15 +2147,11 @@ function getMasterAdmin() {
 
 }
 
-
-
 function saveMasterAdmin(adminObj) {
 
   localStorage.setItem('ccna_master_admin_custom', JSON.stringify(adminObj));
 
 }
-
-
 
 function sha256_pure_js(ascii) {
 
@@ -2297,8 +2226,6 @@ function sha256_pure_js(ascii) {
   words.push(((asciiBitLength / maxWord) | 0) & 0xffffffff);
 
   words.push(asciiBitLength & 0xffffffff);
-
-
 
   j = 0;
 
@@ -2394,8 +2321,6 @@ function sha256_pure_js(ascii) {
 
 }
 
-
-
 function computeSha256Hex(str) {
 
   try {
@@ -2413,6 +2338,125 @@ function computeSha256Hex(str) {
 }
 
 
+// ========================================================
+// ADVANCED ANTI-ACCOUNT-SHARING & DEVICE BINDING SYSTEM
+// ========================================================
+function getDeviceFingerprint() {
+  let storedDeviceId = '';
+  try {
+    storedDeviceId = localStorage.getItem('ccna_device_unique_id');
+  } catch(e) {}
+  
+  if (!storedDeviceId) {
+    const raw = `${navigator.userAgent}|${window.screen.width}x${window.screen.height}|${window.screen.colorDepth}|${navigator.hardwareConcurrency || 4}|${Intl.DateTimeFormat().resolvedOptions().timeZone || ''}|${Date.now()}|${Math.random()}`;
+    storedDeviceId = 'DEV_' + computeSha256Hex(raw).substr(0, 16).toUpperCase();
+    try {
+      localStorage.setItem('ccna_device_unique_id', storedDeviceId);
+    } catch(e) {}
+  }
+
+  const ua = navigator.userAgent || '';
+  let os = 'Windows PC';
+  let icon = '💻';
+  if (/windows phone/i.test(ua)) { os = 'Windows Phone'; icon = '📱'; }
+  else if (/win/i.test(ua)) { os = 'Windows PC'; icon = '💻'; }
+  else if (/android/i.test(ua)) { os = 'Android'; icon = '📱'; }
+  else if (/iphone|ipad|ipod/i.test(ua)) { os = 'iOS (Apple)'; icon = '📱'; }
+  else if (/mac/i.test(ua)) { os = 'MacOS (Apple)'; icon = '💻'; }
+  else if (/linux/i.test(ua)) { os = 'Linux'; icon = '💻'; }
+
+  let browser = 'Brauzer';
+  if (/edg/i.test(ua)) browser = 'Edge';
+  else if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua)) browser = 'Safari';
+  else if (/opr\//i.test(ua)) browser = 'Opera';
+
+  const screenRes = `${window.screen.width || 0}x${window.screen.height || 0}`;
+  const deviceName = `${icon} ${os} (${browser}) • ${screenRes}`;
+
+  return {
+    id: storedDeviceId,
+    name: deviceName,
+    os: os,
+    browser: browser,
+    screen: screenRes,
+    icon: icon
+  };
+}
+
+// Session Security Monitor (Single Active Session Enforcement)
+function startSessionSecurityMonitor() {
+  if (window._sessionSecurityInterval) clearInterval(window._sessionSecurityInterval);
+  window._sessionSecurityInterval = setInterval(() => {
+    checkActiveSessionHealth();
+  }, 2500);
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ccna_registered_users' && state.currentUser && !state.isAdmin) {
+      checkActiveSessionHealth();
+    }
+  });
+}
+
+function checkActiveSessionHealth() {
+  if (!state.currentUser || state.isAdmin) return;
+  const users = getRegisteredUsers();
+  const current = users.find(u => u.login.toLowerCase() === state.currentUser.login.toLowerCase());
+  if (current && current.currentSessionToken && state.currentUser.sessionToken) {
+    if (current.currentSessionToken !== state.currentUser.sessionToken) {
+      handleSessionKickedOut();
+    }
+  }
+}
+
+function handleSessionKickedOut() {
+  try { SoundEffects.playWrong(); } catch(e) {}
+  
+  // Clear local session
+  state.currentUser = null;
+  state.isAdmin = false;
+  try {
+    localStorage.removeItem('ccna_auth_session');
+    sessionStorage.removeItem('ccna_auth_session');
+  } catch(e) {}
+  document.documentElement.classList.remove('is-authenticated');
+
+  const kickedModal = document.getElementById('sessionKickedModal');
+  if (kickedModal) {
+    kickedModal.style.setProperty('display', 'flex', 'important');
+  } else {
+    alert("🔴 DIQQAT! Hisobingizga boshqa qurilmadan kirildi. Xavfsizlik yuzasidan joriy sessiya yakunlandi.");
+    location.reload();
+  }
+}
+
+function closeSessionKickedModal() {
+  const kickedModal = document.getElementById('sessionKickedModal');
+  if (kickedModal) kickedModal.style.display = 'none';
+  openAuthModal('login');
+}
+
+// Admin Action: Reset bound devices for a student
+function adminResetUserDevice(studentId) {
+  const users = getRegisteredUsers();
+  const idx = users.findIndex(u => u.id === studentId);
+  if (idx === -1) return;
+  const u = users[idx];
+
+  const devCount = (u.boundDevices && u.boundDevices.length) || 0;
+  if (!confirm(`Haqiqatan ham ${u.name} talabasiga biriktirilgan qurilmalarni (${devCount} ta) tozalab, yangi qurilmadan kirishiga ruxsat bermoqchimisiz?`)) {
+    return;
+  }
+
+  u.boundDevices = [];
+  u.currentSessionToken = '';
+  saveRegisteredUsers(users);
+
+  try { SoundEffects.playCorrect(); } catch(e) {}
+  renderAdminStudentsList();
+  alert(`✅ ${u.name} talabasining qurilmasi muvaffaqiyatli uzildi! Endi talaba istalgan yangi kompyuter yoki telefondan kira oladi.`);
+}
 
 function getRegisteredUsers() {
 
@@ -2438,17 +2482,11 @@ function getRegisteredUsers() {
 
 }
 
-
-
 function saveRegisteredUsers(users) {
 
   localStorage.setItem('ccna_registered_users', JSON.stringify(users));
 
 }
-
-
-
-
 
 function openAuthModal(defaultTab = 'login') {
 
@@ -2474,8 +2512,6 @@ function openAuthModal(defaultTab = 'login') {
 
 }
 
-
-
 function switchAuthTab(tab) {
 
   const loginForm = document.getElementById('loginTabForm');
@@ -2490,8 +2526,6 @@ function switchAuthTab(tab) {
 
   const subtitle = document.getElementById('authModalSubtitle');
 
-
-
   const errLogin = document.getElementById('authErrorMsg');
 
   const errReg = document.getElementById('regErrorMsg');
@@ -2499,8 +2533,6 @@ function switchAuthTab(tab) {
   if (errLogin) errLogin.style.display = 'none';
 
   if (errReg) errReg.style.display = 'none';
-
-
 
   if (tab === 'register') {
 
@@ -2542,8 +2574,6 @@ function switchAuthTab(tab) {
 
 }
 
-
-
 function getLockoutRemainingSeconds() {
 
   const lockoutUntil = parseInt(localStorage.getItem('ccna_auth_lockout_until') || '0', 10);
@@ -2553,8 +2583,6 @@ function getLockoutRemainingSeconds() {
   return diff > 0 ? diff : 0;
 
 }
-
-
 
 function checkAuth() {
 
@@ -2569,8 +2597,6 @@ function checkAuth() {
   const navTabs = document.querySelector('.nav-tabs');
 
   const adminNav = document.getElementById('adminNavTab');
-
-
 
   let savedSession = state.currentUser;
 
@@ -2590,15 +2616,11 @@ function checkAuth() {
 
   }
 
-
-
   if (savedSession && savedSession.login) {
 
     state.currentUser = savedSession;
 
     state.isAdmin = (savedSession.role === 'admin');
-
-
 
     const loginBtn = document.getElementById('openAuthModalBtn');
 
@@ -2642,8 +2664,6 @@ function checkAuth() {
 
     }
 
-
-
     // STRICT SECURITY: If not admin, close adminSection immediately!
 
     if (!state.isAdmin) {
@@ -2666,8 +2686,6 @@ function checkAuth() {
 
     document.documentElement.classList.remove('is-authenticated');
 
-
-
     try {
 
       localStorage.removeItem('ccna_auth_session');
@@ -2676,11 +2694,7 @@ function checkAuth() {
 
     } catch(e) {}
 
-
-
     switchMainTab('quiz');
-
-
 
     const loginBtn = document.getElementById('openAuthModalBtn');
 
@@ -2698,15 +2712,11 @@ function checkAuth() {
 
     if (userBadge) userBadge.style.display = 'none';
 
-
-
     switchAuthTab('login');
 
   }
 
 }
-
-
 
 async function handleUserLogin() {
 
@@ -2720,11 +2730,7 @@ async function handleUserLogin() {
 
     const errEl = document.getElementById('authErrorMsg');
 
-
-
     if (!loginInput || !passwordInput) return;
-
-
 
     let lockoutSeconds = 0;
 
@@ -2744,13 +2750,9 @@ async function handleUserLogin() {
 
     }
 
-
-
     const rawLogin = (loginInput.value || '').trim();
 
     const rawPassword = (passwordInput.value || '').trim();
-
-
 
     if (!rawLogin) {
 
@@ -2772,19 +2774,13 @@ async function handleUserLogin() {
 
     }
 
-
-
     const normalizedLogin = rawLogin.toLowerCase();
-
-
 
     // 1. Dynamic Master Admin & User Check
 
     let match = null;
 
     const master = getMasterAdmin();
-
-
 
     // Direct failsafe check for Master Admin first (instant)
 
@@ -2820,8 +2816,6 @@ async function handleUserLogin() {
 
     }
 
-
-
     let computedHash = "";
 
     try {
@@ -2835,8 +2829,6 @@ async function handleUserLogin() {
       console.warn("Hash calc error:", e);
 
     }
-
-
 
     if (!match && (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase())) {
 
@@ -2857,8 +2849,6 @@ async function handleUserLogin() {
       }
 
     }
-
-
 
     if (!match) {
 
@@ -2896,9 +2886,48 @@ async function handleUserLogin() {
 
     }
 
-
-
     if (match) {
+      // 3. DEVICE BINDING & CONCURRENT SESSION ENFORCEMENT
+      if (match.role !== 'admin') {
+        const currentDev = getDeviceFingerprint();
+        const registeredUsers = getRegisteredUsers();
+        const userIdx = registeredUsers.findIndex(u => u.login.toLowerCase() === normalizedLogin);
+
+        if (userIdx !== -1) {
+          const userRec = registeredUsers[userIdx];
+          userRec.boundDevices = userRec.boundDevices || [];
+          userRec.maxDevices = parseInt(userRec.maxDevices || 1, 10);
+
+          const alreadyBound = userRec.boundDevices.find(d => d.id === currentDev.id);
+          if (alreadyBound) {
+            alreadyBound.lastActive = new Date().toLocaleString('uz-UZ');
+          } else {
+            // Check max devices limit (Default: 1 device)
+            if (userRec.boundDevices.length >= userRec.maxDevices) {
+              const existingDev = userRec.boundDevices[0] || { name: "Boshqa qurilma", boundAt: "-" };
+              showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu hisob allaqachon ruxsat etilgan qurilmaga biriktirilgan:\n• ${existingDev.name}\n• Bog'langan vaqt: ${existingDev.boundAt || '-'}\n\nBitta hisobdan bir vaqtda faqat ${userRec.maxDevices} ta qurilmada foydalanish mumkin! Yangi qurilmadan kirish uchun Administrator (Abdulloh)ga murojaat qiling.`);
+              try { SoundEffects.playWrong(); } catch(e) {}
+              return;
+            } else {
+              userRec.boundDevices.push({
+                id: currentDev.id,
+                name: currentDev.name,
+                os: currentDev.os,
+                browser: currentDev.browser,
+                screen: currentDev.screen,
+                boundAt: new Date().toLocaleString('uz-UZ'),
+                lastActive: new Date().toLocaleString('uz-UZ')
+              });
+            }
+          }
+
+          // Generate single active session token
+          const newSessionToken = 'tok_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          userRec.currentSessionToken = newSessionToken;
+          match.sessionToken = newSessionToken;
+          saveRegisteredUsers(registeredUsers);
+        }
+      }
 
       try {
 
@@ -2907,8 +2936,6 @@ async function handleUserLogin() {
         localStorage.removeItem('ccna_auth_lockout_until');
 
       } catch(e) {}
-
-
 
       const sessionData = {
 
@@ -2921,18 +2948,15 @@ async function handleUserLogin() {
         role: match.role,
 
         group: match.group,
+        sessionToken: match.sessionToken || ('tok_adm_' + Date.now()),
 
         authenticatedAt: new Date().toISOString()
 
       };
 
-
-
       state.currentUser = sessionData;
 
       state.isAdmin = (match.role === 'admin');
-
-
 
       // ALWAYS save to localStorage (guaranteed to work across file://, localhost, and https://)
 
@@ -2944,15 +2968,11 @@ async function handleUserLogin() {
 
       } catch(e) {}
 
-
-
       document.documentElement.classList.add('is-authenticated');
 
       passwordInput.value = '';
 
       try { SoundEffects.playCorrect(); } catch(e) {}
-
-
 
       // Directly reveal UI immediately
 
@@ -2964,8 +2984,6 @@ async function handleUserLogin() {
 
       }
 
-
-
       const mainContent = document.querySelector('main');
 
       if (mainContent) {
@@ -2974,8 +2992,6 @@ async function handleUserLogin() {
 
       }
 
-
-
       const navTabs = document.querySelector('.nav-tabs');
 
       if (navTabs) {
@@ -2983,8 +2999,6 @@ async function handleUserLogin() {
         navTabs.style.setProperty('visibility', 'visible', 'important');
 
       }
-
-
 
       const userBadge = document.getElementById('currentUserBadge');
 
@@ -2998,13 +3012,9 @@ async function handleUserLogin() {
 
       }
 
-
-
       const loginBtn = document.getElementById('openAuthModalBtn');
 
       if (loginBtn) loginBtn.style.display = 'none';
-
-
 
       const adminNav = document.getElementById('adminNavTab');
 
@@ -3014,11 +3024,7 @@ async function handleUserLogin() {
 
       }
 
-
-
       try { renderPartsGrid(); } catch(e) {}
-
-
 
       // Tab activation based on role
 
@@ -3040,8 +3046,6 @@ async function handleUserLogin() {
 
       try { SoundEffects.playIncorrect(); } catch(e) {}
 
-
-
       let failedAttempts = 1;
 
       try {
@@ -3051,8 +3055,6 @@ async function handleUserLogin() {
         localStorage.setItem('ccna_auth_failed_attempts', failedAttempts.toString());
 
       } catch(e) {}
-
-
 
       if (failedAttempts >= 5) {
 
@@ -3098,8 +3100,6 @@ async function handleUserLogin() {
 
 }
 
-
-
 async function handleUserRegister() {
 
   const nameInput = document.getElementById('regFullNameInput');
@@ -3114,8 +3114,6 @@ async function handleUserRegister() {
 
   const errEl = document.getElementById('regErrorMsg');
 
-
-
   const name = nameInput.value.trim();
 
   const login = loginInput.value.trim();
@@ -3126,8 +3124,6 @@ async function handleUserRegister() {
 
   const pwdConfirm = pwdConfirmInput.value;
 
-
-
   if (!name || !login || !group || !pwd) {
 
     showAuthError(errEl, "Iltimos, barcha maydonlarni to'ldiring!");
@@ -3135,8 +3131,6 @@ async function handleUserRegister() {
     return;
 
   }
-
-
 
   if (login.length < 3) {
 
@@ -3148,8 +3142,6 @@ async function handleUserRegister() {
 
   }
 
-
-
   if (pwd.length < 4) {
 
     showAuthError(errEl, "Parol kamida 4 ta belgidan iborat bo'lishi kerak!");
@@ -3159,8 +3151,6 @@ async function handleUserRegister() {
     return;
 
   }
-
-
 
   if (pwd !== pwdConfirm) {
 
@@ -3172,11 +3162,7 @@ async function handleUserRegister() {
 
   }
 
-
-
   const normalizedLogin = login.toLowerCase();
-
-
 
   // Check if reserved admin login
 
@@ -3192,8 +3178,6 @@ async function handleUserRegister() {
 
   }
 
-
-
   const existingUsers = getRegisteredUsers();
 
   if (existingUsers.some(u => u.login.toLowerCase() === normalizedLogin)) {
@@ -3206,13 +3190,9 @@ async function handleUserRegister() {
 
   }
 
-
-
   // Compute SHA-256 salted hash
 
   const hash = await computeSha256Hex(`${normalizedLogin}:${pwd}:${AUTH_SALT}`);
-
-
 
   const newUser = {
 
@@ -3223,6 +3203,7 @@ async function handleUserRegister() {
     login: normalizedLogin,
 
     group: group,
+      maxDevices: parseInt((document.getElementById('modalStudentMaxDevices') || {}).value || 1, 10),
 
     hash: hash,
 
@@ -3234,13 +3215,9 @@ async function handleUserRegister() {
 
   };
 
-
-
   existingUsers.push(newUser);
 
   saveRegisteredUsers(existingUsers);
-
-
 
   // Reset inputs
 
@@ -3253,8 +3230,6 @@ async function handleUserRegister() {
   pwdInput.value = '';
 
   pwdConfirmInput.value = '';
-
-
 
   // Switch to login tab with approval notice
 
@@ -3280,8 +3255,6 @@ async function handleUserRegister() {
 
 }
 
-
-
 function showAuthError(el, msg) {
 
   if (el) {
@@ -3294,21 +3267,15 @@ function showAuthError(el, msg) {
 
 }
 
-
-
 function startLockoutTimer(seconds, btnId, errEl) {
 
   const btn = document.getElementById(btnId);
 
   let remaining = seconds;
 
-
-
   showAuthError(errEl, `Xavfsizlik blokirovkasi! Qayta urinish: ${remaining} soniya...`);
 
   if (btn) btn.disabled = true;
-
-
 
   const interval = setInterval(() => {
 
@@ -3334,8 +3301,6 @@ function startLockoutTimer(seconds, btnId, errEl) {
 
 }
 
-
-
 function togglePasswordVisibility(inputId) {
 
   const pwdInput = document.getElementById(inputId);
@@ -3345,8 +3310,6 @@ function togglePasswordVisibility(inputId) {
   pwdInput.type = (pwdInput.type === 'password') ? 'text' : 'password';
 
 }
-
-
 
 function logoutUser() {
 
@@ -3370,8 +3333,6 @@ function logoutUser() {
 
 }
 
-
-
 function openAdminPrompt() {
 
   if (!state.currentUser || !state.isAdmin) {
@@ -3390,8 +3351,6 @@ function openAdminPrompt() {
 
 }
 
-
-
 // PART GRID
 
 function renderPartsGrid() {
@@ -3400,8 +3359,6 @@ function renderPartsGrid() {
 
   if (!grid) return;
 
-
-
   grid.innerHTML = '';
 
   const currentStudentName = (state.currentUser && state.currentUser.name) 
@@ -3409,8 +3366,6 @@ function renderPartsGrid() {
     ? String(state.currentUser.name).trim().toLowerCase() 
 
     : '';
-
-
 
   PARTS_CONFIG.forEach(part => {
 
@@ -3448,13 +3403,9 @@ function renderPartsGrid() {
 
       }
 
-
-
       const card = document.createElement('div');
 
       card.className = `part-card ${part.featured ? 'featured' : ''}`;
-
-
 
       let scoreBadge = '';
 
@@ -3477,8 +3428,6 @@ function renderPartsGrid() {
         scoreBadge = `<span class="part-last-score" style="color:var(--text-muted)">Topshirilmagan</span>`;
 
       }
-
-
 
       card.innerHTML = `
 
@@ -3506,15 +3455,11 @@ function renderPartsGrid() {
 
       `;
 
-
-
       card.addEventListener('click', () => {
 
         startPartQuiz(part);
 
       });
-
-
 
       grid.appendChild(card);
 
@@ -3528,8 +3473,6 @@ function renderPartsGrid() {
 
 }
 
-
-
 // START PART QUIZ
 
 function startPartQuiz(part) {
@@ -3542,19 +3485,13 @@ function startPartQuiz(part) {
 
   }
 
-
-
   state.activePartKey = part.key;
 
   state.activePartTitle = part.title;
 
-
-
   const modeSelect = document.getElementById('partModeSelect');
 
   state.mode = modeSelect ? modeSelect.value : 'practice';
-
-
 
   let questions = [];
 
@@ -3568,8 +3505,6 @@ function startPartQuiz(part) {
 
   }
 
-
-
   if (questions.length === 0) {
 
     alert("Bu bo'limda savollar topilmadi!");
@@ -3577,8 +3512,6 @@ function startPartQuiz(part) {
     return;
 
   }
-
-
 
   state.quizQuestions = questions;
 
@@ -3596,8 +3529,6 @@ function startPartQuiz(part) {
 
   state.reviewOnlyWrong = false;
 
-
-
   document.getElementById('partsSelectionView').style.display = 'none';
 
   document.getElementById('quizTestingArea').style.display = 'block';
@@ -3608,13 +3539,9 @@ function startPartQuiz(part) {
 
   document.getElementById('finishedCard').style.display = 'none';
 
-
-
   document.getElementById('activePartTitle').textContent = `📁 ${part.title} (${questions.length} ta savol)`;
 
   document.getElementById('activeModeLabel').textContent = state.mode === 'exam' ? '⏱️ Pearson VUE Imtihon Rejimi' : '📝 Mashq Rejimi';
-
-
 
   clearInterval(state.timerInterval);
 
@@ -3634,15 +3561,11 @@ function startPartQuiz(part) {
 
   }
 
-
-
   renderPalette();
 
   renderCurrentQuestion();
 
 }
-
-
 
 function confirmExitQuiz() {
 
@@ -3660,8 +3583,6 @@ function confirmExitQuiz() {
 
 }
 
-
-
 function backToPartsList() {
 
   clearInterval(state.timerInterval);
@@ -3674,8 +3595,6 @@ function backToPartsList() {
 
 }
 
-
-
 function restartCurrentPart() {
 
   const currentPart = PARTS_CONFIG.find(p => p.key === state.activePartKey) || PARTS_CONFIG[0];
@@ -3683,8 +3602,6 @@ function restartCurrentPart() {
   startPartQuiz(currentPart);
 
 }
-
-
 
 // TIMER
 
@@ -3712,8 +3629,6 @@ function startExamTimer() {
 
 }
 
-
-
 function updateTimerDisplay() {
 
   const el = document.getElementById('examTimer');
@@ -3738,8 +3653,6 @@ function updateTimerDisplay() {
 
 }
 
-
-
 // QUESTION PALETTE
 
 function renderPalette() {
@@ -3748,13 +3661,9 @@ function renderPalette() {
 
   if (!grid) return;
 
-
-
   grid.innerHTML = '';
 
   const total = state.quizQuestions.length;
-
-
 
   for (let i = 0; i < total; i++) {
 
@@ -3766,23 +3675,17 @@ function renderPalette() {
 
     btn.textContent = i + 1;
 
-
-
     if (i === state.currentIndex) {
 
       btn.classList.add('active');
 
     }
 
-
-
     const userAns = state.userAnswers[i] || [];
 
     const hasAnswer = userAns.length > 0;
 
     const isChecked = !!state.checkedQuestions[i];
-
-
 
     if (state.isQuizFinished) {
 
@@ -3838,8 +3741,6 @@ function renderPalette() {
 
       }
 
-
-
       if (state.flaggedQuestions[i]) {
 
         btn.classList.add('flagged');
@@ -3847,8 +3748,6 @@ function renderPalette() {
       }
 
     }
-
-
 
     btn.addEventListener('click', () => {
 
@@ -3868,13 +3767,9 @@ function renderPalette() {
 
     });
 
-
-
     grid.appendChild(btn);
 
   }
-
-
 
   // Legend and progress text
 
@@ -3940,8 +3835,6 @@ function renderPalette() {
 
 }
 
-
-
 // RENDER CURRENT QUESTION
 
 function renderCurrentQuestion() {
@@ -3950,19 +3843,13 @@ function renderCurrentQuestion() {
 
   if (total === 0) return;
 
-
-
   const q = state.quizQuestions[state.currentIndex];
 
   const idx = state.currentIndex;
 
-
-
   document.getElementById('currentQNum').textContent = `${idx + 1} / ${total}`;
 
   document.getElementById('sourceBadge').textContent = state.activePartTitle || q.source;
-
-
 
   const flagBtn = document.getElementById('flagBtn');
 
@@ -3972,8 +3859,6 @@ function renderCurrentQuestion() {
 
   flagBtn.innerHTML = isFlagged ? '🚩 Belgilangan (Flagged)' : '🏳️ Belgilash (Flag)';
 
-
-
   const bookmarkBtn = document.getElementById('bookmarkBtn');
 
   const isBookmarked = state.bookmarks.includes(q.id);
@@ -3981,8 +3866,6 @@ function renderCurrentQuestion() {
   bookmarkBtn.classList.toggle('bookmarked', isBookmarked);
 
   bookmarkBtn.innerHTML = isBookmarked ? '⭐ Saqlangan' : '☆ Saqlash';
-
-
 
   const multiAnswer = q.answer.length > 1;
 
@@ -4008,17 +3891,11 @@ function renderCurrentQuestion() {
 
   }
 
-
-
   document.getElementById('questionText').innerHTML = escapeHtml(q.question) + multiNotice + diagramHtml;
-
-
 
   const listEl = document.getElementById('optionsList');
 
   listEl.innerHTML = '';
-
-
 
   const isReview = state.isReviewMode || state.isQuizFinished;
 
@@ -4027,8 +3904,6 @@ function renderCurrentQuestion() {
   const userAns = state.userAnswers[idx] || [];
 
   const isUserCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
-
-
 
   // Review Mode Banner updates
 
@@ -4086,8 +3961,6 @@ function renderCurrentQuestion() {
 
   }
 
-
-
   const optKeys = Object.keys(q.options).sort();
 
   optKeys.forEach(letter => {
@@ -4100,13 +3973,9 @@ function renderCurrentQuestion() {
 
     if (isChecked) item.classList.add('disabled');
 
-
-
     const isSelected = userAns.includes(letter);
 
     if (isSelected) item.classList.add('selected');
-
-
 
     const isCorrectOpt = q.answer.includes(letter);
 
@@ -4123,8 +3992,6 @@ function renderCurrentQuestion() {
       }
 
     }
-
-
 
     let badgeHtml = '';
 
@@ -4144,8 +4011,6 @@ function renderCurrentQuestion() {
 
     }
 
-
-
     item.innerHTML = `
 
       <div class="option-letter">${letter}</div>
@@ -4153,8 +4018,6 @@ function renderCurrentQuestion() {
       <div class="option-text">${formatOptionText(text)}${badgeHtml}</div>
 
     `;
-
-
 
     if (!isChecked) {
 
@@ -4168,13 +4031,9 @@ function renderCurrentQuestion() {
 
     }
 
-
-
     listEl.appendChild(item);
 
   });
-
-
 
   const expBox = document.getElementById('explanationBox');
 
@@ -4208,8 +4067,6 @@ function renderCurrentQuestion() {
 
   }
 
-
-
   const prevBtn = document.getElementById('prevQBtn');
 
   const nextBtn = document.getElementById('nextQBtn');
@@ -4220,11 +4077,7 @@ function renderCurrentQuestion() {
 
   const returnToResBtn = document.getElementById('returnToResultsBtn');
 
-
-
   prevBtn.disabled = idx === 0 && (!state.reviewOnlyWrong || idx === 0);
-
-
 
   if (isReview) {
 
@@ -4280,19 +4133,13 @@ function renderCurrentQuestion() {
 
   }
 
-
-
   const progressPercent = ((idx + 1) / total) * 100;
 
   document.getElementById('progressBarFill').style.width = `${progressPercent}%`;
 
-
-
   renderPalette();
 
 }
-
-
 
 function toggleOption(letter, isMulti) {
 
@@ -4303,8 +4150,6 @@ function toggleOption(letter, isMulti) {
     state.userAnswers[idx] = [];
 
   }
-
-
 
   if (isMulti) {
 
@@ -4326,13 +4171,9 @@ function toggleOption(letter, isMulti) {
 
   }
 
-
-
   renderCurrentQuestion();
 
 }
-
-
 
 function checkCurrentAnswer() {
 
@@ -4344,11 +4185,7 @@ function checkCurrentAnswer() {
 
   if (userAns.length === 0) return;
 
-
-
   state.checkedQuestions[idx] = true;
-
-
 
   const isCorrect = arraysEqual(userAns.sort(), q.answer.slice().sort());
 
@@ -4362,13 +4199,9 @@ function checkCurrentAnswer() {
 
   }
 
-
-
   renderCurrentQuestion();
 
 }
-
-
 
 function nextQuestion() {
 
@@ -4410,8 +4243,6 @@ function nextQuestion() {
 
   }
 
-
-
   if (state.currentIndex < state.quizQuestions.length - 1) {
 
     state.currentIndex++;
@@ -4439,8 +4270,6 @@ function nextQuestion() {
   }
 
 }
-
-
 
 function prevQuestion() {
 
@@ -4476,8 +4305,6 @@ function prevQuestion() {
 
   }
 
-
-
   if (state.currentIndex > 0) {
 
     state.currentIndex--;
@@ -4490,8 +4317,6 @@ function prevQuestion() {
 
 }
 
-
-
 // QUIZ REVIEW & RETRY SYSTEM
 
 function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
@@ -4499,8 +4324,6 @@ function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
   state.isReviewMode = true;
 
   state.reviewOnlyWrong = onlyWrong;
-
-
 
   if (targetIndex !== null) {
 
@@ -4536,15 +4359,11 @@ function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
 
   }
 
-
-
   document.getElementById('finishedCard').style.display = 'none';
 
   document.getElementById('reviewScreenCard').style.display = 'none';
 
   document.getElementById('questionCard').style.display = 'block';
-
-
 
   renderPalette();
 
@@ -4553,8 +4372,6 @@ function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
   SoundEffects.playClick();
 
 }
-
-
 
 function returnToFinishedResults() {
 
@@ -4571,8 +4388,6 @@ function returnToFinishedResults() {
   SoundEffects.playClick();
 
 }
-
-
 
 function toggleReviewFilter() {
 
@@ -4608,8 +4423,6 @@ function toggleReviewFilter() {
 
 }
 
-
-
 function retryWrongQuestionsOnly() {
 
   const wrongQuestions = state.quizQuestions.filter((q, idx) => {
@@ -4620,8 +4433,6 @@ function retryWrongQuestionsOnly() {
 
   });
 
-
-
   if (wrongQuestions.length === 0) {
 
     alert("Siz barcha savollarga to'g'ri javob bergansiz! Qaytadan yechish shart emas.");
@@ -4630,15 +4441,11 @@ function retryWrongQuestionsOnly() {
 
   }
 
-
-
   if (!confirm(`Siz ${wrongQuestions.length} ta xato savolni qaytadan yechmoqchimisiz?`)) {
 
     return;
 
   }
-
-
 
   state.quizQuestions = wrongQuestions;
 
@@ -4656,19 +4463,13 @@ function retryWrongQuestionsOnly() {
 
   state.reviewOnlyWrong = false;
 
-
-
   document.getElementById('finishedCard').style.display = 'none';
 
   document.getElementById('reviewScreenCard').style.display = 'none';
 
   document.getElementById('questionCard').style.display = 'block';
 
-
-
   document.getElementById('activePartTitle').textContent = `🔄 Xatolar ustida ishlash (${wrongQuestions.length} ta savol)`;
-
-
 
   renderPalette();
 
@@ -4677,10 +4478,6 @@ function retryWrongQuestionsOnly() {
   SoundEffects.playClick();
 
 }
-
-
-
-
 
 function toggleFlagCurrent() {
 
@@ -4694,15 +4491,11 @@ function toggleFlagCurrent() {
 
 }
 
-
-
 function toggleBookmarkCurrent() {
 
   const q = state.quizQuestions[state.currentIndex];
 
   if (!q) return;
-
-
 
   const idx = state.bookmarks.indexOf(q.id);
 
@@ -4724,8 +4517,6 @@ function toggleBookmarkCurrent() {
 
 }
 
-
-
 // EXAM REVIEW SCREEN
 
 function openExamReviewScreen() {
@@ -4736,8 +4527,6 @@ function openExamReviewScreen() {
 
   reviewCard.style.display = 'block';
 
-
-
   const total = state.quizQuestions.length;
 
   let answered = 0;
@@ -4746,13 +4535,9 @@ function openExamReviewScreen() {
 
   let flagged = 0;
 
-
-
   const tbody = document.getElementById('reviewTableBody');
 
   tbody.innerHTML = '';
-
-
 
   state.quizQuestions.forEach((q, i) => {
 
@@ -4762,15 +4547,11 @@ function openExamReviewScreen() {
 
     const isFlag = !!state.flaggedQuestions[i];
 
-
-
     if (isAns) answered++;
 
     else unanswered++;
 
     if (isFlag) flagged++;
-
-
 
     const tr = document.createElement('tr');
 
@@ -4802,8 +4583,6 @@ function openExamReviewScreen() {
 
   });
 
-
-
   document.getElementById('revTotalCount').textContent = total;
 
   document.getElementById('revAnsweredCount').textContent = answered;
@@ -4813,8 +4592,6 @@ function openExamReviewScreen() {
   document.getElementById('revFlaggedCount').textContent = flagged;
 
 }
-
-
 
 function closeReviewScreen() {
 
@@ -4826,8 +4603,6 @@ function closeReviewScreen() {
 
 }
 
-
-
 function jumpToQuestionFromReview(index) {
 
   state.currentIndex = index;
@@ -4836,23 +4611,17 @@ function jumpToQuestionFromReview(index) {
 
 }
 
-
-
 // SUBMIT FINAL EXAM & SCORE
 
 function submitFinalExam() {
 
   clearInterval(state.timerInterval);
 
-
-
   let correctCount = 0;
 
   let wrongCount = 0;
 
   let unansCount = 0;
-
-
 
   state.quizQuestions.forEach((q, idx) => {
 
@@ -4874,15 +4643,11 @@ function submitFinalExam() {
 
   });
 
-
-
   const total = state.quizQuestions.length;
 
   const scorePercent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
   const isPass = scorePercent >= 82.5;
-
-
 
   const student = state.currentUser || { name: 'Mehmon', group: 'Guruhsiz' };
 
@@ -4916,15 +4681,11 @@ function submitFinalExam() {
 
   };
 
-
-
   state.results.push(newResult);
 
   state.lastFinishedResult = newResult;
 
   localStorage.setItem('ccna_results', JSON.stringify(state.results));
-
-
 
   if (isPass) {
 
@@ -4936,8 +4697,6 @@ function submitFinalExam() {
 
   }
 
-
-
   document.getElementById('questionCard').style.display = 'none';
 
   document.getElementById('reviewScreenCard').style.display = 'none';
@@ -4946,31 +4705,21 @@ function submitFinalExam() {
 
   finishCard.style.display = 'block';
 
-
-
   state.isQuizFinished = true;
 
   state.isReviewMode = false;
 
   state.reviewOnlyWrong = false;
 
-
-
   const wrongBadge = document.getElementById('wrongCountBadge');
 
   if (wrongBadge) wrongBadge.textContent = wrongCount;
-
-
 
   const retryBtn = document.getElementById('btnRetryWrong');
 
   if (retryBtn) retryBtn.style.display = wrongCount > 0 ? 'inline-flex' : 'none';
 
-
-
   renderPalette();
-
-
 
   document.getElementById('finalPartName').textContent = `Bo'lim: ${state.activePartTitle} (${state.mode === 'exam' ? 'Imtihon' : 'Mashq'})`;
 
@@ -4990,13 +4739,9 @@ function submitFinalExam() {
 
   `;
 
-
-
   const statusEl = document.getElementById('finalStatusMsg');
 
   const certBtnArea = document.getElementById('certButtonArea');
-
-
 
   if (isPass) {
 
@@ -5018,8 +4763,6 @@ function submitFinalExam() {
 
 }
 
-
-
 // CERTIFICATE
 
 function openCertificateModal() {
@@ -5027,8 +4770,6 @@ function openCertificateModal() {
   const r = state.lastFinishedResult;
 
   if (!r) return;
-
-
 
   document.getElementById('certRecipientName').textContent = r.studentName;
 
@@ -5038,15 +4779,11 @@ function openCertificateModal() {
 
   document.getElementById('certDateText').textContent = new Date().toLocaleDateString();
 
-
-
   document.getElementById('certModal').style.display = 'flex';
 
   SoundEffects.playCorrect();
 
 }
-
-
 
 function closeCertModal() {
 
@@ -5054,15 +4791,11 @@ function closeCertModal() {
 
 }
 
-
-
 function printCertificate() {
 
   window.print();
 
 }
-
-
 
 // ==========================================
 
@@ -5075,8 +4808,6 @@ function initStudyModule() {
   const select = document.getElementById('studySourceSelect');
 
   if (!select) return;
-
-
 
   // Populate source dropdown
 
@@ -5098,21 +4829,15 @@ function initStudyModule() {
 
   });
 
-
-
   // Render keywords matrix
 
   renderKeywordTable();
 
 }
 
-
-
 function switchStudyView(viewName) {
 
   state.study.view = viewName;
-
-
 
   document.getElementById('studyTabBook').classList.toggle('active', viewName === 'book');
 
@@ -5126,8 +4851,6 @@ function switchStudyView(viewName) {
 
   document.getElementById('studyTabKeys').classList.toggle('active', viewName === 'keys');
 
-
-
   document.getElementById('studyBookView').style.display = viewName === 'book' ? 'block' : 'none';
 
   document.getElementById('studyFlashView').style.display = viewName === 'flash' ? 'block' : 'none';
@@ -5140,11 +4863,7 @@ function switchStudyView(viewName) {
 
   document.getElementById('studyKeysView').style.display = viewName === 'keys' ? 'block' : 'none';
 
-
-
   SoundEffects.playClick();
-
-
 
   if (viewName === 'match') {
 
@@ -5162,33 +4881,23 @@ function switchStudyView(viewName) {
 
 }
 
-
-
 function renderStudyContent() {
 
   const sourceSelect = document.getElementById('studySourceSelect');
 
   const searchInput = document.getElementById('studySearchInput');
 
-
-
   const selectedSrc = sourceSelect ? sourceSelect.value : 'all';
 
   const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
-
-
   let list = CCNA_QUESTIONS.slice();
-
-
 
   if (selectedSrc !== 'all') {
 
     list = list.filter(q => q.source === selectedSrc);
 
   }
-
-
 
   if (query) {
 
@@ -5204,17 +4913,11 @@ function renderStudyContent() {
 
   }
 
-
-
   state.study.questions = list;
-
-
 
   const countBadge = document.getElementById('studyResultsCount');
 
   if (countBadge) countBadge.textContent = `${list.length} ta savol`;
-
-
 
   if (state.study.view === 'book') {
 
@@ -5232,8 +4935,6 @@ function renderStudyContent() {
 
 }
 
-
-
 // View 1: Book Mode (Questions with Highlighted Answers)
 
 function renderStudyBookList(questions) {
@@ -5242,11 +4943,7 @@ function renderStudyBookList(questions) {
 
   if (!container) return;
 
-
-
   container.innerHTML = '';
-
-
 
   if (questions.length === 0) {
 
@@ -5264,8 +4961,6 @@ function renderStudyBookList(questions) {
 
   }
 
-
-
   // Render up to 100 questions at once for high performance
 
   const limit = Math.min(questions.length, 120);
@@ -5277,8 +4972,6 @@ function renderStudyBookList(questions) {
     const card = document.createElement('div');
 
     card.className = 'study-card';
-
-
 
     // Options HTML
 
@@ -5312,8 +5005,6 @@ function renderStudyBookList(questions) {
 
     });
 
-
-
     // Quick Cue / Key summary
 
     let cueHtml = '';
@@ -5340,8 +5031,6 @@ function renderStudyBookList(questions) {
 
     }
 
-
-
     let imgHtml = '';
 
     if (q.image) {
@@ -5357,8 +5046,6 @@ function renderStudyBookList(questions) {
       `;
 
     }
-
-
 
     card.innerHTML = `
 
@@ -5380,13 +5067,9 @@ function renderStudyBookList(questions) {
 
     `;
 
-
-
     container.appendChild(card);
 
   }
-
-
 
   if (questions.length > limit) {
 
@@ -5406,8 +5089,6 @@ function renderStudyBookList(questions) {
 
 }
 
-
-
 // View 2: Flashcard Mode
 
 function renderCurrentFlashcard() {
@@ -5415,8 +5096,6 @@ function renderCurrentFlashcard() {
   const list = state.study.questions;
 
   const idx = state.study.flashIndex;
-
-
 
   if (list.length === 0) {
 
@@ -5428,15 +5107,11 @@ function renderCurrentFlashcard() {
 
   }
 
-
-
   const q = list[idx];
 
   document.getElementById('flashcardBadge').textContent = `${q.source} • ${idx + 1} / ${list.length}`;
 
   document.getElementById('flashcardQuestion').textContent = q.question;
-
-
 
   // Build answer text
 
@@ -5448,13 +5123,9 @@ function renderCurrentFlashcard() {
 
   document.getElementById('flashcardExplanationText').textContent = q.explanation || '';
 
-
-
   const ansBox = document.getElementById('flashcardAnswerBox');
 
   const hintText = document.getElementById('flashcardHintText');
-
-
 
   if (state.study.flashFlipped) {
 
@@ -5472,8 +5143,6 @@ function renderCurrentFlashcard() {
 
 }
 
-
-
 function flipFlashcard() {
 
   state.study.flashFlipped = !state.study.flashFlipped;
@@ -5483,8 +5152,6 @@ function flipFlashcard() {
   SoundEffects.playClick();
 
 }
-
-
 
 function nextFlashcard() {
 
@@ -5502,8 +5169,6 @@ function nextFlashcard() {
 
 }
 
-
-
 function prevFlashcard() {
 
   if (state.study.flashIndex > 0) {
@@ -5520,8 +5185,6 @@ function prevFlashcard() {
 
 }
 
-
-
 // View 3: Keyword Matrix Table
 
 function renderKeywordTable() {
@@ -5529,8 +5192,6 @@ function renderKeywordTable() {
   const tbody = document.getElementById('keywordTableBody');
 
   if (!tbody) return;
-
-
 
   tbody.innerHTML = '';
 
@@ -5554,8 +5215,6 @@ function renderKeywordTable() {
 
 }
 
-
-
 // ==========================================
 
 // 🧩 1. MATCH PAIRS (PUZZLE GAME)
@@ -5574,8 +5233,6 @@ const matchState = {
 
 };
 
-
-
 function initMatchGame() {
 
   // Pick 5 random items from CCNA_KEYWORD_MATRIX
@@ -5583,8 +5240,6 @@ function initMatchGame() {
   const shuffled = CCNA_KEYWORD_MATRIX.slice().sort(() => Math.random() - 0.5);
 
   const selected = shuffled.slice(0, 5);
-
-
 
   matchState.pairs = selected;
 
@@ -5594,25 +5249,17 @@ function initMatchGame() {
 
   matchState.matchedCount = 0;
 
-
-
   document.getElementById('matchScore').textContent = '0';
 
   document.getElementById('matchTotal').textContent = selected.length;
-
-
 
   const leftItems = selected.map((item, i) => ({ id: i, text: item.trigger }));
 
   const rightItems = selected.map((item, i) => ({ id: i, text: item.answer }));
 
-
-
   // Shuffle right side
 
   rightItems.sort(() => Math.random() - 0.5);
-
-
 
   const leftCol = document.getElementById('matchLeftCol');
 
@@ -5621,8 +5268,6 @@ function initMatchGame() {
   leftCol.innerHTML = '';
 
   rightCol.innerHTML = '';
-
-
 
   leftItems.forEach(item => {
 
@@ -5641,8 +5286,6 @@ function initMatchGame() {
     leftCol.appendChild(btn);
 
   });
-
-
 
   rightItems.forEach(item => {
 
@@ -5664,17 +5307,11 @@ function initMatchGame() {
 
 }
 
-
-
 function handleMatchClick(btn, id, side) {
 
   if (btn.classList.contains('matched')) return;
 
-
-
   SoundEffects.playClick();
-
-
 
   if (side === 'left') {
 
@@ -5694,8 +5331,6 @@ function handleMatchClick(btn, id, side) {
 
   }
 
-
-
   // Check if both sides selected
 
   if (matchState.selectedLeft && matchState.selectedRight) {
@@ -5703,8 +5338,6 @@ function handleMatchClick(btn, id, side) {
     const left = matchState.selectedLeft;
 
     const right = matchState.selectedRight;
-
-
 
     if (left.id === right.id) {
 
@@ -5724,19 +5357,13 @@ function handleMatchClick(btn, id, side) {
 
       right.btn.innerHTML += ' ✅';
 
-
-
       matchState.matchedCount++;
 
       document.getElementById('matchScore').textContent = matchState.matchedCount;
 
-
-
       matchState.selectedLeft = null;
 
       matchState.selectedRight = null;
-
-
 
       if (matchState.matchedCount === matchState.pairs.length) {
 
@@ -5762,8 +5389,6 @@ function handleMatchClick(btn, id, side) {
 
       right.btn.classList.add('shake-error');
 
-
-
       setTimeout(() => {
 
         left.btn.classList.remove('shake-error', 'selected');
@@ -5781,8 +5406,6 @@ function handleMatchClick(btn, id, side) {
   }
 
 }
-
-
 
 // ==========================================
 
@@ -5806,8 +5429,6 @@ const blitzState = {
 
 };
 
-
-
 function startSpeedBlitz() {
 
   blitzState.timer = 60;
@@ -5818,8 +5439,6 @@ function startSpeedBlitz() {
 
   blitzState.active = true;
 
-
-
   document.getElementById('blitzScore').textContent = '0';
 
   document.getElementById('blitzSeconds').textContent = '60';
@@ -5828,11 +5447,7 @@ function startSpeedBlitz() {
 
   document.getElementById('blitzStartBtn').style.display = 'none';
 
-
-
   SoundEffects.playCorrect();
-
-
 
   clearInterval(blitzState.interval);
 
@@ -5841,8 +5456,6 @@ function startSpeedBlitz() {
     blitzState.timer--;
 
     document.getElementById('blitzSeconds').textContent = blitzState.timer;
-
-
 
     if (blitzState.timer <= 0) {
 
@@ -5862,19 +5475,13 @@ function startSpeedBlitz() {
 
   }, 1000);
 
-
-
   nextBlitzQuestion();
 
 }
 
-
-
 function nextBlitzQuestion() {
 
   if (!blitzState.active) return;
-
-
 
   // Pick random question with options
 
@@ -5882,17 +5489,11 @@ function nextBlitzQuestion() {
 
   blitzState.currentQ = randQ;
 
-
-
   document.getElementById('blitzQText').textContent = randQ.question;
-
-
 
   const optContainer = document.getElementById('blitzOptionsList');
 
   optContainer.innerHTML = '';
-
-
 
   const optKeys = Object.keys(randQ.options).sort();
 
@@ -5920,19 +5521,13 @@ function nextBlitzQuestion() {
 
 }
 
-
-
 function handleBlitzAnswer(chosenLetter, itemBtn) {
 
   if (!blitzState.active || !blitzState.currentQ) return;
 
-
-
   const q = blitzState.currentQ;
 
   const isCorrect = q.answer.includes(chosenLetter);
-
-
 
   if (isCorrect) {
 
@@ -5948,8 +5543,6 @@ function handleBlitzAnswer(chosenLetter, itemBtn) {
 
     document.getElementById('blitzScore').textContent = blitzState.score;
 
-
-
     const streakBadge = document.getElementById('blitzStreakBadge');
 
     if (blitzState.streak >= 2) {
@@ -5959,8 +5552,6 @@ function handleBlitzAnswer(chosenLetter, itemBtn) {
       streakBadge.textContent = `Combo x${blitzState.streak}! 🔥`;
 
     }
-
-
 
     setTimeout(nextBlitzQuestion, 250);
 
@@ -5974,8 +5565,6 @@ function handleBlitzAnswer(chosenLetter, itemBtn) {
 
     document.getElementById('blitzStreakBadge').style.display = 'none';
 
-
-
     // Show correct
 
     document.querySelectorAll('#blitzOptionsList .option-item').forEach(b => {
@@ -5986,15 +5575,11 @@ function handleBlitzAnswer(chosenLetter, itemBtn) {
 
     });
 
-
-
     setTimeout(nextBlitzQuestion, 800);
 
   }
 
 }
-
-
 
 // ==========================================
 
@@ -6012,15 +5597,11 @@ const ddState = {
 
 };
 
-
-
 function initDragDropModule() {
 
   const select = document.getElementById('ddExerciseSelect');
 
   if (!select) return;
-
-
 
   if (typeof CCNA_DRAGDROP === 'undefined' || CCNA_DRAGDROP.length === 0) {
 
@@ -6029,8 +5610,6 @@ function initDragDropModule() {
     return;
 
   }
-
-
 
   select.innerHTML = '';
 
@@ -6046,13 +5625,9 @@ function initDragDropModule() {
 
   });
 
-
-
   loadDragDropExercise();
 
 }
-
-
 
 function loadDragDropExercise() {
 
@@ -6066,17 +5641,11 @@ function loadDragDropExercise() {
 
   ddState.assigned = {};
 
-
-
   const ex = CCNA_DRAGDROP[index];
 
   if (!ex) return;
 
-
-
   document.getElementById('ddTitleBox').textContent = `🎯 ${ex.title}`;
-
-
 
   // Pool of terms (shuffled)
 
@@ -6085,8 +5654,6 @@ function loadDragDropExercise() {
   const poolContainer = document.getElementById('ddPoolContainer');
 
   poolContainer.innerHTML = '';
-
-
 
   terms.forEach(term => {
 
@@ -6104,15 +5671,11 @@ function loadDragDropExercise() {
 
   });
 
-
-
   // Target slots (definitions)
 
   const targetsContainer = document.getElementById('ddTargetsContainer');
 
   targetsContainer.innerHTML = '';
-
-
 
   ex.pairs.forEach((pair, slotIdx) => {
 
@@ -6138,8 +5701,6 @@ function loadDragDropExercise() {
 
 }
 
-
-
 function selectDraggableItem(el, term) {
 
   SoundEffects.playClick();
@@ -6152,8 +5713,6 @@ function selectDraggableItem(el, term) {
 
 }
 
-
-
 function placeDraggableInSlot(slotIdx) {
 
   if (!ddState.selectedItem) {
@@ -6164,13 +5723,9 @@ function placeDraggableInSlot(slotIdx) {
 
   }
 
-
-
   SoundEffects.playClick();
 
   const { el, term } = ddState.selectedItem;
-
-
 
   // Assign
 
@@ -6182,8 +5737,6 @@ function placeDraggableInSlot(slotIdx) {
 
   targetArea.innerHTML = `<b>✓ ${escapeHtml(term)}</b>`;
 
-
-
   // Hide or dim from pool
 
   el.style.opacity = '0.4';
@@ -6194,29 +5747,21 @@ function placeDraggableInSlot(slotIdx) {
 
 }
 
-
-
 function checkDragDropAnswers() {
 
   const ex = CCNA_DRAGDROP[ddState.currentIndex];
 
   if (!ex) return;
 
-
-
   let allCorrect = true;
 
   let correctCount = 0;
-
-
 
   ex.pairs.forEach((pair, slotIdx) => {
 
     const userVal = ddState.assigned[slotIdx];
 
     const targetArea = document.getElementById(`ddSlotArea_${slotIdx}`);
-
-
 
     if (userVal && userVal.toLowerCase() === pair.term.toLowerCase()) {
 
@@ -6238,8 +5783,6 @@ function checkDragDropAnswers() {
 
   });
 
-
-
   if (allCorrect) {
 
     SoundEffects.playCorrect();
@@ -6256,8 +5799,6 @@ function checkDragDropAnswers() {
 
 }
 
-
-
 function resetCurrentDragDrop() {
 
   loadDragDropExercise();
@@ -6265,8 +5806,6 @@ function resetCurrentDragDrop() {
   SoundEffects.playClick();
 
 }
-
-
 
 function nextDragDropExercise() {
 
@@ -6282,8 +5821,6 @@ function nextDragDropExercise() {
 
 }
 
-
-
 function prevDragDropExercise() {
 
   if (ddState.currentIndex > 0) {
@@ -6298,21 +5835,15 @@ function prevDragDropExercise() {
 
 }
 
-
-
 // ADMIN DASHBOARD & USER MANAGEMENT
 
 let currentAdminSubTab = 'students';
 
 let adminStudentFilterQuery = '';
 
-
-
 function switchAdminTab(tabName) {
 
   currentAdminSubTab = tabName;
-
-
 
   const btnStudents = document.getElementById('adminTabBtnStudents');
 
@@ -6322,8 +5853,6 @@ function switchAdminTab(tabName) {
 
   const btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
 
-
-
   const viewStudents = document.getElementById('adminViewStudents');
 
   const viewResults = document.getElementById('adminViewResults');
@@ -6332,13 +5861,9 @@ function switchAdminTab(tabName) {
 
   const viewLeaderboard = document.getElementById('adminViewLeaderboard');
 
-
-
   [btnStudents, btnResults, btnCharts, btnLeaderboard].forEach(b => b && b.classList.remove('active'));
 
   [viewStudents, viewResults, viewCharts, viewLeaderboard].forEach(v => v && (v.style.display = 'none'));
-
-
 
   if (tabName === 'students') {
 
@@ -6378,19 +5903,13 @@ function switchAdminTab(tabName) {
 
 }
 
-
-
 function renderAdminDashboard() {
 
   if (!state.isAdmin) return;
 
-
-
   const users = getRegisteredUsers();
 
   const results = state.results || [];
-
-
 
   // 1. Update Stats Cards
 
@@ -6406,8 +5925,6 @@ function renderAdminDashboard() {
 
   const badgeResults = document.getElementById('adminResultsBadge');
 
-
-
   if (totalStudentsEl) totalStudentsEl.textContent = users.length;
 
   if (totalQuizzesEl) totalQuizzesEl.textContent = results.length;
@@ -6415,8 +5932,6 @@ function renderAdminDashboard() {
   if (badgeStudents) badgeStudents.textContent = users.length;
 
   if (badgeResults) badgeResults.textContent = results.length;
-
-
 
   if (results.length > 0) {
 
@@ -6436,15 +5951,11 @@ function renderAdminDashboard() {
 
   }
 
-
-
   // Populate Part filter in Results view
 
   populateAdminPartFilter();
 
   populateAdminGroupFilter();
-
-
 
   // Render active tab
 
@@ -6468,21 +5979,15 @@ function renderAdminDashboard() {
 
 }
 
-
-
 function populateAdminGroupFilter() {
 
   const select = document.getElementById('adminGroupFilter');
 
   if (!select) return;
 
-
-
   const users = getRegisteredUsers();
 
   const groups = Array.from(new Set(users.map(u => u.group).filter(Boolean)));
-
-
 
   const currentVal = select.value;
 
@@ -6504,15 +6009,11 @@ function populateAdminGroupFilter() {
 
 }
 
-
-
 function populateAdminPartFilter() {
 
   const select = document.getElementById('adminResultPartFilter');
 
   if (!select) return;
-
-
 
   select.innerHTML = '<option value="all">Barcha Partlar</option>';
 
@@ -6530,8 +6031,6 @@ function populateAdminPartFilter() {
 
 }
 
-
-
 // SUB-VIEW 1: STUDENTS & ADMINS LIST & MANAGEMENT
 
 function renderAdminStudentsList() {
@@ -6546,11 +6045,7 @@ function renderAdminStudentsList() {
 
   const roleSelect = document.getElementById('adminRoleFilter');
 
-
-
   if (!tbody) return;
-
-
 
   const users = getRegisteredUsers();
 
@@ -6559,8 +6054,6 @@ function renderAdminStudentsList() {
   const groupFilter = groupSelect ? groupSelect.value : 'all';
 
   const roleFilter = roleSelect ? roleSelect.value : 'all';
-
-
 
   // Primary Master Administrator entry
 
@@ -6582,11 +6075,7 @@ function renderAdminStudentsList() {
 
   };
 
-
-
   const allDisplayUsers = [masterAdminEntry, ...users];
-
-
 
   let filtered = allDisplayUsers.filter(u => {
 
@@ -6606,19 +6095,13 @@ function renderAdminStudentsList() {
 
   });
 
-
-
   if (countText) {
 
     countText.textContent = `Ko'rsatilmoqda: ${filtered.length} / ${allDisplayUsers.length} ta hisob`;
 
   }
 
-
-
   tbody.innerHTML = '';
-
-
 
   if (filtered.length === 0) {
 
@@ -6632,11 +6115,7 @@ function renderAdminStudentsList() {
 
   }
 
-
-
   const allResults = state.results || [];
-
-
 
   filtered.forEach((u, idx) => {
 
@@ -6648,8 +6127,6 @@ function renderAdminStudentsList() {
 
     );
 
-
-
     const quizCount = userResults.length;
 
     const avgScore = quizCount > 0 
@@ -6658,13 +6135,9 @@ function renderAdminStudentsList() {
 
       : 0;
 
-
-
     const isAdmin = (u.role === 'admin');
 
     const isApproved = (u.isMaster || isAdmin || u.isApproved !== false);
-
-
 
     const roleBadge = isAdmin
 
@@ -6672,15 +6145,11 @@ function renderAdminStudentsList() {
 
       : `<span style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.3); padding:3px 9px; border-radius:6px; font-weight:600; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👤 Foydalanuvchi</span>`;
 
-
-
     const statusBadge = isApproved
 
       ? `<span style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">✅ Faol</span>`
 
       : `<span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.4); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">⏳ Kutilmoqda</span>`;
-
-
 
     const tr = document.createElement('tr');
 
@@ -6689,8 +6158,6 @@ function renderAdminStudentsList() {
       tr.style.background = 'rgba(239, 68, 68, 0.05)';
 
     }
-
-
 
     tr.innerHTML = `
 
@@ -6708,6 +6175,16 @@ function renderAdminStudentsList() {
 
       <td style="font-size:0.85rem; color:var(--text-muted);">${u.createdAt || '-'}</td>
 
+      <td>
+        ${u.isMaster 
+          ? `<span style="color:var(--warning); font-size:0.83rem; font-weight:700;">👑 Cheksiz (Admin)</span>`
+          : (u.boundDevices && u.boundDevices.length > 0
+              ? `<div style="font-size:0.82rem; font-weight:700; color:var(--text-main);">${escapeHtml(u.boundDevices[0].name)}</div>
+                 <div style="font-size:0.75rem; color:var(--text-muted);">Faol: ${escapeHtml(u.boundDevices[0].lastActive || u.boundDevices[0].boundAt || '-')}</div>`
+              : `<span style="color:var(--text-muted); font-size:0.82rem;">Biriktirilmagan (0/${u.maxDevices || 1})</span>`
+            )
+        }
+      </td>
       <td><b>${quizCount} ta</b></td>
 
       <td>
@@ -6740,6 +6217,7 @@ function renderAdminStudentsList() {
 
                   <button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
 
+                  <button class="btn-action-icon" title="Biriktirilgan qurilmani uzish / Yangi qurilmaga ruxsat berish" onclick="adminResetUserDevice('${u.id}')" style="color:var(--warning); font-weight:700;">📱 Uzish</button>
                   <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
 
              }`
@@ -6756,8 +6234,6 @@ function renderAdminStudentsList() {
 
 }
 
-
-
 // USER MODAL (ADD / EDIT)
 
 function openAddStudentModal() {
@@ -6771,6 +6247,7 @@ function openAddStudentModal() {
   document.getElementById('modalStudentLogin').value = '';
 
   document.getElementById('modalStudentGroup').value = '';
+  const maxDevEl = document.getElementById('modalStudentMaxDevices'); if (maxDevEl) maxDevEl.value = '1';
 
   document.getElementById('modalStudentPassword').value = '';
 
@@ -6780,15 +6257,11 @@ function openAddStudentModal() {
 
   document.getElementById('modalPwdNotice').style.display = 'none';
 
-
-
   document.getElementById('studentFormModal').style.display = 'flex';
 
   document.getElementById('modalStudentName').focus();
 
 }
-
-
 
 function openEditStudentModal(studentId) {
 
@@ -6797,8 +6270,6 @@ function openEditStudentModal(studentId) {
   const user = users.find(u => u.id === studentId);
 
   if (!user) return;
-
-
 
   document.getElementById('studentEditId').value = user.id;
 
@@ -6809,6 +6280,7 @@ function openEditStudentModal(studentId) {
   document.getElementById('modalStudentLogin').value = user.login || '';
 
   document.getElementById('modalStudentGroup').value = user.group || '';
+  const maxDevEl = document.getElementById('modalStudentMaxDevices'); if (maxDevEl) maxDevEl.value = (user.maxDevices || 1).toString();
 
   document.getElementById('modalStudentPassword').value = '';
 
@@ -6818,21 +6290,15 @@ function openEditStudentModal(studentId) {
 
   document.getElementById('modalPwdNotice').style.display = 'inline';
 
-
-
   document.getElementById('studentFormModal').style.display = 'flex';
 
 }
-
-
 
 function closeStudentModal() {
 
   document.getElementById('studentFormModal').style.display = 'none';
 
 }
-
-
 
 async function saveStudentFromModal() {
 
@@ -6850,8 +6316,6 @@ async function saveStudentFromModal() {
 
   const role = (roleSelect ? roleSelect.value : 'student') || 'student';
 
-
-
   if (!name || !login || !group) {
 
     alert("Iltimos, Ism, Login va Guruh maydonlarini to'ldiring!");
@@ -6860,11 +6324,7 @@ async function saveStudentFromModal() {
 
   }
 
-
-
   const users = getRegisteredUsers();
-
-
 
   if (editId) {
 
@@ -6885,10 +6345,9 @@ async function saveStudentFromModal() {
       users[userIndex].login = login;
 
       users[userIndex].group = group;
+      const maxDevEl = document.getElementById('modalStudentMaxDevices'); if (maxDevEl) users[userIndex].maxDevices = parseInt(maxDevEl.value || 1, 10);
 
       users[userIndex].role = role;
-
-
 
       if (password) {
 
@@ -6928,8 +6387,6 @@ async function saveStudentFromModal() {
 
     }
 
-
-
     const hash = await computeSha256Hex(`${login}:${password}:${AUTH_SALT}`);
 
     const newUser = {
@@ -6950,8 +6407,6 @@ async function saveStudentFromModal() {
 
     };
 
-
-
     users.push(newUser);
 
     saveRegisteredUsers(users);
@@ -6969,8 +6424,6 @@ async function saveStudentFromModal() {
   }
 
 }
-
-
 
 function deleteStudent(studentId, studentName) {
 
@@ -6990,8 +6443,6 @@ function deleteStudent(studentId, studentName) {
 
 }
 
-
-
 function filterResultsByStudent(studentName) {
 
   switchAdminTab('results');
@@ -7008,8 +6459,6 @@ function filterResultsByStudent(studentName) {
 
 }
 
-
-
 // SUB-VIEW 2: TEST RESULTS LIST
 
 function renderAdminResultsList() {
@@ -7022,11 +6471,7 @@ function renderAdminResultsList() {
 
   const statusSelect = document.getElementById('adminResultStatusFilter');
 
-
-
   if (!tbody) return;
-
-
 
   const results = state.results || [];
 
@@ -7035,8 +6480,6 @@ function renderAdminResultsList() {
   const partFilter = partSelect ? partSelect.value : 'all';
 
   const statusFilter = statusSelect ? statusSelect.value : 'all';
-
-
 
   let filtered = results.slice().reverse().filter(r => {
 
@@ -7048,11 +6491,7 @@ function renderAdminResultsList() {
 
       (r.group && r.group.toLowerCase().includes(query));
 
-
-
     const matchPart = (partFilter === 'all') || (r.partTitle === partFilter);
-
-
 
     const isPass = (r.percent >= 82.5);
 
@@ -7062,17 +6501,11 @@ function renderAdminResultsList() {
 
       (statusFilter === 'fail' && !isPass);
 
-
-
     return matchQuery && matchPart && matchStatus;
 
   });
 
-
-
   tbody.innerHTML = '';
-
-
 
   if (filtered.length === 0) {
 
@@ -7085,8 +6518,6 @@ function renderAdminResultsList() {
     return;
 
   }
-
-
 
   filtered.forEach((r, idx) => {
 
@@ -7134,8 +6565,6 @@ function renderAdminResultsList() {
 
 }
 
-
-
 function deleteSpecificResult(index) {
 
   if (confirm("Haqiqatan ham ushbu test natijasini o'chirmoqchimisiz?")) {
@@ -7156,8 +6585,6 @@ function deleteSpecificResult(index) {
 
 }
 
-
-
 // SUB-VIEW 3: LEADERBOARD
 
 function renderAdminLeaderboard() {
@@ -7166,13 +6593,9 @@ function renderAdminLeaderboard() {
 
   if (!tbody) return;
 
-
-
   const users = getRegisteredUsers();
 
   const allResults = state.results || [];
-
-
 
   const rankings = users.map(u => {
 
@@ -7184,8 +6607,6 @@ function renderAdminLeaderboard() {
 
     );
 
-
-
     const totalTests = uResults.length;
 
     const passedTests = uResults.filter(r => r.percent >= 82.5).length;
@@ -7195,8 +6616,6 @@ function renderAdminLeaderboard() {
       ? Math.round(uResults.reduce((acc, r) => acc + (r.percent || 0), 0) / totalTests) 
 
       : 0;
-
-
 
     return {
 
@@ -7216,17 +6635,11 @@ function renderAdminLeaderboard() {
 
   });
 
-
-
   // Sort by passed tests then average score
 
   rankings.sort((a, b) => b.passedTests - a.passedTests || b.avgScore - a.avgScore);
 
-
-
   tbody.innerHTML = '';
-
-
 
   if (rankings.length === 0) {
 
@@ -7240,8 +6653,6 @@ function renderAdminLeaderboard() {
 
   }
 
-
-
   rankings.slice(0, 15).forEach((item, idx) => {
 
     let medal = `${idx + 1}`;
@@ -7251,8 +6662,6 @@ function renderAdminLeaderboard() {
     else if (idx === 1) medal = "🥈 2-o'rin";
 
     else if (idx === 2) medal = "🥉 3-o'rin";
-
-
 
     const tr = document.createElement('tr');
 
@@ -7280,8 +6689,6 @@ function renderAdminLeaderboard() {
 
 }
 
-
-
 function exportResultsToCSV() {
 
   const results = state.results || [];
@@ -7294,13 +6701,9 @@ function exportResultsToCSV() {
 
   }
 
-
-
   let csvContent = "﻿"; // UTF-8 BOM
 
   csvContent += "№,Talaba,Guruhi,Bo'lim,To'g'ri,Jami,Foiz,Status,Sana va Vaqt\n";
-
-
 
   results.forEach((r, idx) => {
 
@@ -7309,8 +6712,6 @@ function exportResultsToCSV() {
     csvContent += `"${idx + 1}","${r.studentName || ''}","${r.group || ''}","${r.partTitle || ''}","${r.correct}","${r.total}","${r.percent}%","${status}","${r.date || ''}"\n`;
 
   });
-
-
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
@@ -7334,8 +6735,6 @@ function exportResultsToCSV() {
 
 }
 
-
-
 function clearAllResults() {
 
   if (confirm("DIQQAT! Barcha talabalarning topshirgan test natijalari butunlay o'chiriladi. Ushbu amalni ortga qaytarib bo'lmaydi. Davom etasizmi?")) {
@@ -7353,10 +6752,6 @@ function clearAllResults() {
   }
 
 }
-
-
-
-
 
 // PASSWORD MANAGEMENT (ADMIN & USER SELF-SERVICE)
 
@@ -7378,19 +6773,13 @@ function openChangePasswordModal(targetLogin = null) {
 
   const errEl = document.getElementById('changePwdErrorMsg');
 
-
-
   if (!modal) return;
-
-
 
   if (!targetLogin && state.currentUser) {
 
     targetLogin = state.currentUser.login;
 
   }
-
-
 
   targetLoginInput.value = targetLogin || '';
 
@@ -7402,13 +6791,9 @@ function openChangePasswordModal(targetLogin = null) {
 
   if (errEl) errEl.style.display = 'none';
 
-
-
   const isChangingOwn = (state.currentUser && targetLogin && state.currentUser.login.toLowerCase() === targetLogin.toLowerCase());
 
   const isMasterAdmin = (state.isAdmin);
-
-
 
   if (!isChangingOwn && isMasterAdmin) {
 
@@ -7424,8 +6809,6 @@ function openChangePasswordModal(targetLogin = null) {
 
   }
 
-
-
   modal.style.display = 'flex';
 
   if (oldPwdGroup && oldPwdGroup.style.display !== 'none') {
@@ -7440,8 +6823,6 @@ function openChangePasswordModal(targetLogin = null) {
 
 }
 
-
-
 function closeChangePasswordModal() {
 
   const modal = document.getElementById('changePasswordModal');
@@ -7449,8 +6830,6 @@ function closeChangePasswordModal() {
   if (modal) modal.style.display = 'none';
 
 }
-
-
 
 async function saveNewPassword() {
 
@@ -7466,19 +6845,13 @@ async function saveNewPassword() {
 
   const oldPwdGroup = document.getElementById('changePwdOldGroup');
 
-
-
   const oldPwd = oldPwdInput ? oldPwdInput.value : '';
 
   const newPwd = newPwdInput ? newPwdInput.value : '';
 
   const confirmPwd = confirmPwdInput ? confirmPwdInput.value : '';
 
-
-
   if (errEl) errEl.style.display = 'none';
-
-
 
   if (!newPwd) {
 
@@ -7490,8 +6863,6 @@ async function saveNewPassword() {
 
   }
 
-
-
   if (newPwd.length < 4) {
 
     showAuthError(errEl, "Yangi parol kamida 4 ta belgidan iborat bo'lishi kerak!");
@@ -7501,8 +6872,6 @@ async function saveNewPassword() {
     return;
 
   }
-
-
 
   if (newPwd !== confirmPwd) {
 
@@ -7514,13 +6883,9 @@ async function saveNewPassword() {
 
   }
 
-
-
   const isChangingOwn = (state.currentUser && state.currentUser.login.toLowerCase() === targetLogin);
 
   const master = getMasterAdmin();
-
-
 
   // 1. If target is Master Admin
 
@@ -7534,8 +6899,6 @@ async function saveNewPassword() {
 
       const isHashOld = (oldHash === master.hash || oldHash === 'a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2');
 
-
-
       if (!isDefaultOld && !isHashOld) {
 
         showAuthError(errEl, "Joriy (eski) parol noto'g'ri kiritildi!");
@@ -7548,8 +6911,6 @@ async function saveNewPassword() {
 
     }
 
-
-
     const newHash = await computeSha256Hex(`${master.login.toLowerCase()}:${newPwd}:${AUTH_SALT}`);
 
     master.hash = newHash;
@@ -7557,8 +6918,6 @@ async function saveNewPassword() {
     master.isPasswordChanged = true;
 
     saveMasterAdmin(master);
-
-
 
     SoundEffects.playCorrect();
 
@@ -7570,15 +6929,11 @@ async function saveNewPassword() {
 
   }
 
-
-
   // 2. If target is registered user
 
   const users = getRegisteredUsers();
 
   const userIndex = users.findIndex(u => u.login.toLowerCase() === targetLogin);
-
-
 
   if (userIndex === -1) {
 
@@ -7588,11 +6943,7 @@ async function saveNewPassword() {
 
   }
 
-
-
   const user = users[userIndex];
-
-
 
   if (isChangingOwn && (oldPwdGroup && oldPwdGroup.style.display !== 'none')) {
 
@@ -7610,15 +6961,11 @@ async function saveNewPassword() {
 
   }
 
-
-
   const newHash = await computeSha256Hex(`${targetLogin}:${newPwd}:${AUTH_SALT}`);
 
   users[userIndex].hash = newHash;
 
   saveRegisteredUsers(users);
-
-
 
   SoundEffects.playCorrect();
 
@@ -7628,10 +6975,6 @@ async function saveNewPassword() {
 
 }
 
-
-
-
-
 // LABS SECTION
 
 function initLabs() {
@@ -7639,8 +6982,6 @@ function initLabs() {
   const listEl = document.getElementById('labsList');
 
   if (!listEl) return;
-
-
 
   listEl.innerHTML = '';
 
@@ -7651,8 +6992,6 @@ function initLabs() {
     btn.className = 'lab-item-btn';
 
     if (index === 0) btn.classList.add('active');
-
-
 
     const title = lab.tasks && lab.tasks.length > 0 ? lab.tasks[0] : lab.tasks_text.slice(0, 40);
 
@@ -7670,8 +7009,6 @@ function initLabs() {
 
     `;
 
-
-
     btn.addEventListener('click', () => {
 
       document.querySelectorAll('.lab-item-btn').forEach(b => b.classList.remove('active'));
@@ -7684,19 +7021,13 @@ function initLabs() {
 
     });
 
-
-
     listEl.appendChild(btn);
 
   });
 
-
-
   selectLab(0);
 
 }
-
-
 
 function selectLab(index) {
 
@@ -7706,17 +7037,11 @@ function selectLab(index) {
 
   if (!lab) return;
 
-
-
   document.getElementById('labTitle').textContent = `${lab.name} — Batafsil Qo'llanma`;
-
-
 
   const tasksBox = document.getElementById('labTasksBox');
 
   tasksBox.innerHTML = '';
-
-
 
   if (lab.tasks && lab.tasks.length > 0) {
 
@@ -7744,13 +7069,9 @@ function selectLab(index) {
 
   }
 
-
-
   const solutionBox = document.getElementById('labSolutionCode');
 
   solutionBox.textContent = lab.solution_text || "Yechim mavjud emas.";
-
-
 
   const ptTopology = document.getElementById('labPtTopology');
 
@@ -7782,8 +7103,6 @@ function selectLab(index) {
 
 }
 
-
-
 function openLabInSimulator(labIndex) {
 
   const targetIdx = (typeof labIndex !== 'undefined' && labIndex !== null) ? labIndex : (state.selectedLabIndex || 0);
@@ -7805,8 +7124,6 @@ function openLabInSimulator(labIndex) {
   }
 
 }
-
-
 
 function copyLabCode() {
 
@@ -7840,8 +7157,6 @@ function copyLabCode() {
 
 }
 
-
-
 function generatePtTopologyGuide(lab) {
 
   const text = (lab.tasks_text + ' ' + lab.solution_text).toLowerCase();
@@ -7849,8 +7164,6 @@ function generatePtTopologyGuide(lab) {
   let devices = [];
 
   let cables = "Copper Straight-Through yoki Cross-Over kabel";
-
-
 
   if (text.includes('sw-1') && text.includes('sw-2') && text.includes('r1')) {
 
@@ -7865,8 +7178,6 @@ function generatePtTopologyGuide(lab) {
     devices = ["2x Cisco 2960 Switch", "2x Kompyuter (PC)"];
 
   }
-
-
 
   return `
 
@@ -7894,8 +7205,6 @@ function generatePtTopologyGuide(lab) {
 
 }
 
-
-
 // CLI SIMULATOR
 
 function initCliSimulator() {
@@ -7903,8 +7212,6 @@ function initCliSimulator() {
   const input = document.getElementById('cliInput');
 
   if (!input) return;
-
-
 
   input.addEventListener('keydown', (e) => {
 
@@ -7926,15 +7233,11 @@ function initCliSimulator() {
 
   });
 
-
-
   populateCliScenarioSelect();
 
   switchCliScenario();
 
 }
-
-
 
 function populateCliScenarioSelect() {
 
@@ -7958,8 +7261,6 @@ function populateCliScenarioSelect() {
 
 }
 
-
-
 function switchCliScenario() {
 
   const select = document.getElementById('cliScenarioSelect');
@@ -7972,19 +7273,13 @@ function switchCliScenario() {
 
   state.cli.mode = 'user';
 
-
-
   const scenario = state.cli.scenarios[index] || state.cli.scenarios[0];
 
   state.cli.device = scenario.device;
 
-
-
   updateCliPrompt();
 
   renderCliGoal();
-
-
 
   const hist = document.getElementById('cliHistory');
 
@@ -8004,15 +7299,11 @@ function switchCliScenario() {
 
 }
 
-
-
 function handleCliTabCompletion(inputEl) {
 
   const current = inputEl.value.toLowerCase().trim();
 
   if (!current) return;
-
-
 
   const validCommands = [
 
@@ -8038,8 +7329,6 @@ function handleCliTabCompletion(inputEl) {
 
   ];
 
-
-
   const match = validCommands.find(c => c.startsWith(current));
 
   if (match) {
@@ -8052,15 +7341,11 @@ function handleCliTabCompletion(inputEl) {
 
 }
 
-
-
 function updateCliPrompt() {
 
   const promptEl = document.getElementById('cliPrompt');
 
   if (!promptEl) return;
-
-
 
   const d = state.cli.device;
 
@@ -8078,13 +7363,9 @@ function updateCliPrompt() {
 
   else if (state.cli.mode === 'config-ext-nacl') p = `${d}(config-ext-nacl)#`;
 
-
-
   promptEl.textContent = p;
 
 }
-
-
 
 function renderCliGoal() {
 
@@ -8092,13 +7373,9 @@ function renderCliGoal() {
 
   if (!goalCard) return;
 
-
-
   const scenario = state.cli.scenarios[state.cli.scenarioIndex];
 
   const step = scenario.steps[state.cli.currentLabStep];
-
-
 
   if (!step) {
 
@@ -8117,8 +7394,6 @@ function renderCliGoal() {
     return;
 
   }
-
-
 
   goalCard.innerHTML = `
 
@@ -8146,8 +7421,6 @@ function renderCliGoal() {
 
 }
 
-
-
 function showCliHint() {
 
   const scenario = state.cli.scenarios[state.cli.scenarioIndex];
@@ -8156,13 +7429,9 @@ function showCliHint() {
 
   if (step) alert(`To'g'ri buyruq:
 
-
-
 ${step.cmd}`);
 
 }
-
-
 
 function resetCliSimulator() {
 
@@ -8178,8 +7447,6 @@ function resetCliSimulator() {
 
 }
 
-
-
 function executeCliCommand(rawCmd) {
 
   if (!rawCmd) return;
@@ -8188,11 +7455,7 @@ function executeCliCommand(rawCmd) {
 
   addCliHistory(`${promptText} ${rawCmd}`, 'command');
 
-
-
   const cmd = rawCmd.toLowerCase().trim().replace(/\s+/g, ' ');
-
-
 
   // Mode transitions
 
@@ -8300,8 +7563,6 @@ function executeCliCommand(rawCmd) {
 
   }
 
-
-
   // Check goal step with smart normalization
 
   const scenario = state.cli.scenarios[state.cli.scenarioIndex];
@@ -8328,11 +7589,7 @@ function executeCliCommand(rawCmd) {
 
       .replace(/^en\b/, 'enable');
 
-
-
     const isMatch = (cmd === exp) || (normalizeCmd(cmd) === normalizeCmd(exp));
-
-
 
     if (isMatch) {
 
@@ -8347,8 +7604,6 @@ function executeCliCommand(rawCmd) {
     }
 
   }
-
-
 
   const body = document.getElementById('cliBody');
 
@@ -8372,8 +7627,6 @@ function addCliHistory(text, type) {
 
 }
 
-
-
 // BOOKMARKS VIEW
 
 function initBookmarksView() {
@@ -8382,19 +7635,13 @@ function initBookmarksView() {
 
 }
 
-
-
 function renderBookmarksList() {
 
   const container = document.getElementById('bookmarksListContainer');
 
   if (!container) return;
 
-
-
   const bookmarkedQuestions = CCNA_QUESTIONS.filter(q => state.bookmarks.includes(q.id));
-
-
 
   container.innerHTML = `
 
@@ -8405,8 +7652,6 @@ function renderBookmarksList() {
     </div>
 
   `;
-
-
 
   if (bookmarkedQuestions.length === 0) {
 
@@ -8424,8 +7669,6 @@ function renderBookmarksList() {
 
   }
 
-
-
   const grid = document.createElement('div');
 
   grid.style.display = 'flex';
@@ -8433,8 +7676,6 @@ function renderBookmarksList() {
   grid.style.flexDirection = 'column';
 
   grid.style.gap = '12px';
-
-
 
   bookmarkedQuestions.forEach(q => {
 
@@ -8468,13 +7709,9 @@ function renderBookmarksList() {
 
   });
 
-
-
   container.appendChild(grid);
 
 }
-
-
 
 // UTILITY HELPERS
 
@@ -8492,15 +7729,11 @@ function arraysEqual(a, b) {
 
 }
 
-
-
 function truncate(str, n) {
 
   return str && str.length > n ? str.substr(0, n - 1) + '...' : str;
 
 }
-
-
 
 function escapeHtml(text) {
 
@@ -8519,8 +7752,6 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 
 }
-
-
 
 function formatOptionText(text) {
 
@@ -8542,8 +7773,6 @@ function formatOptionText(text) {
 
 }
 
-
-
 // IMAGE VIEWER MODAL
 
 function openImageModal(imgSrc) {
@@ -8562,8 +7791,6 @@ function openImageModal(imgSrc) {
 
 }
 
-
-
 function closeImageModal() {
 
   const modal = document.getElementById('imageZoomModal');
@@ -8575,10 +7802,6 @@ function closeImageModal() {
   }
 
 }
-
-
-
-
 
 // ADMIN USER APPROVAL SYSTEM
 
@@ -8603,8 +7826,6 @@ function approveUser(userId) {
   alert(`✅ ${u.name} muvaffaqiyatli tasdiqlandi! Endi bu foydalanuvchi tizimga kira oladi.`);
 
 }
-
-
 
 function toggleUserApproval(userId) {
 
@@ -8632,10 +7853,6 @@ function toggleUserApproval(userId) {
 
 }
 
-
-
-
-
 // ========================================================
 
 // ========================================================
@@ -8645,8 +7862,6 @@ function toggleUserApproval(userId) {
 // ========================================================
 
 let currentChartsSubView = 'overview';
-
-
 
 function switchChartsSubView(viewName) {
 
@@ -8666,8 +7881,6 @@ function switchChartsSubView(viewName) {
 
   });
 
-
-
   SoundEffects.playClick();
 
   setTimeout(() => {
@@ -8678,19 +7891,13 @@ function switchChartsSubView(viewName) {
 
 }
 
-
-
 function renderAdminCharts() {
 
   if (!state.isAdmin) return;
 
-
-
   const results = state.results || [];
 
   const users = getRegisteredUsers();
-
-
 
   // 1. Top Insights
 
@@ -8710,8 +7917,6 @@ function renderAdminCharts() {
 
   const pendingNoticeEl = document.getElementById('chartPendingNotice');
 
-
-
   let avgOverall = 0;
 
   if (results.length > 0) {
@@ -8723,8 +7928,6 @@ function renderAdminCharts() {
     const pTitle = maxResult.partTitle || maxResult.partKey || 'Part';
 
     if (topStudentEl) topStudentEl.textContent = `${maxResult.studentName || 'Talaba'} (${pTitle})`;
-
-
 
     const activityMap = {};
 
@@ -8754,8 +7957,6 @@ function renderAdminCharts() {
 
     if (activeStudentEl) activeStudentEl.textContent = topStudent;
 
-
-
     const passCount = results.filter(r => (r.percent || 0) >= 82.5).length;
 
     const passRate = Math.round((passCount / results.length) * 100);
@@ -8763,8 +7964,6 @@ function renderAdminCharts() {
     if (passRateEl) passRateEl.textContent = passRate + '%';
 
     if (passCountEl) passCountEl.textContent = `${passCount} / ${results.length} ta o'tdi`;
-
-
 
     avgOverall = Math.round(results.reduce((acc, r) => acc + (r.percent || 0), 0) / results.length);
 
@@ -8784,8 +7983,6 @@ function renderAdminCharts() {
 
   }
 
-
-
   const approvedCount = users.filter(u => u.isApproved !== false).length;
 
   const pendingCount = users.filter(u => u.isApproved === false).length;
@@ -8801,8 +7998,6 @@ function renderAdminCharts() {
       : '✅ Barcha hisoblar faol';
 
   }
-
-
 
   // 2. Render depending on active sub-view
 
@@ -8834,8 +8029,6 @@ function renderAdminCharts() {
 
 }
 
-
-
 // 1. CISCO EXAM PASS GAUGE METER (SPIDOMETR)
 
 function drawCiscoGauge(scorePercent, totalTests) {
@@ -8847,8 +8040,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
   const passBadge = document.getElementById('gaugePassBadge');
 
   if (!canvas) return;
-
-
 
   const ctx = canvas.getContext('2d');
 
@@ -8868,15 +8059,9 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   ctx.scale(dpr, dpr);
 
-
-
   ctx.clearRect(0, 0, w, h);
 
-
-
   if (scoreText) scoreText.textContent = totalTests > 0 ? (scorePercent + '%') : '0%';
-
-
 
   if (passBadge) {
 
@@ -8914,8 +8099,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   }
 
-
-
   const cx = w / 2;
 
   const cy = 135;
@@ -8923,8 +8106,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
   const r = 90;
 
   const arcWidth = 14;
-
-
 
   // Background track
 
@@ -8937,8 +8118,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
 
   ctx.stroke();
-
-
 
   // Colored Zones:
 
@@ -8966,15 +8145,11 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   }
 
-
-
   drawArcSegment(0, 70, '#ef4444');
 
   drawArcSegment(70, 82.5, '#f59e0b');
 
   drawArcSegment(82.5, 100, '#10b981');
-
-
 
   // Gold indicator at 82.5% pass mark
 
@@ -9000,8 +8175,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   ctx.stroke();
 
-
-
   // Draw Pointer Needle
 
   const clampedScore = Math.max(0, Math.min(100, scorePercent));
@@ -9013,8 +8186,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
   const tipX = cx + needleLen * Math.cos(needleAngle);
 
   const tipY = cy + needleLen * Math.sin(needleAngle);
-
-
 
   ctx.save();
 
@@ -9038,8 +8209,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   ctx.restore();
 
-
-
   // Center hub pin
 
   ctx.beginPath();
@@ -9058,8 +8227,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
   ctx.fill();
 
-
-
   // Tick labels
 
   ctx.fillStyle = '#94a3b8';
@@ -9076,8 +8243,6 @@ function drawCiscoGauge(scorePercent, totalTests) {
 
 }
 
-
-
 // 2. REPUTABLE MASTERY HEATMAP (LEETCODE / NETACAD MATRIX)
 
 function renderMasteryHeatmap(results, users) {
@@ -9086,11 +8251,7 @@ function renderMasteryHeatmap(results, users) {
 
   if (!container) return;
 
-
-
   const relevantParts = PARTS_CONFIG.filter(p => p.key !== 'all').slice(0, 12);
-
-
 
   // Collect unique students (registered users + any in results)
 
@@ -9112,8 +8273,6 @@ function renderMasteryHeatmap(results, users) {
 
   });
 
-
-
   const studentsList = Array.from(studentsMap.values());
 
   if (studentsList.length === 0) {
@@ -9123,8 +8282,6 @@ function renderMasteryHeatmap(results, users) {
     return;
 
   }
-
-
 
   let tableHtml = `
 
@@ -9152,8 +8309,6 @@ function renderMasteryHeatmap(results, users) {
 
   `;
 
-
-
   studentsList.forEach(st => {
 
     const stResults = results.filter(r => (r.studentName || '').toLowerCase() === st.name.toLowerCase());
@@ -9166,8 +8321,6 @@ function renderMasteryHeatmap(results, users) {
 
       : 0;
 
-
-
     tableHtml += `
 
       <tr>
@@ -9177,8 +8330,6 @@ function renderMasteryHeatmap(results, users) {
         <td style="color:var(--text-muted); font-size:0.8rem;">${escapeHtml(st.group)}</td>
 
     `;
-
-
 
     relevantParts.forEach(p => {
 
@@ -9190,8 +8341,6 @@ function renderMasteryHeatmap(results, users) {
 
       );
 
-
-
       if (partMatches.length > 0) {
 
         const bestScore = Math.max(...partMatches.map(m => m.percent || 0));
@@ -9201,8 +8350,6 @@ function renderMasteryHeatmap(results, users) {
         if (bestScore < 70) cellClass = 'cell-low';
 
         else if (bestScore < 82.5) cellClass = 'cell-medium';
-
-
 
         tableHtml += `
 
@@ -9222,8 +8369,6 @@ function renderMasteryHeatmap(results, users) {
 
     });
 
-
-
     const avgColor = avgScore >= 82.5 ? '#10b981' : (avgScore >= 70 ? '#f59e0b' : (avgScore > 0 ? '#ef4444' : 'var(--text-muted)'));
 
     tableHtml += `
@@ -9238,15 +8383,11 @@ function renderMasteryHeatmap(results, users) {
 
   });
 
-
-
   tableHtml += '</tbody></table>';
 
   container.innerHTML = tableHtml;
 
 }
-
-
 
 // 3. ENHANCED BAR CHART FOR ALL REAL PARTS
 
@@ -9260,15 +8401,11 @@ function drawPartScoresChart(results) {
 
   if (!container) return;
 
-
-
   const rect = container.getBoundingClientRect();
 
   const width = rect.width || 750;
 
   const height = 300;
-
-
 
   const dpr = window.devicePixelRatio || 1;
 
@@ -9280,19 +8417,13 @@ function drawPartScoresChart(results) {
 
   canvas.style.height = height + 'px';
 
-
-
   const ctx = canvas.getContext('2d');
 
   ctx.scale(dpr, dpr);
 
-
-
   // Real parts from PARTS_CONFIG
 
   const parts = PARTS_CONFIG.filter(p => p.key !== 'all');
-
-
 
   const partData = parts.map(p => {
 
@@ -9306,8 +8437,6 @@ function drawPartScoresChart(results) {
 
     });
 
-
-
     if (matching.length === 0) return { name: p.title, avg: 0, count: 0 };
 
     const avg = Math.round(matching.reduce((acc, r) => acc + (r.percent || 0), 0) / matching.length);
@@ -9315,8 +8444,6 @@ function drawPartScoresChart(results) {
     return { name: p.title, avg, count: matching.length };
 
   });
-
-
 
   const padLeft = 45;
 
@@ -9329,8 +8456,6 @@ function drawPartScoresChart(results) {
   const plotWidth = width - padLeft - padRight;
 
   const plotHeight = height - padTop - padBottom;
-
-
 
   // Background Grid Lines
 
@@ -9345,8 +8470,6 @@ function drawPartScoresChart(results) {
   ctx.textAlign = 'right';
 
   ctx.textBaseline = 'middle';
-
-
 
   [0, 25, 50, 75, 100].forEach(val => {
 
@@ -9363,8 +8486,6 @@ function drawPartScoresChart(results) {
     ctx.fillText(val + '%', padLeft - 8, y);
 
   });
-
-
 
   // Gold 82.5% Pass Line
 
@@ -9396,15 +8517,11 @@ function drawPartScoresChart(results) {
 
   ctx.restore();
 
-
-
   // Draw Bars
 
   const colWidth = plotWidth / partData.length;
 
   const barWidth = Math.max(14, Math.min(colWidth * 0.62, 38));
-
-
 
   partData.forEach((item, idx) => {
 
@@ -9413,8 +8530,6 @@ function drawPartScoresChart(results) {
     const barHeight = (item.avg / 100) * plotHeight;
 
     const y = padTop + plotHeight - barHeight;
-
-
 
     if (item.count > 0) {
 
@@ -9440,8 +8555,6 @@ function drawPartScoresChart(results) {
 
       }
 
-
-
       ctx.fillStyle = grad;
 
       const r = Math.min(5, barWidth / 2);
@@ -9464,8 +8577,6 @@ function drawPartScoresChart(results) {
 
       ctx.fill();
 
-
-
       // Top label: score
 
       ctx.fillStyle = item.avg >= 82.5 ? '#10b981' : (item.avg >= 70 ? '#f59e0b' : '#ef4444');
@@ -9475,8 +8586,6 @@ function drawPartScoresChart(results) {
       ctx.textAlign = 'center';
 
       ctx.fillText(item.avg + '%', x + barWidth / 2, y - 6);
-
-
 
       // Count badge
 
@@ -9508,8 +8617,6 @@ function drawPartScoresChart(results) {
 
     }
 
-
-
     // X-axis label
 
     ctx.fillStyle = '#cbd5e1';
@@ -9526,19 +8633,13 @@ function drawPartScoresChart(results) {
 
 }
 
-
-
 function renderPartsCardsGrid(results) {
 
   const container = document.getElementById('adminPartsCardsGrid');
 
   if (!container) return;
 
-
-
   const parts = PARTS_CONFIG.filter(p => p.key !== 'all');
-
-
 
   container.innerHTML = parts.map(p => {
 
@@ -9552,8 +8653,6 @@ function renderPartsCardsGrid(results) {
 
     });
 
-
-
     const testCount = matching.length;
 
     const avg = testCount > 0 
@@ -9563,8 +8662,6 @@ function renderPartsCardsGrid(results) {
       : 0;
 
     const passCount = matching.filter(m => (m.percent || 0) >= 82.5).length;
-
-
 
     let statusColor = '#10b981';
 
@@ -9589,8 +8686,6 @@ function renderPartsCardsGrid(results) {
       statusText = "O'RTACHA";
 
     }
-
-
 
     return `
 
@@ -9632,8 +8727,6 @@ function renderPartsCardsGrid(results) {
 
 }
 
-
-
 // 4. TOP 3 STUDENT PODIUM
 
 function renderStudentPodium(results, users) {
@@ -9642,13 +8735,9 @@ function renderStudentPodium(results, users) {
 
   if (!container) return;
 
-
-
   const studentStats = [];
 
   const uniqueNames = new Set(results.map(r => r.studentName || r.login));
-
-
 
   uniqueNames.forEach(name => {
 
@@ -9664,11 +8753,7 @@ function renderStudentPodium(results, users) {
 
   });
 
-
-
   studentStats.sort((a, b) => b.avg - a.avg || b.count - a.count);
-
-
 
   if (studentStats.length === 0) {
 
@@ -9678,15 +8763,11 @@ function renderStudentPodium(results, users) {
 
   }
 
-
-
   const p1 = studentStats[0];
 
   const p2 = studentStats.length > 1 ? studentStats[1] : null;
 
   const p3 = studentStats.length > 2 ? studentStats[2] : null;
-
-
 
   container.innerHTML = `
 
@@ -9714,8 +8795,6 @@ function renderStudentPodium(results, users) {
 
     ` : '<div class="podium-col" style="visibility:hidden;"></div>'}
 
-
-
     <!-- 1st Place (Center & Highest) -->
 
     <div class="podium-col">
@@ -9737,8 +8816,6 @@ function renderStudentPodium(results, users) {
       <div class="podium-block podium-1">1</div>
 
     </div>
-
-
 
     <!-- 3rd Place -->
 
@@ -9768,8 +8845,6 @@ function renderStudentPodium(results, users) {
 
 }
 
-
-
 // 5. MODERN GROUP CARDS
 
 function renderGroupPerformanceCards(results, users) {
@@ -9778,15 +8853,11 @@ function renderGroupPerformanceCards(results, users) {
 
   if (!container) return;
 
-
-
   const groupsSet = new Set();
 
   users.forEach(u => groupsSet.add(u.group || 'Guruhsiz'));
 
   results.forEach(r => groupsSet.add(r.studentGroup || 'Guruhsiz'));
-
-
 
   const groups = Array.from(groupsSet);
 
@@ -9797,8 +8868,6 @@ function renderGroupPerformanceCards(results, users) {
     return;
 
   }
-
-
 
   const groupStats = groups.map(g => {
 
@@ -9818,17 +8887,11 @@ function renderGroupPerformanceCards(results, users) {
 
     const passRate = count > 0 ? Math.round((passCount / count) * 100) : 0;
 
-
-
     return { name: g, userCount: groupUsers.length, testCount: count, avg, passRate, passCount };
 
   });
 
-
-
   groupStats.sort((a, b) => b.avg - a.avg || b.testCount - a.testCount);
-
-
 
   container.innerHTML = groupStats.map(gs => {
 
@@ -9837,8 +8900,6 @@ function renderGroupPerformanceCards(results, users) {
     if (gs.avg < 70) color = '#ef4444';
 
     else if (gs.avg < 82.5) color = '#f59e0b';
-
-
 
     return `
 
@@ -9880,8 +8941,6 @@ function renderGroupPerformanceCards(results, users) {
 
 }
 
-
-
 // 6. DONUT CHART
 
 function drawDonutChart(results) {
@@ -9893,8 +8952,6 @@ function drawDonutChart(results) {
   const centerTextEl = document.getElementById('donutTotalText');
 
   if (!canvas) return;
-
-
 
   const ctx = canvas.getContext('2d');
 
@@ -9912,17 +8969,11 @@ function drawDonutChart(results) {
 
   ctx.scale(dpr, dpr);
 
-
-
   ctx.clearRect(0, 0, size, size);
-
-
 
   const total = results.length;
 
   if (centerTextEl) centerTextEl.textContent = total;
-
-
 
   const categories = [
 
@@ -9935,8 +8986,6 @@ function drawDonutChart(results) {
     { label: "Qayta tayyorlanish (<70%)", min: 0, max: 69.99, color: '#ef4444', count: 0 }
 
   ];
-
-
 
   results.forEach(r => {
 
@@ -9956,8 +9005,6 @@ function drawDonutChart(results) {
 
   });
 
-
-
   const cx = size / 2;
 
   const cy = size / 2;
@@ -9965,8 +9012,6 @@ function drawDonutChart(results) {
   const outerR = 76;
 
   const innerR = 50;
-
-
 
   if (total === 0) {
 
@@ -9990,8 +9035,6 @@ function drawDonutChart(results) {
 
   }
 
-
-
   let startAngle = -Math.PI / 2;
 
   categories.forEach(cat => {
@@ -10001,8 +9044,6 @@ function drawDonutChart(results) {
     const sliceAngle = (cat.count / total) * Math.PI * 2;
 
     const endAngle = startAngle + sliceAngle;
-
-
 
     ctx.save();
 
@@ -10024,21 +9065,15 @@ function drawDonutChart(results) {
 
     ctx.restore();
 
-
-
     ctx.strokeStyle = '#151e32';
 
     ctx.lineWidth = 2;
 
     ctx.stroke();
 
-
-
     startAngle = endAngle;
 
   });
-
-
 
   if (legendEl) {
 
@@ -10070,8 +9105,6 @@ function drawDonutChart(results) {
 
 }
 
-
-
 // 7. PROGRESS TREND AREA CURVE
 
 function drawTrendChart(results) {
@@ -10084,15 +9117,11 @@ function drawTrendChart(results) {
 
   if (!container) return;
 
-
-
   const rect = container.getBoundingClientRect();
 
   const width = rect.width || 750;
 
   const height = 230;
-
-
 
   const dpr = window.devicePixelRatio || 1;
 
@@ -10104,13 +9133,9 @@ function drawTrendChart(results) {
 
   canvas.style.height = height + 'px';
 
-
-
   const ctx = canvas.getContext('2d');
 
   ctx.scale(dpr, dpr);
-
-
 
   const padLeft = 45;
 
@@ -10124,8 +9149,6 @@ function drawTrendChart(results) {
 
   const plotHeight = height - padTop - padBottom;
 
-
-
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
 
   ctx.lineWidth = 1;
@@ -10137,8 +9160,6 @@ function drawTrendChart(results) {
   ctx.textAlign = 'right';
 
   ctx.textBaseline = 'middle';
-
-
 
   [0, 50, 100].forEach(val => {
 
@@ -10155,8 +9176,6 @@ function drawTrendChart(results) {
     ctx.fillText(val + '%', padLeft - 6, y);
 
   });
-
-
 
   const passY = padTop + plotHeight - (82.5 / 100) * plotHeight;
 
@@ -10184,8 +9203,6 @@ function drawTrendChart(results) {
 
   ctx.restore();
 
-
-
   if (results.length === 0) {
 
     ctx.fillStyle = '#64748b';
@@ -10200,13 +9217,9 @@ function drawTrendChart(results) {
 
   }
 
-
-
   const recent = results.slice(-15);
 
   const stepX = recent.length > 1 ? plotWidth / (recent.length - 1) : plotWidth / 2;
-
-
 
   const points = recent.map((r, idx) => {
 
@@ -10218,8 +9231,6 @@ function drawTrendChart(results) {
 
   });
 
-
-
   if (points.length > 1) {
 
     const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop + plotHeight);
@@ -10228,15 +9239,11 @@ function drawTrendChart(results) {
 
     areaGrad.addColorStop(1, 'rgba(0, 118, 206, 0.0)');
 
-
-
     ctx.beginPath();
 
     ctx.moveTo(points[0].x, padTop + plotHeight);
 
     ctx.lineTo(points[0].x, points[0].y);
-
-
 
     for (let i = 0; i < points.length - 1; i++) {
 
@@ -10250,8 +9257,6 @@ function drawTrendChart(results) {
 
     }
 
-
-
     ctx.lineTo(points[points.length - 1].x, padTop + plotHeight);
 
     ctx.closePath();
@@ -10259,8 +9264,6 @@ function drawTrendChart(results) {
     ctx.fillStyle = areaGrad;
 
     ctx.fill();
-
-
 
     ctx.save();
 
@@ -10294,8 +9297,6 @@ function drawTrendChart(results) {
 
   }
 
-
-
   points.forEach((pt, i) => {
 
     ctx.save();
@@ -10320,8 +9321,6 @@ function drawTrendChart(results) {
 
     ctx.restore();
 
-
-
     ctx.fillStyle = pt.percent >= 82.5 ? '#10b981' : '#f59e0b';
 
     ctx.font = 'bold 10px sans-serif';
@@ -10329,8 +9328,6 @@ function drawTrendChart(results) {
     ctx.textAlign = 'center';
 
     ctx.fillText(pt.percent + '%', pt.x, pt.y - 8);
-
-
 
     ctx.fillStyle = '#64748b';
 
