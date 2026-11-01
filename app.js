@@ -1,4 +1,143 @@
 
+// IN-QUIZ INTERACTIVE DRAG & DROP MATCHING RENDERER
+function renderInQuizDragDrop(q, idx, isChecked, isReview) {
+  const listEl = document.getElementById('optionsList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  if (!state.userAnswers[idx] || typeof state.userAnswers[idx] !== 'object' || Array.isArray(state.userAnswers[idx])) {
+    state.userAnswers[idx] = {};
+  }
+  const userMatches = state.userAnswers[idx];
+
+  const allTerms = q.pairs.map(p => p.term);
+  const assignedValues = Object.values(userMatches);
+  const availableTerms = allTerms.filter(t => !assignedValues.includes(t));
+
+  const ddWrapper = document.createElement('div');
+  ddWrapper.className = 'in-quiz-dd-container';
+
+  // 1. Terms Pool
+  const poolTitle = document.createElement('div');
+  poolTitle.className = 'in-quiz-dd-pool-title';
+  poolTitle.innerHTML = `📌 <b>Variantlar (Tanlash uchun bosing):</b> ${!isChecked ? '<span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">Variantni tanlab, so\'ng kerakli ta\'rif yonidagi katakka bosing</span>' : ''}`;
+  ddWrapper.appendChild(poolTitle);
+
+  const poolBox = document.createElement('div');
+  poolBox.className = 'in-quiz-dd-pool';
+
+  if (!isChecked) {
+    if (availableTerms.length === 0) {
+      poolBox.innerHTML = '<span style="color:var(--text-muted); font-size:0.88rem; padding:6px 0;">✅ Barcha variantlar kataklarga joylashtirildi</span>';
+    } else {
+      availableTerms.forEach(t => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = `in-quiz-term-chip ${state.activeInQuizTerm === t ? 'selected' : ''}`;
+        chip.textContent = t;
+        chip.onclick = () => {
+          state.activeInQuizTerm = (state.activeInQuizTerm === t) ? null : t;
+          renderCurrentQuestion();
+          SoundEffects.playClick();
+        };
+        poolBox.appendChild(chip);
+      });
+    }
+  } else {
+    poolBox.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Test tekshirilgan. Natijalar quyidagi kataklarda ko\'rsatilgan:</span>';
+  }
+  ddWrapper.appendChild(poolBox);
+
+  // 2. Definition Rows
+  const slotsContainer = document.createElement('div');
+  slotsContainer.className = 'in-quiz-dd-slots';
+
+  q.pairs.forEach((pair, sIdx) => {
+    const assignedVal = userMatches[sIdx];
+    const isCorrect = (assignedVal === pair.term);
+
+    const row = document.createElement('div');
+    row.className = 'in-quiz-dd-row';
+    if (isChecked) {
+      row.classList.add(isCorrect ? 'slot-correct' : 'slot-wrong');
+    }
+
+    const slotBox = document.createElement('div');
+    slotBox.className = 'in-quiz-slot-box';
+
+    if (assignedVal) {
+      slotBox.innerHTML = `
+        <span class="in-quiz-assigned-val">${escapeHtml(assignedVal)}</span>
+        ${!isChecked ? `<button type="button" class="btn-remove-slot" title="O'chirish">✕</button>` : ''}
+      `;
+      if (!isChecked) {
+        const removeBtn = slotBox.querySelector('.btn-remove-slot');
+        if (removeBtn) {
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            delete userMatches[sIdx];
+            renderCurrentQuestion();
+            SoundEffects.playClick();
+          };
+        }
+      }
+    } else {
+      slotBox.innerHTML = `<span class="in-quiz-slot-empty">${state.activeInQuizTerm ? '👇 Shu yerga bosing' : 'Bo\'sh katak'}</span>`;
+    }
+
+    if (!isChecked) {
+      slotBox.onclick = () => {
+        if (state.activeInQuizTerm) {
+          userMatches[sIdx] = state.activeInQuizTerm;
+          state.activeInQuizTerm = null;
+          renderCurrentQuestion();
+          SoundEffects.playClick();
+        }
+      };
+    }
+
+    const defBox = document.createElement('div');
+    defBox.className = 'in-quiz-def-box';
+    let statusBadge = '';
+    if (isChecked) {
+      statusBadge = isCorrect 
+        ? `<div style="color:#10b981; font-weight:800; font-size:0.85rem; margin-top:4px;">✅ To'g'ri moslashtirildi</div>`
+        : `<div style="color:#ef4444; font-weight:800; font-size:0.85rem; margin-top:4px;">❌ To'g'ri javob: <u>${escapeHtml(pair.term)}</u></div>`;
+    }
+    defBox.innerHTML = `<div class="in-quiz-def-text">${escapeHtml(pair.def)}</div>${statusBadge}`;
+
+    row.appendChild(slotBox);
+    row.appendChild(defBox);
+    slotsContainer.appendChild(row);
+  });
+
+  ddWrapper.appendChild(slotsContainer);
+  listEl.appendChild(ddWrapper);
+
+  // Explanation Box for review / practice mode
+  const expBox = document.getElementById('explanationBox');
+  const expText = document.getElementById('explanationText');
+  if (isChecked && (isReview || state.mode === 'practice')) {
+    expBox.classList.add('visible');
+    let totalPairs = q.pairs.length;
+    let correctCount = 0;
+    q.pairs.forEach((p, sIdx) => {
+      if (userMatches[sIdx] === p.term) correctCount++;
+    });
+    const allCorrect = (correctCount === totalPairs);
+    const pairsList = q.pairs.map(p => `• <b>${escapeHtml(p.term)}</b> ➔ ${escapeHtml(p.def)}`).join('<br>');
+    expText.innerHTML = `
+      <div style="color:${allCorrect ? '#10b981' : '#ef4444'}; font-weight:800; margin-bottom:8px;">
+        ${allCorrect ? '✅ Barcha mosliklar to\'g\'ri topildi!' : `❌ Natija: ${correctCount} / ${totalPairs} ta to'g'ri`}
+      </div>
+      <b>To'g'ri mosliklar ro'yxati:</b><br>${pairsList}
+    `;
+  } else if (expBox) {
+    expBox.classList.remove('visible');
+  }
+}
+
+
 function shuffleArray(array) {
   if (!Array.isArray(array)) return [];
   const arr = array.slice();
@@ -1830,35 +1969,35 @@ const state = {
 
 const PARTS_CONFIG = [
 
-  { key: 'Part 5.docx', title: 'Part 5', count: 49, desc: 'SNMP, Port Security, Private IP, RSTP, REST API asoslari' },
+  { key: 'Part 5.docx', title: 'Part 5', count: 50, desc: 'SNMP, Port Security, Private IP, RSTP, REST API asoslari + Drag & Drop' },
 
-  { key: 'Part 6.docx', title: 'Part 6', count: 32, desc: 'Switching, MAC address table, Static Route, VTP asoslari' },
+  { key: 'Part 6.docx', title: 'Part 6', count: 33, desc: 'Switching, MAC address table, Static Route, VTP asoslari + Drag & Drop' },
 
-  { key: 'Part 7.docx', title: 'Part 7', count: 48, desc: 'VLAN, Trunking (802.1Q), Inter-VLAN Routing, DHCP Relay' },
+  { key: 'Part 7.docx', title: 'Part 7', count: 50, desc: 'VLAN, Trunking (802.1Q), Inter-VLAN Routing, DHCP Relay + Drag & Drop' },
 
-  { key: 'Part 8.docx', title: 'Part 8', count: 72, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari' },
+  { key: 'Part 8.docx', title: 'Part 8', count: 73, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari + Drag & Drop' },
 
-  { key: 'Part 9.docx', title: 'Part 9', count: 95, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR' },
+  { key: 'Part 9.docx', title: 'Part 9', count: 98, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR + Drag & Drop' },
 
-  { key: 'Part 10.docx', title: 'Part 10', count: 75, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency' },
+  { key: 'Part 10.docx', title: 'Part 10', count: 80, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency + Drag & Drop' },
 
-  { key: 'Part 11.docx', title: 'Part 11', count: 65, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks' },
+  { key: 'Part 11.docx', title: 'Part 11', count: 71, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks + Drag & Drop' },
 
-  { key: 'Part 12.docx', title: 'Part 12', count: 94, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari' },
+  { key: 'Part 12.docx', title: 'Part 12', count: 98, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari + Drag & Drop' },
 
-  { key: 'Part 13.docx', title: 'Part 13', count: 84, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect' },
+  { key: 'Part 13.docx', title: 'Part 13', count: 86, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect + Drag & Drop' },
 
-  { key: 'Part 14.docx', title: 'Part 14', count: 90, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security' },
+  { key: 'Part 14.docx', title: 'Part 14', count: 92, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security + Drag & Drop' },
 
-  { key: 'Part 15.docx', title: 'Part 15', count: 112, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya' },
+  { key: 'Part 15.docx', title: 'Part 15', count: 113, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya + Drag & Drop' },
 
-  { key: 'Part 16.docx', title: 'Part 16', count: 72, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP)' },
+  { key: 'Part 16.docx', title: 'Part 16', count: 73, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP) + Drag & Drop' },
 
   { key: 'new questions.docx', title: 'New Questions', count: 279, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
 
-  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 29, desc: 'Cisco rasmiy interaktiv Drag & Drop moslashtirish mashqlari (29 ta)', isDragDrop: true },
+  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 29, desc: 'Cisco rasmiy barcha 29 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
 
-  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1193, desc: 'Barcha 1193 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
+  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1222, desc: 'Barcha 1222 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
 
 ];
 
@@ -4357,9 +4496,12 @@ function renderPartsGrid() {
 function startPartQuiz(part) {
 
   if (part.isDragDrop || part.key === 'dragdrop') {
-    switchTab('study');
+    switchMainTab('study');
     if (typeof switchStudyView === 'function') {
       switchStudyView('dragdrop');
+    }
+    if (typeof initDragDropModule === 'function') {
+      initDragDropModule();
     }
     return;
   }
@@ -4571,11 +4713,20 @@ function renderPalette() {
 
     }
 
-    const userAns = state.userAnswers[i] || [];
+    const userAns = state.userAnswers[i] || (q.isDragDrop ? {} : []);
 
-    const hasAnswer = userAns.length > 0;
+    const hasAnswer = q.isDragDrop ? Object.keys(userAns).length > 0 : (Array.isArray(userAns) && userAns.length > 0);
 
     const isChecked = !!state.checkedQuestions[i];
+
+    let isCorrect = false;
+    if (q.isDragDrop) {
+      let matches = 0;
+      q.pairs.forEach((p, sIdx) => { if (userAns[sIdx] === p.term) matches++; });
+      isCorrect = (matches === q.pairs.length);
+    } else if (Array.isArray(userAns)) {
+      isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
+    }
 
     if (state.isQuizFinished) {
 
@@ -4588,8 +4739,6 @@ function renderPalette() {
         btn.title = `${i + 1}-savol: Javob berilmagan`;
 
       } else {
-
-        const isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
 
         if (isCorrect) {
 
@@ -4797,6 +4946,11 @@ function renderCurrentQuestion() {
   const isReview = state.isReviewMode || state.isQuizFinished;
 
   const isChecked = isReview || !!state.checkedQuestions[idx];
+
+  if (q.isDragDrop) {
+    renderInQuizDragDrop(q, idx, isChecked, isReview);
+    return;
+  }
 
   const userAns = state.userAnswers[idx] || [];
 
@@ -5083,6 +5237,22 @@ function checkCurrentAnswer() {
   const idx = state.currentIndex;
 
   const q = state.quizQuestions[idx];
+
+  if (q.isDragDrop) {
+    const userMatches = state.userAnswers[idx] || {};
+    if (Object.keys(userMatches).length === 0) return;
+    state.checkedQuestions[idx] = true;
+    let correctCount = 0;
+    q.pairs.forEach((p, sIdx) => {
+      if (userMatches[sIdx] === p.term) correctCount++;
+    });
+    const isCorrect = (correctCount === q.pairs.length);
+    if (isCorrect) SoundEffects.playCorrect();
+    else SoundEffects.playWrong();
+    renderCurrentQuestion();
+    renderPalette();
+    return;
+  }
 
   const userAns = state.userAnswers[idx] || [];
 
