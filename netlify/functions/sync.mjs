@@ -1,7 +1,6 @@
-const { getStore } = require('@netlify/blobs');
+import { getStore } from '@netlify/blobs';
 
-exports.handler = async (event, context) => {
-  // CORS Headers allowing cross-origin requests
+export default async (req, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -9,8 +8,8 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+  if (req.method === 'OPTIONS') {
+    return new Response('', { status: 200, headers });
   }
 
   try {
@@ -19,25 +18,22 @@ exports.handler = async (event, context) => {
       consistency: 'strong'
     });
 
-    const key = (event.queryStringParameters && event.queryStringParameters.key) || 'users';
+    const url = new URL(req.url);
+    const key = url.searchParams.get('key') || 'users';
 
-    // GET: Retrieve data
-    if (event.httpMethod === 'GET') {
+    // GET Request: Retrieve data
+    if (req.method === 'GET') {
       const data = await store.get(key, { type: 'json' });
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(data || [])
-      };
+      return new Response(JSON.stringify(data || []), { status: 200, headers });
     }
 
-    // POST: Save or mutate data
-    if (event.httpMethod === 'POST') {
-      const payload = JSON.parse(event.body || '{}');
+    // POST Request: Save or mutate data
+    if (req.method === 'POST') {
+      const payload = await req.json().catch(() => ({}));
 
       if (payload.action === 'save_all') {
         await store.setJSON(key, payload.data || []);
-        return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
       }
 
       if (payload.action === 'upsert_user') {
@@ -50,32 +46,25 @@ exports.handler = async (event, context) => {
           users.push(user);
         }
         await store.setJSON('users', users);
-        return { statusCode: 200, headers, body: JSON.stringify({ success: true, count: users.length }) };
+        return new Response(JSON.stringify({ success: true, count: users.length }), { status: 200, headers });
       }
 
       if (payload.action === 'append') {
         let items = (await store.get(key, { type: 'json' })) || [];
         if (payload.item) {
           items.push(payload.item);
-          // keep last 1000 items
           if (items.length > 1000) items = items.slice(-1000);
           await store.setJSON(key, items);
         }
-        return { statusCode: 200, headers, body: JSON.stringify({ success: true, total: items.length }) };
+        return new Response(JSON.stringify({ success: true, total: items.length }), { status: 200, headers });
       }
 
-      // Default: direct JSON save
       await store.setJSON(key, payload.data !== undefined ? payload.data : payload);
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers });
     }
 
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   } catch (err) {
-    console.error('Netlify Blobs sync error:', err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message || 'Internal error' })
-    };
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
   }
 };
