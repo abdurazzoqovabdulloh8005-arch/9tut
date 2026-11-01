@@ -1,4 +1,136 @@
 
+let selectedStudentChatImage = null;
+let selectedAdminChatImage = null;
+
+function compressImageFile(file, maxWidth, maxHeight, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let w = img.width;
+      let h = img.height;
+      if (w > maxWidth || h > maxHeight) {
+        const ratio = Math.min(maxWidth / w, maxHeight / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleStudentImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImageFile(file, 900, 900, function(base64) {
+    selectedStudentChatImage = base64;
+    const preview = document.getElementById('studentChatImgPreview');
+    const thumb = document.getElementById('studentPreviewThumb');
+    if (preview && thumb) {
+      thumb.src = base64;
+      preview.style.display = 'flex';
+    }
+  });
+}
+
+function cancelStudentImageAttach() {
+  selectedStudentChatImage = null;
+  const input = document.getElementById('studentChatImageInput');
+  if (input) input.value = '';
+  const preview = document.getElementById('studentChatImgPreview');
+  if (preview) preview.style.display = 'none';
+}
+
+function handleAdminImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImageFile(file, 900, 900, function(base64) {
+    selectedAdminChatImage = base64;
+    const preview = document.getElementById('adminChatImgPreview');
+    const thumb = document.getElementById('adminPreviewThumb');
+    if (preview && thumb) {
+      thumb.src = base64;
+      preview.style.display = 'flex';
+    }
+  });
+}
+
+function cancelAdminImageAttach() {
+  selectedAdminChatImage = null;
+  const input = document.getElementById('adminChatImageInput');
+  if (input) input.value = '';
+  const preview = document.getElementById('adminChatImgPreview');
+  if (preview) preview.style.display = 'none';
+}
+
+
+// UNIVERSAL QUESTION VALIDATION HELPERS (Handles both Multi-Choice & Drag & Drop)
+function isQuestionAnswered(q, uAns) {
+  if (!uAns) return false;
+  if (q && q.isDragDrop) {
+    return typeof uAns === 'object' && !Array.isArray(uAns) && Object.keys(uAns).length > 0;
+  }
+  return Array.isArray(uAns) && uAns.length > 0;
+}
+
+function isQuestionCorrect(q, uAns) {
+  if (!q || !isQuestionAnswered(q, uAns)) return false;
+  if (q.isDragDrop) {
+    if (!Array.isArray(q.pairs)) return false;
+    let matches = 0;
+    q.pairs.forEach((p, sIdx) => {
+      if (uAns[sIdx] === p.term) matches++;
+    });
+    return matches === q.pairs.length;
+  }
+  if (!Array.isArray(uAns) || !Array.isArray(q.answer)) return false;
+  return arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
+}
+
+// SMART UZBEK TRANSLATOR FOR CISCO EXPLANATIONS
+function translateExplanationToUzbek(exp, q) {
+  if (!exp) return "Ushbu savol uchun qo'shimcha tushuntirish mavjud emas.";
+  
+  let uz = exp;
+  // Replace broken encoding symbols
+  uz = uz.replace(/[\ufffd]/g, ' - ');
+  
+  // Common CCNA technical terminology translations into clear Uzbek
+  const dict = [
+    [/Enabling the PortFast feature causes a switch or a trunk port to enter the STP forwarding-state immediately or upon a linkup event, thus bypassing the listening and learning states\./gi,
+     "PortFast funksiyasini yoqish orqali port darhol STP Forwarding (uzatish) holatiga o'tadi va Listening hamda Learning holatlarini aylanib o'tadi (bypass qiladi)."],
+    [/The switch with lowest Bridge Priority would become the root bridge for that VLAN\./gi,
+     "Eng past Bridge Priority (ustunlik) qiymatiga ega bo'lgan kommutator ushbu VLAN uchun Root Bridge (asosiy kommutator) bo'ladi."],
+    [/In this case Switch (\d+) has the lowest Bridge Priority of (\d+) so it will become the root bridge\./gi,
+     "Bu holatda Switch $1 eng kichik Bridge Priority ($2) qiymatiga ega, shuning uchun u Root Bridge bo'ladi."],
+    [/When you enable LAG or make any changes to the LAG configuration, you must immediately reboot the controller\./gi,
+     "WLC da LAG yoqilganda yoki o'zgartirilganda, kontroller darhol qayta yuklanishi (reboot qilinishi) shart."],
+    [/default gateway/gi, "asosiy shlyuz (default gateway)"],
+    [/broadcast domain/gi, "eshittirish domeni (broadcast domain)"],
+    [/collision domain/gi, "to'qnashuv domeni (collision domain)"],
+    [/root bridge/gi, "Root Bridge (asosiy kommutator)"],
+    [/forwarding state/gi, "Forwarding (uzatish) holati"],
+    [/blocking state/gi, "Blocking (bloklash) holati"],
+    [/listening state/gi, "Listening (tinglash) holati"],
+    [/learning state/gi, "Learning (o'rganish) holati"],
+    [/administrative distance/gi, "Ma'muriy masofa (Administrative Distance)"]
+  ];
+
+  dict.forEach(([pattern, repl]) => {
+    uz = uz.replace(pattern, repl);
+  });
+
+  return uz;
+}
+
+
 // IN-QUIZ INTERACTIVE DRAG & DROP MATCHING RENDERER
 function renderInQuizDragDrop(q, idx, isChecked, isReview) {
   const listEl = document.getElementById('optionsList');
@@ -149,10 +281,7 @@ function shuffleArray(array) {
 }
 
 function scrollToQuestionTop() {
-  const target = document.getElementById('quizTestingArea') || document.getElementById('questionCard');
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // CCNA Professional Offline Quiz & Practical Trainer
@@ -3060,8 +3189,8 @@ function saveChatMessages(msgs) {
   } catch(e) {}
 }
 
-function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text) {
-  if (!text || !text.trim()) return;
+function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text, imageData) {
+  if ((!text || !text.trim()) && !imageData) return;
   const msgs = getChatMessages();
   const newMsg = {
     id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -3070,7 +3199,8 @@ function sendChatMessage(fromLogin, fromName, fromRole, toLogin, toName, text) {
     fromRole: fromRole,
     toLogin: toLogin.toLowerCase(),
     toName: toName,
-    text: text.trim(),
+    text: (text || '').trim(),
+    image: imageData || null,
     timestamp: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
     date: new Date().toLocaleDateString('uz-UZ'),
     isoTime: new Date().toISOString(),
@@ -3127,7 +3257,8 @@ function renderStudentChatMessages() {
     return `
       <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
         <div class="chat-bubble-content">
-          ${escapeHtml(m.text)}
+          ${m.text ? `<div>${escapeHtml(m.text)}</div>` : ''}
+            ${m.image ? `<div style="margin-top:6px;"><img src="${m.image}" class="chat-attached-image" onclick="openImageModal(this.src)" alt="Chat rasm" title="Kattalashtirish uchun bosing"></div>` : ''}
         </div>
         <div class="chat-bubble-meta">
           ${isMe ? 'Siz' : '👑 Abdulloh'} • ${m.timestamp}
@@ -3141,9 +3272,9 @@ function renderStudentChatMessages() {
 
 function handleSendStudentMessage() {
   const input = document.getElementById('studentChatInput');
-  if (!input || !state.currentUser) return;
-  const text = input.value.trim();
-  if (!text) return;
+  if (!state.currentUser) return;
+  const text = input ? input.value.trim() : '';
+  if (!text && !selectedStudentChatImage) return;
 
   sendChatMessage(
     state.currentUser.login,
@@ -3151,10 +3282,12 @@ function handleSendStudentMessage() {
     'student',
     'abdulloh',
     'Abdulloh',
-    text
+    text,
+    selectedStudentChatImage
   );
 
-  input.value = '';
+  if (input) input.value = '';
+  cancelStudentImageAttach();
   renderStudentChatMessages();
 }
 
@@ -3338,7 +3471,8 @@ function renderAdminActiveChatMessages() {
     return `
       <div class="chat-bubble-row ${isMe ? 'sent' : 'received'}">
         <div class="chat-bubble-content">
-          ${escapeHtml(m.text)}
+          ${m.text ? `<div>${escapeHtml(m.text)}</div>` : ''}
+            ${m.image ? `<div style="margin-top:6px;"><img src="${m.image}" class="chat-attached-image" onclick="openImageModal(this.src)" alt="Chat rasm" title="Kattalashtirish uchun bosing"></div>` : ''}
         </div>
         <div class="chat-bubble-meta">
           ${isMe ? '👑 Siz (Admin)' : escapeHtml(m.fromName)} • ${m.timestamp}
@@ -3353,9 +3487,8 @@ function renderAdminActiveChatMessages() {
 function handleSendAdminReply() {
   if (!activeAdminChatUser) return;
   const input = document.getElementById('adminChatReplyInput');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text) return;
+  const text = input ? input.value.trim() : '';
+  if (!text && !selectedAdminChatImage) return;
 
   sendChatMessage(
     'abdulloh',
@@ -3363,10 +3496,12 @@ function handleSendAdminReply() {
     'admin',
     activeAdminChatUser.login,
     activeAdminChatUser.name,
-    text
+    text,
+    selectedAdminChatImage
   );
 
-  input.value = '';
+  if (input) input.value = '';
+  cancelAdminImageAttach();
   renderAdminActiveChatMessages();
   renderAdminChatConversations();
 }
@@ -4762,8 +4897,6 @@ function renderPalette() {
 
       if (isChecked && state.mode === 'practice') {
 
-        const isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
-
         if (isCorrect) {
 
           btn.classList.add('correct');
@@ -4824,11 +4957,11 @@ function renderPalette() {
 
     state.quizQuestions.forEach((q, idx) => {
 
-      const uAns = state.userAnswers[idx] || [];
+      const uAns = state.userAnswers[idx];
 
-      if (uAns.length === 0) unansCount++;
+      if (!isQuestionAnswered(q, uAns)) unansCount++;
 
-      else if (arraysEqual(uAns.slice().sort(), q.answer.slice().sort())) correctCount++;
+      else if (isQuestionCorrect(q, uAns)) correctCount++;
 
       else wrongCount++;
 
@@ -4937,7 +5070,8 @@ function renderCurrentQuestion() {
 
   }
 
-  document.getElementById('questionText').innerHTML = escapeHtml(q.question) + multiNotice + diagramHtml;
+  const cleanQuestionText = (q.question || '').replace(/[\ufffd]/g, ' - ');
+document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText) + multiNotice + diagramHtml;
 
   const listEl = document.getElementById('optionsList');
 
@@ -5094,11 +5228,12 @@ function renderCurrentQuestion() {
 
     expBox.classList.add('visible');
 
-    const ansStr = q.answer.join(', ');
+    const ansStr = Array.isArray(q.answer) ? q.answer.join(', ') : '';
 
-    const note = q.explanation ? `<br><br><b>Tushuntirish:</b><br>${escapeHtml(q.explanation)}` : '';
+    const cleanExp = (q.explanation || '').replace(/[\ufffd]/g, ' - ');
+    const uzExp = translateExplanationToUzbek(cleanExp, q);
 
-    const uStr = userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
+    const uStr = Array.isArray(userAns) && userAns.length > 0 ? userAns.join(', ') : "Javob berilmagan";
 
     const headerHtml = isReview 
 
@@ -5110,7 +5245,31 @@ function renderCurrentQuestion() {
 
       : '';
 
-    expText.innerHTML = `${headerHtml}<b>To'g'ri javob:</b> <span style="color:var(--success); font-weight:700;">${ansStr}</span>${note}`;
+    const gTranslateUrl = "https://translate.google.com/?sl=en&tl=uz&text=" + encodeURIComponent(cleanExp) + "&op=translate";
+
+    expText.innerHTML = `
+      ${headerHtml}
+      <div style="margin-bottom:10px;">
+        <b>To'g'ri javob:</b> <span style="color:#10b981; font-weight:800; font-size:1.05rem;">${ansStr}</span>
+      </div>
+      
+      <div class="exp-uz-card">
+        <div style="font-weight:700; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+          <span>🇺🇿 Tushuntirish (O'zbek tilida):</span>
+          <a href="${gTranslateUrl}" target="_blank" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">🌐 Google Tarjima</a>
+        </div>
+        <div style="font-size:0.92rem; line-height:1.6; color:var(--text-main);">
+          ${escapeHtml(uzExp)}
+        </div>
+      </div>
+
+      <details style="margin-top:10px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
+        <summary>🇬🇧 Asl inglizcha tushuntirish (Original English)</summary>
+        <div style="margin-top:6px; padding:8px 12px; background:rgba(0,0,0,0.15); border-radius:6px; line-height:1.5;">
+          ${escapeHtml(cleanExp)}
+        </div>
+      </details>
+    `;
 
   } else {
 
@@ -5238,41 +5397,26 @@ function checkCurrentAnswer() {
 
   const q = state.quizQuestions[idx];
 
-  if (q.isDragDrop) {
-    const userMatches = state.userAnswers[idx] || {};
-    if (Object.keys(userMatches).length === 0) return;
-    state.checkedQuestions[idx] = true;
-    let correctCount = 0;
-    q.pairs.forEach((p, sIdx) => {
-      if (userMatches[sIdx] === p.term) correctCount++;
-    });
-    const isCorrect = (correctCount === q.pairs.length);
-    if (isCorrect) SoundEffects.playCorrect();
-    else SoundEffects.playWrong();
-    renderCurrentQuestion();
-    renderPalette();
+  const uAns = state.userAnswers[idx];
+
+  if (!isQuestionAnswered(q, uAns)) {
+    alert("Iltimos, avval javobni tanlang yoki kataklarga joylashtiring!");
     return;
   }
 
-  const userAns = state.userAnswers[idx] || [];
-
-  if (userAns.length === 0) return;
-
   state.checkedQuestions[idx] = true;
 
-  const isCorrect = arraysEqual(userAns.sort(), q.answer.slice().sort());
+  const isCorrect = isQuestionCorrect(q, uAns);
 
   if (isCorrect) {
-
     SoundEffects.playCorrect();
-
   } else {
-
     SoundEffects.playWrong();
-
   }
 
   renderCurrentQuestion();
+
+  renderPalette();
 
 }
 
@@ -5284,9 +5428,9 @@ function nextQuestion() {
 
     for (let i = state.currentIndex + 1; i < state.quizQuestions.length; i++) {
 
-      const uAns = state.userAnswers[i] || [];
+      const uAns = state.userAnswers[i];
 
-      if (!arraysEqual(uAns.slice().sort(), state.quizQuestions[i].answer.slice().sort())) {
+      if (!isQuestionCorrect(state.quizQuestions[i], uAns)) {
 
         nextWrong = i;
 
@@ -5354,9 +5498,9 @@ function prevQuestion() {
 
     for (let i = state.currentIndex - 1; i >= 0; i--) {
 
-      const uAns = state.userAnswers[i] || [];
+      const uAns = state.userAnswers[i];
 
-      if (!arraysEqual(uAns.slice().sort(), state.quizQuestions[i].answer.slice().sort())) {
+      if (!isQuestionCorrect(state.quizQuestions[i], uAns)) {
 
         prevWrong = i;
 
@@ -5412,9 +5556,7 @@ function openQuizReviewMode(onlyWrong = false, targetIndex = null) {
 
     const firstWrongIdx = state.quizQuestions.findIndex((q, idx) => {
 
-      const uAns = state.userAnswers[idx] || [];
-
-      return !arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
+      return !isQuestionCorrect(q, state.userAnswers[idx]);
 
     });
 
@@ -5702,13 +5844,13 @@ function submitFinalExam() {
 
   state.quizQuestions.forEach((q, idx) => {
 
-    const uAns = state.userAnswers[idx] || [];
+    const uAns = state.userAnswers[idx];
 
-    if (uAns.length === 0) {
+    if (!isQuestionAnswered(q, uAns)) {
 
       unansCount++;
 
-    } else if (arraysEqual(uAns.sort(), q.answer.slice().sort())) {
+    } else if (isQuestionCorrect(q, uAns)) {
 
       correctCount++;
 
