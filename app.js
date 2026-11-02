@@ -196,6 +196,51 @@ const CloudSync = {
     return getRegisteredUsers();
   },
 
+  // Pull cloud quiz results and merge into state.results
+  async syncResults() {
+    if (!this.isAvailable()) return state.results || [];
+    try {
+      const cloudResults = await this.get('results');
+      if (Array.isArray(cloudResults)) {
+        const localRaw = localStorage.getItem('ccna_results');
+        const localResults = localRaw ? JSON.parse(localRaw) : [];
+        const resultMap = new Map();
+
+        localResults.forEach(r => {
+          if (!r) return;
+          const k = r.id || `${r.studentName}_${r.timestamp}_${r.percent}`;
+          resultMap.set(k, r);
+        });
+
+        cloudResults.forEach(r => {
+          if (!r) return;
+          const k = r.id || `${r.studentName}_${r.timestamp}_${r.percent}`;
+          resultMap.set(k, r);
+        });
+
+        const merged = Array.from(resultMap.values()).sort((a,b) => {
+          const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return tb - ta;
+        });
+
+        state.results = merged;
+        localStorage.setItem('ccna_results', JSON.stringify(merged));
+
+        // If local had unsynced results, seed the cloud
+        if (merged.length > cloudResults.length) {
+          this.saveAll('results', merged);
+        }
+        return merged;
+      } else if (state.results && state.results.length > 0) {
+        this.saveAll('results', state.results);
+      }
+    } catch(e) {
+      console.warn("CloudSync syncResults error:", e);
+    }
+    return state.results || [];
+  },
+
   // Pull cloud chat and merge
   async syncChat() {
     if (!this.isAvailable()) return;
@@ -234,6 +279,7 @@ const CloudSync = {
     await Promise.allSettled([
       this.syncMasterAdmin(),
       this.syncUsers(),
+      this.syncResults(),
       this.syncChat(),
       this.syncAlerts()
     ]);
@@ -2647,6 +2693,11 @@ function switchMainTab(target) {
   if (target === 'admin') {
 
     renderAdminDashboard();
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      CloudSync.syncResults().then(() => {
+        renderAdminDashboard();
+      });
+    }
 
   } else if (target === 'study') {
 
@@ -3867,15 +3918,21 @@ function startChatLiveMonitor() {
       renderAdminChatConversations();
     }
 
-    // If admin is active, also sync registered users and security alerts in background!
+    // If admin is active, also sync registered users, quiz results, and security alerts in background!
     if (state.isAdmin && typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       await CloudSync.syncUsers();
+      await CloudSync.syncResults();
       await CloudSync.syncAlerts();
       updateSecurityAlertBadge();
       const studentsTbody = document.getElementById('adminStudentsTableBody');
       const adminViewStudents = document.getElementById('adminViewStudents');
       if (studentsTbody && adminViewStudents && adminViewStudents.style.display === 'block') {
         renderAdminStudentsList();
+      }
+      const resultsTbody = document.getElementById('adminResultsTableBody');
+      const adminViewResults = document.getElementById('adminViewResults');
+      if (resultsTbody && adminViewResults && adminViewResults.style.display === 'block') {
+        renderAdminResultsList();
       }
     }
   }, 3200);
@@ -6191,9 +6248,11 @@ function submitFinalExam() {
 
   const newResult = {
 
-    id: 'res_' + Date.now(),
+    id: 'res_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
 
     studentName: student.name,
+
+    login: student.login ? student.login.toLowerCase() : '',
 
     studentGroup: student.group,
 
@@ -6224,6 +6283,10 @@ function submitFinalExam() {
   state.lastFinishedResult = newResult;
 
   localStorage.setItem('ccna_results', JSON.stringify(state.results));
+
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    CloudSync.append('results', newResult);
+  }
 
   if (isPass) {
 
@@ -7687,15 +7750,15 @@ function renderAdminStudentsList() {
 
     const roleBadge = isAdmin
 
-      ? `<span style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.35); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👑 ${u.isMaster ? 'Bosh Admin' : 'Admin'}</span>`
+      ? `<span style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.35); padding:2px 6px; border-radius:5px; font-weight:700; font-size:0.78rem;">👑 ${u.isMaster ? 'Bosh Admin' : 'Admin'}</span>`
 
-      : `<span style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.3); padding:3px 9px; border-radius:6px; font-weight:600; font-size:0.83rem; display:inline-flex; align-items:center; gap:4px;">👤 Foydalanuvchi</span>`;
+      : `<span style="background:rgba(59, 130, 246, 0.12); color:#3b82f6; border:1px solid rgba(59, 130, 246, 0.3); padding:2px 6px; border-radius:5px; font-weight:600; font-size:0.78rem;">👤 User</span>`;
 
     const statusBadge = isApproved
 
-      ? `<span style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">✅ Faol</span>`
+      ? `<span style="background:rgba(16, 185, 129, 0.12); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3); padding:2px 6px; border-radius:5px; font-weight:700; font-size:0.78rem;">✅ Faol</span>`
 
-      : `<span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.4); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">⏳ Kutilmoqda</span>`;
+      : `<span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.4); padding:2px 6px; border-radius:5px; font-weight:700; font-size:0.78rem;">⏳ Kutilmoqda</span>`;
 
     const tr = document.createElement('tr');
 
@@ -7705,37 +7768,37 @@ function renderAdminStudentsList() {
 
     }
 
+    const dev = (u.boundDevices && u.boundDevices.length > 0) ? u.boundDevices[0] : null;
+    const devShort = dev ? `${escapeHtml(dev.os || 'PC')} (${escapeHtml(dev.browser || 'Web')})` : 'Biriktirilmagan';
+    const devTooltip = dev ? `${escapeHtml(dev.name || '')} • ${escapeHtml(dev.screen || '')} • Faol: ${escapeHtml(dev.lastActive || dev.boundAt || '-')}` : 'Hali hech qaysi qurilma biriktirilmagan';
+
     tr.innerHTML = `
 
-      <td style="font-weight:700; color:var(--text-muted);">${idx + 1}</td>
+      <td style="font-weight:700; color:var(--text-muted); text-align:center;">${idx + 1}</td>
 
-      <td><b>${escapeHtml(u.name)}</b> ${u.isMaster ? '👑' : ''}</td>
+      <td style="font-weight:600;">${escapeHtml(u.name)} ${u.isMaster ? '👑' : ''}</td>
 
-      <td><code>${escapeHtml(u.login)}</code></td>
+      <td><code style="font-size:0.82rem;">${escapeHtml(u.login)}</code></td>
 
       <td>${roleBadge}</td>
 
       <td>${statusBadge}</td>
 
-      <td><span style="background:var(--bg-card); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:0.85rem;">${escapeHtml(u.group || 'Guruhsiz')}</span></td>
+      <td><span style="background:var(--bg-card); border:1px solid var(--border); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${escapeHtml(u.group || 'Guruhsiz')}</span></td>
 
-      <td style="font-size:0.85rem; color:var(--text-muted);">${u.createdAt || '-'}</td>
+      <td style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap;">${u.createdAt || '-'}</td>
 
       <td>
         ${u.isMaster 
-          ? `<span style="color:var(--warning); font-size:0.83rem; font-weight:700;">👑 Cheksiz (Admin)</span>`
-          : (u.boundDevices && u.boundDevices.length > 0
-              ? `<div style="font-size:0.82rem; font-weight:700; color:var(--text-main);">${escapeHtml(u.boundDevices[0].name)}</div>
-                 <div style="font-size:0.75rem; color:var(--text-muted);">Faol: ${escapeHtml(u.boundDevices[0].lastActive || u.boundDevices[0].boundAt || '-')}</div>`
-              : `<span style="color:var(--text-muted); font-size:0.82rem;">Biriktirilmagan (0/${u.maxDevices || 1})</span>`
-            )
+          ? `<span style="color:var(--warning); font-size:0.8rem; font-weight:700;">👑 Cheksiz</span>`
+          : `<span style="font-size:0.8rem; cursor:help; color:var(--text-main);" title="${devTooltip}">💻 ${devShort}</span>`
         }
       </td>
-      <td><b>${quizCount} ta</b></td>
+      <td style="text-align:center;"><b>${quizCount} ta</b></td>
 
-      <td>
+      <td style="text-align:center;">
 
-        <span style="font-weight:700; color:${avgScore >= 82.5 ? 'var(--success)' : (avgScore > 0 ? 'var(--warning)' : 'var(--text-muted)')};">
+        <span style="font-weight:700; font-size:0.85rem; color:${avgScore >= 82.5 ? 'var(--success)' : (avgScore > 0 ? 'var(--warning)' : 'var(--text-muted)')};">
 
           ${avgScore > 0 ? avgScore + '%' : '-'}
 
@@ -7743,15 +7806,15 @@ function renderAdminStudentsList() {
 
       </td>
 
-      <td style="text-align:center; white-space:nowrap;">
+      <td style="text-align:center; white-space:nowrap; padding:4px 6px;">
 
         ${!isApproved 
 
-          ? `<button class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; font-weight:700; padding:5px 12px; border-radius:6px;" title="Ruxsat berish (Tasdiqlash)" onclick="approveUser('${u.id}')">✅ Tasdiqlash</button>
+          ? `<button class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; font-weight:700; padding:3px 8px; border-radius:5px;" title="Ruxsat berish (Tasdiqlash)" onclick="approveUser('${u.id}')">✅ Tasdiqlash</button>
 
-             <button class="btn-action-icon btn-action-danger" style="padding:5px 10px; border-radius:6px;" title="Rad etish / O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">❌ Rad etish</button>`
+             <button class="btn-action-icon btn-action-danger" style="padding:3px 6px; border-radius:5px;" title="Rad etish / O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">❌ Rad etish</button>`
 
-          : `<button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊 Natijalar</button>
+          : `<button class="btn-action-icon" title="Test natijalarini ko'rish" onclick="filterResultsByStudent('${escapeHtml(u.name)}')">📊</button>
 
              ${u.isMaster 
 
@@ -7763,7 +7826,7 @@ function renderAdminStudentsList() {
 
                   <button class="btn-action-icon" title="Tahrirlash / Rolni o'zgartirish" onclick="openEditStudentModal('${u.id}')">✏️</button>
 
-                  <button class="btn-action-icon" title="Biriktirilgan qurilmani uzish / Yangi qurilmaga ruxsat berish" onclick="adminResetUserDevice('${u.id}')" style="color:var(--warning); font-weight:700;">📱 Uzish</button>
+                  <button class="btn-action-icon" title="Qurilmani uzish (Yangi qurilmaga ruxsat)" onclick="adminResetUserDevice('${u.id}')" style="color:var(--warning); font-weight:700;">🔌</button>
                   <button class="btn-action-icon btn-action-danger" title="O'chirish" onclick="deleteStudent('${u.id}', '${escapeHtml(u.name)}')">🗑️</button>`
 
              }`
@@ -8147,6 +8210,10 @@ function deleteSpecificResult(index) {
 
       localStorage.setItem('ccna_results', JSON.stringify(state.results));
 
+      if (typeof CloudSync !== 'undefined') {
+        CloudSync.saveAll('results', state.results);
+      }
+
       SoundEffects.playClick();
 
       renderAdminDashboard();
@@ -8314,6 +8381,10 @@ function clearAllResults() {
     state.results = [];
 
     localStorage.removeItem('ccna_results');
+
+    if (typeof CloudSync !== 'undefined') {
+      CloudSync.saveAll('results', []);
+    }
 
     renderAdminDashboard();
 
