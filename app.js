@@ -107,6 +107,20 @@ const CloudSync = {
     }
   },
 
+  async deleteUser(id, login) {
+    if (!this.isAvailable()) return false;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_user', id, login: (login || '').toLowerCase() })
+      });
+      return resp.ok;
+    } catch(e) {
+      return false;
+    }
+  },
+
   async upsertUser(user) {
     if (!this.isAvailable()) return false;
     try {
@@ -153,34 +167,28 @@ const CloudSync = {
     return getMasterAdmin();
   },
 
-  // Pull cloud users and merge into localStorage
+  // Pull cloud users (Cloud is Authoritative Source of Truth)
   async syncUsers() {
     if (!this.isAvailable()) return getRegisteredUsers();
     try {
       const cloudUsers = await this.get('users');
       if (Array.isArray(cloudUsers)) {
-        const localRaw = localStorage.getItem('ccna_registered_users');
-        const localUsers = localRaw ? JSON.parse(localRaw) : [];
-        const userMap = new Map();
-        
-        // 1. Add local users first
-        localUsers.forEach(u => {
-          if (u && u.login) userMap.set(u.login.toLowerCase(), u);
+        let deletedLogins = [];
+        try {
+          deletedLogins = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+        } catch(e) {}
+        const delSet = new Set(deletedLogins.map(x => String(x).toLowerCase()));
+
+        // Filter out any users marked as deleted in local tombstone
+        const cleanUsers = cloudUsers.filter(u => {
+          if (!u || !u.login) return false;
+          const uid = String(u.id || '').toLowerCase();
+          const ulog = String(u.login).trim().toLowerCase();
+          return !delSet.has(uid) && !delSet.has(ulog);
         });
 
-        // 2. Cloud users override/add (authoritative source)
-        cloudUsers.forEach(u => {
-          if (u && u.login) userMap.set(u.login.toLowerCase(), u);
-        });
-
-        const merged = Array.from(userMap.values());
-        localStorage.setItem('ccna_registered_users', JSON.stringify(merged));
-
-        // If local had new users not yet in cloud, seed the cloud
-        if (merged.length > cloudUsers.length) {
-          this.saveAll('users', merged);
-        }
-        return merged;
+        localStorage.setItem('ccna_registered_users', JSON.stringify(cleanUsers));
+        return cleanUsers;
       }
     } catch(e) {
       console.warn("CloudSync syncUsers error:", e);
@@ -3914,6 +3922,19 @@ function getRegisteredUsers() {
 
 function saveRegisteredUsers(users) {
   try {
+    let deletedList = [];
+    try {
+      deletedList = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+    } catch(e) {}
+    if (deletedList.length > 0) {
+      const delSet = new Set(deletedList.map(s => String(s).toLowerCase()));
+      users = users.filter(u => {
+        if (!u || !u.login) return false;
+        const uid = String(u.id || '').toLowerCase();
+        const ulog = String(u.login).trim().toLowerCase();
+        return !delSet.has(uid) && !delSet.has(ulog);
+      });
+    }
     localStorage.setItem('ccna_registered_users', JSON.stringify(users));
     if (typeof CloudSync !== 'undefined') {
       CloudSync.saveAll('users', users);
@@ -4653,6 +4674,13 @@ async function handleUserRegister() {
     createdAt: new Date().toLocaleDateString('uz-UZ')
 
   };
+
+  // If re-registering previously deleted user, clear local tombstone
+  try {
+    let delList = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+    delList = delList.filter(s => s !== newUser.login.toLowerCase() && s !== String(newUser.id));
+    localStorage.setItem('ccna_deleted_logins', JSON.stringify(delList));
+  } catch(e) {}
 
   existingUsers.push(newUser);
 
@@ -7948,19 +7976,40 @@ async function saveStudentFromModal() {
 
 }
 
-function deleteStudent(studentId, studentName) {
+async function deleteStudent(studentId, studentName) {
 
   if (confirm(`Haqiqatan ham "${studentName}" nomli talabani va uning hisobini o'chirmoqchimisiz?`)) {
 
     let users = getRegisteredUsers();
+    const targetUser = users.find(u => String(u.id) === String(studentId) || (u.name === studentName));
+    const targetLogin = targetUser ? (targetUser.login || '') : '';
 
-    users = users.filter(u => u.id !== studentId);
+    // 1. Add to local tombstone
+    try {
+      let delList = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+      if (targetLogin && !delList.includes(targetLogin.toLowerCase())) delList.push(targetLogin.toLowerCase());
+      if (studentId && !delList.includes(String(studentId))) delList.push(String(studentId));
+      localStorage.setItem('ccna_deleted_logins', JSON.stringify(delList));
+    } catch(e) {}
 
-    saveRegisteredUsers(users);
+    // 2. Remove locally
+    users = users.filter(u => {
+      if (String(u.id) === String(studentId)) return false;
+      if (targetLogin && String(u.login || '').toLowerCase() === targetLogin.toLowerCase()) return false;
+      return true;
+    });
+    localStorage.setItem('ccna_registered_users', JSON.stringify(users));
 
-    SoundEffects.playClick();
+    // 3. Immediately delete from Cloud
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      CloudSync.deleteUser(studentId, targetLogin);
+    }
 
+    try { SoundEffects.playClick(); } catch(e) {}
+
+    renderAdminStudentsList();
     renderAdminDashboard();
+    updateAdminStats();
 
   }
 
