@@ -208,19 +208,34 @@ const CloudSync = {
 
         localResults.forEach(r => {
           if (!r) return;
-          const k = r.id || `${r.studentName}_${r.timestamp}_${r.percent}`;
+          if (!r.date && r.timestamp) r.date = r.timestamp;
+          if (!r.group && r.studentGroup) r.group = r.studentGroup;
+          const k = r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`;
           resultMap.set(k, r);
         });
 
         cloudResults.forEach(r => {
           if (!r) return;
-          const k = r.id || `${r.studentName}_${r.timestamp}_${r.percent}`;
+          if (!r.date && r.timestamp) r.date = r.timestamp;
+          if (!r.group && r.studentGroup) r.group = r.studentGroup;
+          const k = r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`;
           resultMap.set(k, r);
         });
 
+        const parseTs = (str) => {
+          if (!str) return 0;
+          const t = new Date(str).getTime();
+          if (!isNaN(t)) return t;
+          const m = String(str).match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+          if (m) {
+            return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]), parseInt(m[4]||0), parseInt(m[5]||0), parseInt(m[6]||0)).getTime();
+          }
+          return 0;
+        };
+
         const merged = Array.from(resultMap.values()).sort((a,b) => {
-          const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-          const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          const ta = parseTs(a.date || a.timestamp || a.createdAt);
+          const tb = parseTs(b.date || b.timestamp || b.createdAt);
           return tb - ta;
         });
 
@@ -288,12 +303,35 @@ const CloudSync = {
 
 
 // UNIVERSAL QUESTION VALIDATION HELPERS (Handles both Multi-Choice & Drag & Drop)
+function getRequiredAnswerCount(q) {
+  if (!q) return 1;
+  if (q.isDragDrop) return (q.pairs || []).length;
+  const multiMatch = (q.question || '').match(/\(choose\s+(two|three|four|five|2|3|4|5)\)/i);
+  if (multiMatch) {
+    const wordMap = { 'two': 2, 'three': 3, 'four': 4, 'five': 5, '2': 2, '3': 3, '4': 4, '5': 5 };
+    return wordMap[multiMatch[1].toLowerCase()] || (Array.isArray(q.answer) && q.answer.length > 1 ? q.answer.length : 1);
+  }
+  return Array.isArray(q.answer) && q.answer.length > 1 ? q.answer.length : 1;
+}
+
 function isQuestionAnswered(q, uAns) {
   if (!uAns) return false;
   if (q && q.isDragDrop) {
     return typeof uAns === 'object' && !Array.isArray(uAns) && Object.keys(uAns).length > 0;
   }
   return Array.isArray(uAns) && uAns.length > 0;
+}
+
+function isQuestionFullyAnswered(q, uAns) {
+  if (!uAns) return false;
+  if (q && q.isDragDrop) {
+    if (typeof uAns !== 'object' || Array.isArray(uAns)) return false;
+    const needed = (q.pairs || []).length;
+    return needed > 0 && Object.keys(uAns).length >= needed;
+  }
+  if (!Array.isArray(uAns)) return false;
+  const needed = getRequiredAnswerCount(q);
+  return uAns.length >= needed;
 }
 
 function isQuestionCorrect(q, uAns) {
@@ -575,6 +613,12 @@ function prepareQuizQuestions(rawQuestions) {
     
     // Test variantlarini (A, B, C, D) aralashtirish
     if (qClone.options && typeof qClone.options === 'object') {
+      const hasRelativeOption = Object.values(qClone.options).some(v => 
+        /all of the above|none of the above|both [a-d] and [a-d]/i.test(v)
+      );
+      if (hasRelativeOption) {
+        return qClone;
+      }
       const origKeys = Object.keys(qClone.options).sort();
       if (origKeys.length > 1) {
         const origAns = Array.isArray(qClone.answer) ? qClone.answer : [qClone.answer];
@@ -674,6 +718,32 @@ const SoundEffects = {
 
     } catch (e) {}
 
+  },
+
+  playNotification() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(523.25, now); // C5
+      osc1.frequency.exponentialRampToValueAtTime(783.99, now + 0.12); // G5
+      osc2.frequency.setValueAtTime(659.25, now + 0.08); // E5
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc1.start(now);
+      osc2.start(now + 0.08);
+      osc1.stop(now + 0.38);
+      osc2.stop(now + 0.38);
+    } catch(e) {}
   },
 
   playIncorrect() { this.playWrong(); },
@@ -837,6 +907,7 @@ const state = {
   currentUser: JSON.parse(localStorage.getItem('ccna_current_user') || 'null'),
 
   isAdmin: false,
+  clientIp: localStorage.getItem('ccna_cached_ip') || '',
 
   results: JSON.parse(localStorage.getItem('ccna_results') || '[]'),
 
@@ -899,1523 +970,984 @@ const state = {
     currentLabStep: 0,
 
     scenarios: [
-
+  {
+    "device": "SW-1",
+    "title": "Lab 1: Switch Port Access, Voice VLAN & LLDP Sozlash",
+    "steps": [
       {
-
-            "device": "SW-1",
-
-            "title": "Lab 1: Switch Port Access & Voice VLAN Sozlash",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged EXEC rejimiga o'tish: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Global konfiguratsiyaga o'tish: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "E0/1 interfeysiga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode access",
-
-                        "tip": "Portni access rejimiga o'tkazish: switchport mode access"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport access vlan 10",
-
-                        "tip": "Data VLAN 10 ni biriktirish: switchport access vlan 10"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport voice vlan 11",
-
-                        "tip": "IP Phone uchun Voice VLAN 11: switchport voice vlan 11"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Interfeysdan chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 10",
-
-                        "tip": "VLAN 10 yaratish: vlan 10"
-
-                  },
-
-                  {
-
-                        "cmd": "name Engineering",
-
-                        "tip": "VLAN nomini berish: name Engineering"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "enable",
+        "tip": "Privileged EXEC rejimiga o'tish: enable"
       },
-
       {
-
-            "device": "Sw1",
-
-            "title": "Lab 2: 802.1Q Trunking & VLAN Naming",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejimga o'tish: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiyaga o'tish: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 77",
-
-                        "tip": "VLAN 77 yaratish: vlan 77"
-
-                  },
-
-                  {
-
-                        "cmd": "name User_VLAN",
-
-                        "tip": "VLAN nomini User_VLAN deb belgilash: name User_VLAN"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 177",
-
-                        "tip": "VLAN 177 yaratish: vlan 177"
-
-                  },
-
-                  {
-
-                        "cmd": "name Voice_VLAN",
-
-                        "tip": "VLAN nomini Voice_VLAN deb belgilash: name Voice_VLAN"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "VLAN rejimidan chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "interface range e0/1 - 3",
-
-                        "tip": "E0/1 - 3 portlar diapazoniga kirish: interface range e0/1 - 3"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode access",
-
-                        "tip": "Access rejimiga o'tkazish: switchport mode access"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport access vlan 77",
-
-                        "tip": "User VLAN 77 ni biriktirish: switchport access vlan 77"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport voice vlan 177",
-
-                        "tip": "Voice VLAN 177 ni sozlash: switchport voice vlan 177"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "configure terminal",
+        "tip": "Global konfiguratsiyaga o'tish: configure terminal"
       },
-
       {
-
-            "device": "SW-1",
-
-            "title": "Lab 3: Trunk Allowed VLANs & Native VLAN Untagged",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/0",
-
-                        "tip": "E0/0 trunk portiga kirish: interface e0/0"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk allowed vlan 5,6",
-
-                        "tip": "Faqat VLAN 5 va 6 ga ruxsat berish: switchport trunk allowed vlan 5,6"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Interfeysdan chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "E0/1 portiga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk native vlan 77",
-
-                        "tip": "Native VLAN ni 77 deb belgilash: switchport trunk native vlan 77"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "interface e0/1",
+        "tip": "E0/1 interfeysiga kirish: interface e0/1"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 4: Floating Static Route (Zaxira yo'l)",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 10.0.41.10 255.255.255.255 10.0.12.2",
-
-                        "tip": "R2 orqali asosiy marshrut: ip route 10.0.41.10 255.255.255.255 10.0.12.2"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 10.0.41.10 255.255.255.255 10.0.13.3 254",
-
-                        "tip": "R3 orqali zaxira floating route (AD=254): ip route 10.0.41.10 255.255.255.255 10.0.13.3 254"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 0.0.0.0 0.0.0.0 10.0.13.3",
-
-                        "tip": "Internet uchun default gateway: ip route 0.0.0.0 0.0.0.0 10.0.13.3"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "switchport mode access",
+        "tip": "Portni access rejimiga o'tkazish: switchport mode access"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 5: IPv4 Subnetting & Interface Configuration",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "E0/1 interfeysiga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "ip address 192.168.180.17 255.255.255.240",
-
-                        "tip": "Birinchi foydali /28 IP manzil: ip address 192.168.180.17 255.255.255.240"
-
-                  },
-
-                  {
-
-                        "cmd": "ipv6 address 2001:db8:acca::1/64",
-
-                        "tip": "IPv6 manzilini sozlash: ipv6 address 2001:db8:acca::1/64"
-
-                  },
-
-                  {
-
-                        "cmd": "no shutdown",
-
-                        "tip": "Interfeysni yoqish: no shutdown"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "switchport access vlan 10",
+        "tip": "Data VLAN 10 ni biriktirish: switchport access vlan 10"
       },
-
       {
-
-            "device": "SW-1",
-
-            "title": "Lab 6: Enterprise VLAN 99 FINANCIAL & Access Ports",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 99",
-
-                        "tip": "VLAN 99 yaratish: vlan 99"
-
-                  },
-
-                  {
-
-                        "cmd": "name FINANCIAL",
-
-                        "tip": "VLAN nomini berish: name FINANCIAL"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/2",
-
-                        "tip": "PC1 ulangan E0/2 portiga kirish: interface e0/2"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode access",
-
-                        "tip": "Access rejimiga o'tkazish: switchport mode access"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport access vlan 99",
-
-                        "tip": "VLAN 99 ga biriktirish: switchport access vlan 99"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "switchport voice vlan 11",
+        "tip": "IP Phone uchun Voice VLAN 11 sozlash: switchport voice vlan 11"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 7: Point-to-Point IPv4 Subnetting /30",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/0",
-
-                        "tip": "E0/0 interfeysiga kirish: interface e0/0"
-
-                  },
-
-                  {
-
-                        "cmd": "ip address 10.0.12.5 255.255.255.252",
-
-                        "tip": "/30 tarmog'idagi 1-foydali IP manzil: ip address 10.0.12.5 255.255.255.252"
-
-                  },
-
-                  {
-
-                        "cmd": "no shutdown",
-
-                        "tip": "Portni yoqish: no shutdown"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "exit",
+        "tip": "Interfeysdan chiqish: exit"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 9: OSPF Area 0 & Process ID Sozlash",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/2",
-
-                        "tip": "E0/2 interfeysiga kirish: interface e0/2"
-
-                  },
-
-                  {
-
-                        "cmd": "ip ospf 110 area 0",
-
-                        "tip": "Interfeysda to'g'ridan-to'g'ri OSPF 110 Area 0 yoqish: ip ospf 110 area 0"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "router ospf 110",
-
-                        "tip": "OSPF 110 jarayoniga kirish: router ospf 110"
-
-                  },
-
-                  {
-
-                        "cmd": "router-id 1.1.1.1",
-
-                        "tip": "Router ID belgilash: router-id 1.1.1.1"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "vlan 10",
+        "tip": "VLAN 10 yaratish: vlan 10"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 10: OSPF Router ID & Network Sozlash",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "router ospf 33",
-
-                        "tip": "OSPF 33 jarayonini boshlash: router ospf 33"
-
-                  },
-
-                  {
-
-                        "cmd": "router-id 10.0.12.1",
-
-                        "tip": "Router ID ni E0/1 IP manzili deb belgilash: router-id 10.0.12.1"
-
-                  },
-
-                  {
-
-                        "cmd": "network 10.0.12.0 0.0.0.3 area 0",
-
-                        "tip": "Area 0 uchun tarmoqni e'lon qilish: network 10.0.12.0 0.0.0.3 area 0"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "name Engineering",
+        "tip": "VLAN nomini berish: name Engineering"
       },
-
       {
-
-            "device": "Sw1",
-
-            "title": "Lab 11: 802.1Q Trunking & Untagged Native VLAN",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface range e0/0 - 1",
-
-                        "tip": "E0/0 va E0/1 trunk portlar diapazoni: interface range e0/0 - 1"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk encapsulation dot1q",
-
-                        "tip": "802.1Q enkapsulyatsiya: switchport trunk encapsulation dot1q"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode trunk",
-
-                        "tip": "Trunk rejimini yoqish: switchport mode trunk"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk native vlan 45",
-
-                        "tip": "VLAN 45 ni untagged Native VLAN qilish: switchport trunk native vlan 45"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk allowed vlan 15,45",
-
-                        "tip": "Faqat VLAN 15 va 45 ga ruxsat: switchport trunk allowed vlan 15,45"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "exit",
+        "tip": "VLAN rejimidan chiqish: exit"
       },
-
       {
-
-            "device": "Sw1",
-
-            "title": "Lab 12: Multi-VLAN Naming (IT & HR User VLAN)",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 77",
-
-                        "tip": "VLAN 77 yaratish: vlan 77"
-
-                  },
-
-                  {
-
-                        "cmd": "name IT_User_VLAN",
-
-                        "tip": "VLAN nomini berish: name IT_User_VLAN"
-
-                  },
-
-                  {
-
-                        "cmd": "vlan 88",
-
-                        "tip": "VLAN 88 yaratish: vlan 88"
-
-                  },
-
-                  {
-
-                        "cmd": "name HR_User_VLAN",
-
-                        "tip": "VLAN nomini berish: name HR_User_VLAN"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "lldp run",
+        "tip": "Vendor-neutral qo'shnilarni aniqlashni yoqish: lldp run"
       },
-
       {
-
-            "device": "SW-1",
-
-            "title": "Lab 13: Trunk Allowed VLAN Lists on Port Range",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface range e0/1 - 2",
-
-                        "tip": "E0/1 va E0/2 trunk portlariga kirish: interface range e0/1 - 2"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk allowed vlan 56,77",
-
-                        "tip": "Faqat VLAN 56 va 77 ga ruxsat: switchport trunk allowed vlan 56,77"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "interface e0/0",
+        "tip": "E0/0 interfeysiga kirish: interface e0/0"
       },
-
       {
-
-            "device": "SW1",
-
-            "title": "Lab 14: IEEE 802.1Q Dot1q Trunk Encapsulation",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface range e0/0 - 1",
-
-                        "tip": "E0/0 va E0/1 portlar diapazoni: interface range e0/0 - 1"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk encapsulation dot1q",
-
-                        "tip": "802.1Q enkapsulyatsiya: switchport trunk encapsulation dot1q"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode trunk",
-
-                        "tip": "Trunk rejimini yoqish: switchport mode trunk"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk allowed vlan 10,20",
-
-                        "tip": "Faqat kerakli VLAN larni o'tkazish: switchport trunk allowed vlan 10,20"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "lldp transmit",
+        "tip": "LLDP uzatishni faollashtirish: lldp transmit"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 15: IPv4 /28 Host Configuration & Default Gateway",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "E0/1 interfeysiga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "ip address 192.168.168.193 255.255.255.240",
-
-                        "tip": "1-foydali host IP manzili: ip address 192.168.168.193 255.255.255.240"
-
-                  },
-
-                  {
-
-                        "cmd": "no shutdown",
-
-                        "tip": "Portni faollashtirish: no shutdown"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "lldp receive",
+        "tip": "LLDP qabul qilishni faollashtirish: lldp receive"
       },
-
       {
-
-            "device": "SW-2",
-
-            "title": "Lab 16: Industry Standard Dot1q Trunk & Native VLAN",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/0",
-
-                        "tip": "E0/0 portiga kirish: interface e0/0"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk encapsulation dot1q",
-
-                        "tip": "802.1Q enkapsulyatsiya: switchport trunk encapsulation dot1q"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport mode trunk",
-
-                        "tip": "Trunk rejimini yoqish: switchport mode trunk"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk allowed vlan 10",
-
-                        "tip": "Faqat VLAN 10 ga ruxsat: switchport trunk allowed vlan 10"
-
-                  },
-
-                  {
-
-                        "cmd": "switchport trunk native vlan 11",
-
-                        "tip": "Native VLAN ni 11 qilish: switchport trunk native vlan 11"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "exit",
+        "tip": "Interfeysdan chiqish: exit"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 17: Static Default Route & Host Route /32",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 0.0.0.0 0.0.0.0 10.133.13.3",
-
-                        "tip": "R3 orqali asosiy default route: ip route 0.0.0.0 0.0.0.0 10.133.13.3"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 0.0.0.0 0.0.0.0 10.122.12.2 225",
-
-                        "tip": "R2 orqali zaxira floating default route (AD=225): ip route 0.0.0.0 0.0.0.0 10.122.12.2 225"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "interface e0/2",
+        "tip": "R1 routerga ulangan E0/2 portiga kirish: interface e0/2"
       },
-
       {
-
-            "device": "R2",
-
-            "title": "Lab 18: Default Routing to ISP & Next-Hop",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 0.0.0.0 0.0.0.0 209.165.200.225",
-
-                        "tip": "ISP tomonga default marshrut: ip route 0.0.0.0 0.0.0.0 209.165.200.225"
-
-                  },
-
-                  {
-
-                        "cmd": "ip route 10.0.41.10 255.255.255.255 e0/1",
-
-                        "tip": "Serverga boruvchi host route: ip route 10.0.41.10 255.255.255.255 e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "no cdp enable",
+        "tip": "CDP ni o'chirish: no cdp enable"
       },
-
       {
-
-            "device": "R2",
-
-            "title": "Lab 19: Cisco IOS PAT (Port Address Translation / NAT Overload)",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/0",
-
-                        "tip": "Outside interfeysga kirish: interface e0/0"
-
-                  },
-
-                  {
-
-                        "cmd": "ip nat outside",
-
-                        "tip": "Tashqi interfeys deb belgilash: ip nat outside"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "Inside interfeysga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "ip nat inside",
-
-                        "tip": "Ichki interfeys deb belgilash: ip nat inside"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Interfeysdan chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "access-list 1 permit 10.0.12.1 0.0.0.0",
-
-                        "tip": "Lokal IP uchun ACL 1 yaratish: access-list 1 permit 10.0.12.1 0.0.0.0"
-
-                  },
-
-                  {
-
-                        "cmd": "ip nat inside source list 1 interface e0/0 overload",
-
-                        "tip": "PAT (NAT Overload) ni yoqish: ip nat inside source list 1 interface e0/0 overload"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "end",
+        "tip": "Privileged rejimga qaytish: end (yoki exit)"
       },
-
       {
-
-            "device": "HQ1",
-
-            "title": "Lab 20: OSPF Multi-Router & Router ID (HQ1)",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "router ospf 111",
-
-                        "tip": "OSPF 111 jarayonini boshlash: router ospf 111"
-
-                  },
-
-                  {
-
-                        "cmd": "router-id 10.110.110.110",
-
-                        "tip": "Loopback 0 manzilini Router ID qilish: router-id 10.110.110.110"
-
-                  },
-
-                  {
-
-                        "cmd": "network 10.110.110.110 0.0.0.0 area 0",
-
-                        "tip": "Lo0 tarmog'ini e'lon qilish: network 10.110.110.110 0.0.0.0 area 0"
-
-                  },
-
-                  {
-
-                        "cmd": "network 10.0.112.0 0.0.0.3 area 0",
-
-                        "tip": "HQ2 ga boruvchi tarmoq: network 10.0.112.0 0.0.0.3 area 0"
-
-                  },
-
-                  {
-
-                        "cmd": "network 10.0.113.0 0.0.0.7 area 0",
-
-                        "tip": "HQ3 ga boruvchi tarmoq: network 10.0.113.0 0.0.0.7 area 0"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "show lldp neighbors",
+        "tip": "LLDP qo'shnilarni tekshirish: show lldp neighbors"
       },
-
       {
-
-            "device": "R1",
-
-            "title": "Lab 21: Extended Named ACL (WWW_ACL) Sozlash",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "ip access-list extended WWW_ACL",
-
-                        "tip": "WWW_ACL nomli extended ACL ochish: ip access-list extended WWW_ACL"
-
-                  },
-
-                  {
-
-                        "cmd": "permit tcp 10.101.1.0 0.0.0.255 any eq www",
-
-                        "tip": "Web trafikka ruxsat: permit tcp 10.101.1.0 0.0.0.255 any eq www"
-
-                  },
-
-                  {
-
-                        "cmd": "deny tcp any any eq www",
-
-                        "tip": "Boshqa barcha web trafikni bloklash: deny tcp any any eq www"
-
-                  },
-
-                  {
-
-                        "cmd": "deny tcp host 10.101.0.2 any eq telnet",
-
-                        "tip": "Telnet ulanishni taqiqlash: deny tcp host 10.101.0.2 any eq telnet"
-
-                  },
-
-                  {
-
-                        "cmd": "permit ip any any",
-
-                        "tip": "Qolgan barcha IP trafikka ruxsat: permit ip any any"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "ACL sozlamasidan chiqish: exit"
-
-                  },
-
-                  {
-
-                        "cmd": "interface e0/1",
-
-                        "tip": "E0/1 interfeysiga kirish: interface e0/1"
-
-                  },
-
-                  {
-
-                        "cmd": "ip access-group WWW_ACL in",
-
-                        "tip": "ACL ni interfeys kirishiga biriktirish: ip access-group WWW_ACL in"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
-      },
-
-      {
-
-            "device": "R1",
-
-            "title": "Lab 22: NAT/PAT Overload & NTP Master Sozlash",
-
-            "steps": [
-
-                  {
-
-                        "cmd": "enable",
-
-                        "tip": "Privileged rejim: enable"
-
-                  },
-
-                  {
-
-                        "cmd": "configure terminal",
-
-                        "tip": "Konfiguratsiya: configure terminal"
-
-                  },
-
-                  {
-
-                        "cmd": "ip nat inside source list 192 interface e0/0 overload",
-
-                        "tip": "ACL 192 asosida PAT ni yoqish: ip nat inside source list 192 interface e0/0 overload"
-
-                  },
-
-                  {
-
-                        "cmd": "ntp master",
-
-                        "tip": "Routerni NTP Master deb belgilash: ntp master"
-
-                  },
-
-                  {
-
-                        "cmd": "ntp source-interface Loopback0",
-
-                        "tip": "NTP manba interfeysini Loopback0 qilish: ntp source-interface Loopback0"
-
-                  },
-
-                  {
-
-                        "cmd": "exit",
-
-                        "tip": "Chiqish: exit"
-
-                  }
-
-            ]
-
+        "cmd": "copy running-config startup-config",
+        "tip": "Sozlamalarni xotiraga saqlash: copy running-config startup-config"
       }
-
+    ]
+  },
+  {
+    "device": "Sw1",
+    "title": "Lab 2: Voice & Data VLAN, Port Range & LLDP Sozlash",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC rejimiga o'tish: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Global konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "vlan 77",
+        "tip": "User VLAN 77 yaratish: vlan 77"
+      },
+      {
+        "cmd": "name User_VLAN",
+        "tip": "VLAN nomini User_VLAN deb belgilash: name User_VLAN"
+      },
+      {
+        "cmd": "vlan 177",
+        "tip": "Voice VLAN 177 yaratish: vlan 177"
+      },
+      {
+        "cmd": "name Voice_VLAN",
+        "tip": "VLAN nomini Voice_VLAN deb belgilash: name Voice_VLAN"
+      },
+      {
+        "cmd": "exit",
+        "tip": "VLAN rejimidan chiqish: exit"
+      },
+      {
+        "cmd": "interface range e0/1 - 3",
+        "tip": "E0/1 - 3 portlar diapazoniga kirish: interface range e0/1 - 3"
+      },
+      {
+        "cmd": "switchport mode access",
+        "tip": "Access rejimiga o'tkazish: switchport mode access"
+      },
+      {
+        "cmd": "switchport access vlan 77",
+        "tip": "User VLAN 77 ni biriktirish: switchport access vlan 77"
+      },
+      {
+        "cmd": "switchport voice vlan 177",
+        "tip": "Voice VLAN 177 ni sozlash: switchport voice vlan 177"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Interfeys diapazonidan chiqish: exit"
+      },
+      {
+        "cmd": "lldp run",
+        "tip": "Vendor-neutral qo'shnilarni aniqlash (LLDP) ni yoqish: lldp run"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "E0/0 portiga kirish: interface e0/0"
+      },
+      {
+        "cmd": "lldp transmit",
+        "tip": "LLDP uzatishni yoqish: lldp transmit"
+      },
+      {
+        "cmd": "lldp receive",
+        "tip": "LLDP qabul qilishni yoqish: lldp receive"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga qaytish: end (yoki exit)"
+      },
+      {
+        "cmd": "show lldp neighbors",
+        "tip": "LLDP qo'shnilarni tekshirish: show lldp neighbors"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Konfiguratsiyani saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "SW-1",
+    "title": "Lab 3: Trunk Allowed VLANs & Native VLAN Untagged",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged rejimga o'tish: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "E0/0 trunk interfeysini tanlash: interface e0/0"
+      },
+      {
+        "cmd": "switchport mode trunk",
+        "tip": "Trunk rejimini belgilash: switchport mode trunk"
+      },
+      {
+        "cmd": "switchport trunk allowed vlan 5,6",
+        "tip": "Faqat VLAN 5 va 6 ga ruxsat berish: switchport trunk allowed vlan 5,6"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "interface e0/1",
+        "tip": "E0/1 trunk interfeysiga kirish: interface e0/1"
+      },
+      {
+        "cmd": "switchport trunk native vlan 77",
+        "tip": "Native VLAN ni 77 qilib sozlash: switchport trunk native vlan 77"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga o'tish: end"
+      },
+      {
+        "cmd": "show interfaces trunk",
+        "tip": "Trunk holatini tekshirish: show interfaces trunk"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 4: Floating Static Route (Zaxira yo'l)",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "show ip interface brief",
+        "tip": "Interfeyslarni tekshirish: show ip interface brief"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "ip route 10.0.41.10 255.255.255.255 10.0.12.2",
+        "tip": "Asosiy marshrut (AD=1): ip route 10.0.41.10 255.255.255.255 10.0.12.2"
+      },
+      {
+        "cmd": "ip route 10.0.41.10 255.255.255.255 10.0.13.3 254",
+        "tip": "Floating zaxira yo'l (AD=254): ip route 10.0.41.10 255.255.255.255 10.0.13.3 254"
+      },
+      {
+        "cmd": "ip route 0.0.0.0 0.0.0.0 10.0.13.3",
+        "tip": "Internetga default marshrut: ip route 0.0.0.0 0.0.0.0 10.0.13.3"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga chiqish: end"
+      },
+      {
+        "cmd": "show ip route static",
+        "tip": "Statik marshrutlarni tekshirish: show ip route static"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 5: IPv4 Subnetting & Interface Configuration",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/1",
+        "tip": "E0/1 interfeysiga kirish: interface e0/1"
+      },
+      {
+        "cmd": "ip address 192.168.180.17 255.255.255.240",
+        "tip": "Birinchi yaroqli IP ni berish: ip address 192.168.180.17 255.255.255.240"
+      },
+      {
+        "cmd": "no shutdown",
+        "tip": "Interfeysni yoqish: no shutdown"
+      },
+      {
+        "cmd": "ipv6 address 2001:db8:acca::1/64",
+        "tip": "IPv6 manzil berish: ipv6 address 2001:db8:acca::1/64"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga chiqish: end"
+      },
+      {
+        "cmd": "ping 192.168.180.30",
+        "tip": "R2 bilan aloqani tekshirish: ping 192.168.180.30"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "SW-1",
+    "title": "Lab 6: Enterprise VLAN 99 FINANCIAL & Access Ports",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged rejimga o'tish: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Global konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "vlan 99",
+        "tip": "VLAN 99 yaratish: vlan 99"
+      },
+      {
+        "cmd": "name FINANCIAL",
+        "tip": "VLAN nomini FINANCIAL deb belgilash: name FINANCIAL"
+      },
+      {
+        "cmd": "exit",
+        "tip": "VLAN rejimidan chiqish: exit"
+      },
+      {
+        "cmd": "interface e0/2",
+        "tip": "PC1 ulangan E0/2 portiga kirish: interface e0/2"
+      },
+      {
+        "cmd": "switchport mode access",
+        "tip": "Access rejimini tanlash: switchport mode access"
+      },
+      {
+        "cmd": "switchport access vlan 99",
+        "tip": "Portni VLAN 99 ga biriktirish: switchport access vlan 99"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show vlan brief",
+        "tip": "VLAN 99 va portlarni tekshirish: show vlan brief"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 7: Point-to-Point IPv4 Subnetting /30",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged rejimga o'tish: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "E0/0 interfeysiga kirish: interface e0/0"
+      },
+      {
+        "cmd": "ip address 10.0.12.5 255.255.255.252",
+        "tip": "/30 birinchi IP ni berish: ip address 10.0.12.5 255.255.255.252"
+      },
+      {
+        "cmd": "no shutdown",
+        "tip": "Portni yoqish: no shutdown"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga chiqish: end"
+      },
+      {
+        "cmd": "ping 10.0.12.6",
+        "tip": "R2 routerini ping qilish: ping 10.0.12.6"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 9: OSPF Area 0 & Process ID Sozlash",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged rejim: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/2",
+        "tip": "E0/2 interfeysiga kirish: interface e0/2"
+      },
+      {
+        "cmd": "ip ospf 110 area 0",
+        "tip": "Interfeys ostida OSPF Area 0 ni yoqish: ip ospf 110 area 0"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejim: end"
+      },
+      {
+        "cmd": "show ip ospf neighbor",
+        "tip": "OSPF qo'shnilarni ko'rish: show ip ospf neighbor"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 10: OSPF Router ID & Network Sozlash",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "show ip interface brief",
+        "tip": "E0/1 IP manzilini aniqlash: show ip interface brief"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "router ospf 33",
+        "tip": "OSPF Process 33 ga kirish: router ospf 33"
+      },
+      {
+        "cmd": "router-id 10.0.33.1",
+        "tip": "Router ID ni 10.0.33.1 deb belgilash: router-id 10.0.33.1"
+      },
+      {
+        "cmd": "network 10.0.0.0 0.255.255.255 area 0",
+        "tip": "Tarmoqni OSPF ga e'lon qilish: network 10.0.0.0 0.255.255.255 area 0"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ip ospf neighbor",
+        "tip": "Qo'shnilarni tekshirish: show ip ospf neighbor"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "Sw1",
+    "title": "Lab 11: 802.1Q Trunking & Untagged Native VLAN",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface range e0/0 - 1",
+        "tip": "E0/0 va E0/1 portlariga kirish: interface range e0/0 - 1"
+      },
+      {
+        "cmd": "switchport trunk encapsulation dot1q",
+        "tip": "802.1Q inkapsulyatsiyani yoqish: switchport trunk encapsulation dot1q"
+      },
+      {
+        "cmd": "switchport mode trunk",
+        "tip": "Trunk rejimini faollashtirish: switchport mode trunk"
+      },
+      {
+        "cmd": "switchport trunk native vlan 45",
+        "tip": "Native VLAN ni 45 qilish: switchport trunk native vlan 45"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show interfaces trunk",
+        "tip": "Trunkni tekshirish: show interfaces trunk"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "Sw1",
+    "title": "Lab 12: Multi-VLAN Naming (IT & HR User VLAN)",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "vlan 10",
+        "tip": "VLAN 10 yaratish: vlan 10"
+      },
+      {
+        "cmd": "name IT_Users",
+        "tip": "Nom berish: name IT_Users"
+      },
+      {
+        "cmd": "vlan 20",
+        "tip": "VLAN 20 yaratish: vlan 20"
+      },
+      {
+        "cmd": "name HR_Users",
+        "tip": "Nom berish: name HR_Users"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "end",
+        "tip": "Privileged rejimga chiqish: end"
+      },
+      {
+        "cmd": "show vlan brief",
+        "tip": "VLAN ro'yxatini tekshirish: show vlan brief"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "SW-1",
+    "title": "Lab 13: Trunk Allowed VLAN Lists on Port Range",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface range e0/0 - 2",
+        "tip": "Portlar oralig'iga kirish: interface range e0/0 - 2"
+      },
+      {
+        "cmd": "switchport trunk allowed vlan 10,20,30",
+        "tip": "Faqat VLAN 10,20,30 ga ruxsat berish: switchport trunk allowed vlan 10,20,30"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show interfaces trunk",
+        "tip": "Ruxsat etilgan VLAN larni ko'rish: show interfaces trunk"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "SW1",
+    "title": "Lab 14: IEEE 802.1Q Dot1q Trunk Encapsulation",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface range e0/0 - 1",
+        "tip": "Trunk portlar diapazoniga kirish: interface range e0/0 - 1"
+      },
+      {
+        "cmd": "switchport trunk encapsulation dot1q",
+        "tip": "802.1Q inkapsulyatsiya: switchport trunk encapsulation dot1q"
+      },
+      {
+        "cmd": "switchport mode trunk",
+        "tip": "Trunk rejimi: switchport mode trunk"
+      },
+      {
+        "cmd": "switchport trunk allowed vlan 10,30",
+        "tip": "Faqat PC lar VLAN iga ruxsat: switchport trunk allowed vlan 10,30"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show etherchannel summary",
+        "tip": "Port holatini tekshirish: show etherchannel summary"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 15: IPv4 /28 Host Configuration & Default Gateway",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/1",
+        "tip": "E0/1 interfeysiga kirish: interface e0/1"
+      },
+      {
+        "cmd": "ip address 192.168.168.193 255.255.255.240",
+        "tip": "/28 birinchi host IP: ip address 192.168.168.193 255.255.255.240"
+      },
+      {
+        "cmd": "no shutdown",
+        "tip": "Portni yoqish: no shutdown"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "ping 192.168.168.206",
+        "tip": "R2 routerini ping qilish: ping 192.168.168.206"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "SW-2",
+    "title": "Lab 16: Industry Standard Dot1q Trunk & Native VLAN",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "E0/0 trunk interfeysini tanlash: interface e0/0"
+      },
+      {
+        "cmd": "switchport trunk encapsulation dot1q",
+        "tip": "Standart Dot1Q: switchport trunk encapsulation dot1q"
+      },
+      {
+        "cmd": "switchport mode trunk",
+        "tip": "Trunk rejimini belgilash: switchport mode trunk"
+      },
+      {
+        "cmd": "switchport trunk allowed vlan 10",
+        "tip": "Faqat VLAN 10 ga ruxsat: switchport trunk allowed vlan 10"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show interfaces trunk",
+        "tip": "Trunk holatini tekshirish: show interfaces trunk"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R5",
+    "title": "Lab 17: Static Default Route & Host Route /32",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "ip route 10.200.220.6 255.255.255.255 10.100.110.1",
+        "tip": "Host route (/32): ip route 10.200.220.6 255.255.255.255 10.100.110.1"
+      },
+      {
+        "cmd": "ip route 0.0.0.0 0.0.0.0 10.133.13.3",
+        "tip": "Default marshrut: ip route 0.0.0.0 0.0.0.0 10.133.13.3"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "ping 10.200.220.6",
+        "tip": "Target hostni ping qilish: ping 10.200.220.6"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R2",
+    "title": "Lab 18: Default Routing to ISP & Next-Hop",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "ip route 0.0.0.0 0.0.0.0 209.165.200.225",
+        "tip": "ISP tomonga default route: ip route 0.0.0.0 0.0.0.0 209.165.200.225"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ip route static",
+        "tip": "Marshrutlarni tekshirish: show ip route static"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R2",
+    "title": "Lab 19: Cisco IOS PAT (Port Address Translation / NAT Overload)",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "Tashqi interfeysga kirish: interface e0/0"
+      },
+      {
+        "cmd": "ip nat outside",
+        "tip": "Tashqi NAT belgilash: ip nat outside"
+      },
+      {
+        "cmd": "interface e0/1",
+        "tip": "Ichki interfeysga kirish: interface e0/1"
+      },
+      {
+        "cmd": "ip nat inside",
+        "tip": "Ichki NAT belgilash: ip nat inside"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "access-list 1 permit 10.0.12.1 0.0.0.0",
+        "tip": "NAT ACL yaratish: access-list 1 permit 10.0.12.1 0.0.0.0"
+      },
+      {
+        "cmd": "ip nat inside source list 1 interface e0/0 overload",
+        "tip": "PAT Overload yoqish: ip nat inside source list 1 interface e0/0 overload"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ip nat translations",
+        "tip": "NAT tarjimalarini ko'rish: show ip nat translations"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "HQ1",
+    "title": "Lab 20: OSPF Multi-Router & Router ID (HQ1)",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "router ospf 111",
+        "tip": "OSPF 111 ga kirish: router ospf 111"
+      },
+      {
+        "cmd": "router-id 10.110.110.110",
+        "tip": "Lo0 manzilini Router ID qilish: router-id 10.110.110.110"
+      },
+      {
+        "cmd": "network 10.110.110.110 0.0.0.0 area 0",
+        "tip": "Lo0 ni e'lon qilish: network 10.110.110.110 0.0.0.0 area 0"
+      },
+      {
+        "cmd": "network 10.0.112.0 0.0.0.3 area 0",
+        "tip": "E0/0 ni e'lon qilish: network 10.0.112.0 0.0.0.3 area 0"
+      },
+      {
+        "cmd": "network 10.0.113.0 0.0.0.3 area 0",
+        "tip": "E0/1 ni e'lon qilish: network 10.0.113.0 0.0.0.3 area 0"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ip ospf neighbor",
+        "tip": "Qo'shnilarni tekshirish: show ip ospf neighbor"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 21: Extended Named ACL (WWW_ACL) Sozlash",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "ip access-list extended WWW_ACL",
+        "tip": "Extended ACL yaratish: ip access-list extended WWW_ACL"
+      },
+      {
+        "cmd": "permit tcp 10.101.1.0 0.0.0.255 any eq www",
+        "tip": "VLAN 202 uchun HTTP ga ruxsat: permit tcp 10.101.1.0 0.0.0.255 any eq www"
+      },
+      {
+        "cmd": "deny tcp any any eq www",
+        "tip": "Boshqa barcha HTTP ni bloklash: deny tcp any any eq www"
+      },
+      {
+        "cmd": "deny tcp host 10.101.0.2 any eq telnet",
+        "tip": "PC1 uchun telnetni bloklash: deny tcp host 10.101.0.2 any eq telnet"
+      },
+      {
+        "cmd": "permit ip any any",
+        "tip": "Qolgan barcha trafikka ruxsat: permit ip any any"
+      },
+      {
+        "cmd": "exit",
+        "tip": "Chiqish: exit"
+      },
+      {
+        "cmd": "interface e0/0",
+        "tip": "E0/0 portiga kirish: interface e0/0"
+      },
+      {
+        "cmd": "ip access-group WWW_ACL in",
+        "tip": "ACL ni interfeysga bog'lash: ip access-group WWW_ACL in"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ip access-lists",
+        "tip": "ACL qoidalarini tekshirish: show ip access-lists"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  },
+  {
+    "device": "R1",
+    "title": "Lab 22: NAT/PAT Overload & NTP Master Sozlash",
+    "steps": [
+      {
+        "cmd": "enable",
+        "tip": "Privileged EXEC: enable"
+      },
+      {
+        "cmd": "configure terminal",
+        "tip": "Konfiguratsiyaga o'tish: configure terminal"
+      },
+      {
+        "cmd": "ip nat inside source list 192 interface e0/0 overload",
+        "tip": "PAT Overload yoqish: ip nat inside source list 192 interface e0/0 overload"
+      },
+      {
+        "cmd": "ntp master",
+        "tip": "NTP Master xizmatini yoqish: ntp master"
+      },
+      {
+        "cmd": "ntp source-interface Loopback0",
+        "tip": "NTP source interfeysini sozlash: ntp source-interface Loopback0"
+      },
+      {
+        "cmd": "end",
+        "tip": "Chiqish: end"
+      },
+      {
+        "cmd": "show ntp status",
+        "tip": "NTP holatini tekshirish: show ntp status"
+      },
+      {
+        "cmd": "copy running-config startup-config",
+        "tip": "Saqlash: copy running-config startup-config"
+      }
+    ]
+  }
 ]
 
   }
@@ -2426,31 +1958,31 @@ const state = {
 
 const PARTS_CONFIG = [
 
-  { key: 'Part 5.docx', title: 'Part 5', count: 50, desc: 'SNMP, Port Security, Private IP, RSTP, REST API asoslari + Drag & Drop' },
+  { key: 'Part 5.docx', title: 'Part 5', count: 51, desc: 'SNMP, Port Security, Private IP, RSTP, REST API asoslari + Drag & Drop' },
 
   { key: 'Part 6.docx', title: 'Part 6', count: 33, desc: 'Switching, MAC address table, Static Route, VTP asoslari + Drag & Drop' },
 
   { key: 'Part 7.docx', title: 'Part 7', count: 50, desc: 'VLAN, Trunking (802.1Q), Inter-VLAN Routing, DHCP Relay + Drag & Drop' },
 
-  { key: 'Part 8.docx', title: 'Part 8', count: 73, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari + Drag & Drop' },
+  { key: 'Part 8.docx', title: 'Part 8', count: 74, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari + Drag & Drop' },
 
-  { key: 'Part 9.docx', title: 'Part 9', count: 98, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR + Drag & Drop' },
+  { key: 'Part 9.docx', title: 'Part 9', count: 101, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR + Drag & Drop' },
 
-  { key: 'Part 10.docx', title: 'Part 10', count: 80, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency + Drag & Drop' },
+  { key: 'Part 10.docx', title: 'Part 10', count: 88, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency + Drag & Drop' },
 
-  { key: 'Part 11.docx', title: 'Part 11', count: 71, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks + Drag & Drop' },
+  { key: 'Part 11.docx', title: 'Part 11', count: 74, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks + Drag & Drop' },
 
-  { key: 'Part 12.docx', title: 'Part 12', count: 98, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari + Drag & Drop' },
+  { key: 'Part 12.docx', title: 'Part 12', count: 101, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari + Drag & Drop' },
 
-  { key: 'Part 13.docx', title: 'Part 13', count: 86, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect + Drag & Drop' },
+  { key: 'Part 13.docx', title: 'Part 13', count: 87, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect + Drag & Drop' },
 
-  { key: 'Part 14.docx', title: 'Part 14', count: 92, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security + Drag & Drop' },
+  { key: 'Part 14.docx', title: 'Part 14', count: 97, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security + Drag & Drop' },
 
-  { key: 'Part 15.docx', title: 'Part 15', count: 113, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya + Drag & Drop' },
+  { key: 'Part 15.docx', title: 'Part 15', count: 114, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya + Drag & Drop' },
 
-  { key: 'Part 16.docx', title: 'Part 16', count: 73, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP) + Drag & Drop' },
+  { key: 'Part 16.docx', title: 'Part 16', count: 76, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP) + Drag & Drop' },
 
-  { key: 'new questions.docx', title: 'New Questions', count: 279, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
+  { key: 'new questions.docx', title: 'New Questions', count: 276, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
 
   { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 29, desc: 'Cisco rasmiy barcha 29 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
 
@@ -2458,9 +1990,31 @@ const PARTS_CONFIG = [
 
 ];
 
+function updateDynamicQuestionCounts() {
+  if (typeof CCNA_QUESTIONS !== 'undefined' && Array.isArray(CCNA_QUESTIONS)) {
+    PARTS_CONFIG.forEach(part => {
+      if (part.key === 'all') {
+        part.count = CCNA_QUESTIONS.length;
+      } else if (part.key === 'dragdrop' || part.isDragDrop) {
+        part.count = CCNA_QUESTIONS.filter(q => q.isDragDrop).length;
+      } else {
+        part.count = CCNA_QUESTIONS.filter(q => q.source === part.key).length;
+      }
+    });
+    const sub = document.getElementById('headerTrainerSubtitle');
+    if (sub) {
+      const labCount = typeof CCNA_LABS !== 'undefined' ? CCNA_LABS.length : 21;
+      sub.textContent = `${CCNA_QUESTIONS.length} ta Savol + Pearson VUE Simulyatori + ${labCount} ta Amaliy Lab`;
+    }
+  }
+}
+updateDynamicQuestionCounts();
+
 // Initialize
 
 function initializeApp() {
+  try { updateDynamicQuestionCounts(); } catch(e) {}
+  try { detectClientIp(); } catch(e) {}
 
   if (typeof CloudSync !== 'undefined') {
     CloudSync.syncAll().then(() => {
@@ -2489,6 +2043,7 @@ function initializeApp() {
   try { initCliSimulator(); } catch(e) { console.error("initCliSimulator", e); }
 
   try { initBookmarksView(); } catch(e) { console.error("initBookmarksView", e); }
+  try { restoreUserNavigationAndQuiz(); } catch(e) { console.error("restoreUserNavigationAndQuiz", e); }
 
 }
 
@@ -2614,11 +2169,16 @@ function initHotkeys() {
 
     if (['A', 'B', 'C', 'D', 'E', 'F'].includes(key)) {
 
+      const isChecked = !!state.checkedQuestions[state.currentIndex];
+      if (isChecked || state.isQuizFinished || state.isReviewMode) return;
+
       const q = state.quizQuestions[state.currentIndex];
 
-      if (q && q.options[key]) {
+      if (q && q.options && q.options[key]) {
 
-        toggleOption(key, q.answer.length > 1);
+        const expectedCount = getRequiredAnswerCount(q);
+
+        toggleOption(key, expectedCount > 1, expectedCount);
 
         SoundEffects.playClick();
 
@@ -2673,6 +2233,7 @@ function switchMainTab(target) {
     target = 'quiz';
 
   }
+  try { localStorage.setItem('ccna_active_main_tab', target); } catch(e) {}
 
   const tabs = document.querySelectorAll('.nav-tab');
 
@@ -2971,6 +2532,40 @@ function computeSha256Hex(str) {
 // ========================================================
 // ADVANCED ANTI-ACCOUNT-SHARING & DEVICE BINDING SYSTEM
 // ========================================================
+async function detectClientIp() {
+  if (state.clientIp && state.clientIp !== 'Aniqlanmoqda...') return state.clientIp;
+  try {
+    const cached = localStorage.getItem('ccna_cached_ip');
+    if (cached) state.clientIp = cached;
+  } catch(e) {}
+
+  try {
+    const r = await fetch('/api/sync?action=myip', { signal: AbortSignal.timeout(3500) });
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        state.clientIp = d.ip;
+        localStorage.setItem('ccna_cached_ip', d.ip);
+        return d.ip;
+      }
+    }
+  } catch(e) {}
+
+  try {
+    const r = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3500) });
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        state.clientIp = d.ip;
+        localStorage.setItem('ccna_cached_ip', d.ip);
+        return d.ip;
+      }
+    }
+  } catch(e) {}
+
+  return state.clientIp || '';
+}
+
 function getDeviceFingerprint() {
   let storedDeviceId = '';
   try {
@@ -3003,7 +2598,8 @@ function getDeviceFingerprint() {
   else if (/opr\//i.test(ua)) browser = 'Opera';
 
   const screenRes = `${window.screen.width || 0}x${window.screen.height || 0}`;
-  const deviceName = `${icon} ${os} (${browser}) • ${screenRes}`;
+  const ip = state.clientIp || localStorage.getItem('ccna_cached_ip') || '';
+  const deviceName = `${icon} ${os} (${browser})${ip ? ' • IP: ' + ip : ''} • ${screenRes}`;
 
   return {
     id: storedDeviceId,
@@ -3011,7 +2607,8 @@ function getDeviceFingerprint() {
     os: os,
     browser: browser,
     screen: screenRes,
-    icon: icon
+    icon: icon,
+    ip: ip
   };
 }
 
@@ -3709,6 +3306,16 @@ function updateChatBadges() {
     const unreadForAdmin = msgs.filter(m => m.toLogin === 'abdulloh' && !m.isRead).length;
     const adminBadge = document.getElementById('adminChatBadge');
     if (adminBadge) adminBadge.textContent = unreadForAdmin;
+
+    const headerAdminBadge = document.getElementById('adminNavUnreadBadge');
+    if (headerAdminBadge) {
+      if (unreadForAdmin > 0) {
+        headerAdminBadge.textContent = unreadForAdmin;
+        headerAdminBadge.style.display = 'inline-block';
+      } else {
+        headerAdminBadge.style.display = 'none';
+      }
+    }
   }
 }
 
@@ -3767,6 +3374,7 @@ function selectAdminChatUser(studentLogin) {
   if (!user) return;
 
   activeAdminChatUser = user;
+  try { localStorage.setItem('ccna_active_admin_chat_user', studentLogin); } catch(e) {}
   markChatDialogueAsRead(studentLogin, 'admin');
 
   // Update Header
@@ -3897,13 +3505,208 @@ function adminClearCurrentChatHistory() {
   renderAdminChatConversations();
 }
 
+
+// NOTIFICATION SYSTEM (In-app Toast + Sound + Desktop API)
+function showAppNotification({ icon = '🔔', title = 'Bildirishnoma', body = '', onClick = null, duration = 6500 }) {
+  // 1. Play audio chime
+  try {
+    if (typeof SoundEffects !== 'undefined' && SoundEffects.playNotification) {
+      SoundEffects.playNotification();
+    }
+  } catch(e) {}
+
+  // 2. Desktop notification (if permitted)
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notif = new Notification(title, {
+        body: body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/906/906377.png'
+      });
+      if (onClick) {
+        notif.onclick = () => {
+          window.focus();
+          try { onClick(); } catch(e) {}
+          notif.close();
+        };
+      }
+    } else if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  } catch(e) {}
+
+  // 3. In-app Toast Container
+  let container = document.getElementById('appNotificationContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'appNotificationContainer';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'app-toast-item';
+  toast.innerHTML = `
+    <div style="font-size:1.6rem; line-height:1; flex-shrink:0;">${icon}</div>
+    <div style="flex:1; min-width:0;">
+      <div style="font-weight:700; font-size:0.92rem; color:var(--text-main); margin-bottom:2px; display:flex; justify-content:space-between; align-items:center;">
+        <span>${escapeHtml(title)}</span>
+        <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">Hozirgina</span>
+      </div>
+      <div style="font-size:0.83rem; color:var(--text-muted); line-height:1.4; word-break:break-word;">
+        ${escapeHtml(body)}
+      </div>
+    </div>
+    <button type="button" style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer; padding:0 0 0 6px; line-height:1;" title="Yopish">✕</button>
+  `;
+
+  // Close button
+  const closeBtn = toast.querySelector('button');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toast.remove();
+    });
+  }
+
+  // Click handler
+  if (onClick) {
+    toast.addEventListener('click', () => {
+      try { onClick(); } catch(e) {}
+      toast.remove();
+    });
+  }
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(40px)';
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, duration);
+}
+
+let _knownChatMsgIds = null;
+let _knownUserCount = -1;
+let _knownResultCount = -1;
+let _knownAlertCount = -1;
+
+function checkLiveNotifications() {
+  const msgs = getChatMessages();
+  if (_knownChatMsgIds === null) {
+    _knownChatMsgIds = new Set(msgs.map(m => m.id));
+  } else {
+    // Detect new incoming chat messages
+    msgs.forEach(m => {
+      if (!_knownChatMsgIds.has(m.id)) {
+        _knownChatMsgIds.add(m.id);
+        if (state.isAdmin && m.toLogin === 'abdulloh' && !m.isRead) {
+          showAppNotification({
+            icon: '💬',
+            title: `Yangi xabar: ${m.fromName}`,
+            body: m.text ? (m.text.length > 70 ? m.text.substring(0, 70) + '...' : m.text) : (m.image ? "📷 Rasm yuborildi" : "Yangi xabar"),
+            onClick: () => {
+              switchMainTab('admin');
+              switchAdminTab('chat');
+              selectAdminChatUser(m.fromLogin);
+            }
+          });
+        } else if (state.currentUser && !state.isAdmin && m.toLogin === state.currentUser.login.toLowerCase() && !m.isRead) {
+          showAppNotification({
+            icon: '💬',
+            title: `${m.fromName} (Admin) dan yangi xabar`,
+            body: m.text ? (m.text.length > 70 ? m.text.substring(0, 70) + '...' : m.text) : (m.image ? "📷 Rasm yuborildi" : "Yangi xabar"),
+            onClick: () => {
+              openStudentChatModal();
+            }
+          });
+        }
+      }
+    });
+  }
+
+  // Admin monitors: new registered students, new test results, new security alerts
+  if (state.isAdmin) {
+    // 1. New registered users
+    const users = getRegisteredUsers();
+    if (_knownUserCount === -1) {
+      _knownUserCount = users.length;
+    } else if (users.length > _knownUserCount) {
+      const added = users.slice(_knownUserCount);
+      added.forEach(u => {
+        showAppNotification({
+          icon: '👤',
+          title: "Yangi foydalanuvchi qo'shildi!",
+          body: `${u.name} (Login: ${u.login}, Guruhi: ${u.group || 'Standart'}) ro'yxatdan o'tdi`,
+          onClick: () => {
+            switchMainTab('admin');
+            switchAdminTab('students');
+          }
+        });
+      });
+      _knownUserCount = users.length;
+    }
+
+    // 2. New quiz results
+    const results = state.results || [];
+    if (_knownResultCount === -1) {
+      _knownResultCount = results.length;
+    } else if (results.length > _knownResultCount) {
+      const added = results.slice(_knownResultCount);
+      added.forEach(r => {
+        showAppNotification({
+          icon: '📝',
+          title: "Yangi test natijasi!",
+          body: `${r.userName || 'Talaba'} (${r.partTitle || r.partKey}) topshirdi: ${r.scorePercent || r.score}%`,
+          onClick: () => {
+            switchMainTab('admin');
+            switchAdminTab('results');
+          }
+        });
+      });
+      _knownResultCount = results.length;
+    }
+
+    // 3. New security alerts
+    const alerts = getSecurityAlerts();
+    if (_knownAlertCount === -1) {
+      _knownAlertCount = alerts.length;
+    } else if (alerts.length > _knownAlertCount) {
+      const added = alerts.slice(_knownAlertCount);
+      added.forEach(a => {
+        showAppNotification({
+          icon: '🚨',
+          title: "Xavfsizlik ogohlantirishi!",
+          body: `${a.userName}: Yangi qurilmadan (${a.deviceType || "Noma'lum"}) kirish urinishi!`,
+          onClick: () => {
+            switchMainTab('admin');
+            switchAdminTab('security');
+          }
+        });
+      });
+      _knownAlertCount = alerts.length;
+    }
+  }
+}
+
 // Live monitor for real-time messages
 function startChatLiveMonitor() {
+  // Request desktop notification permission softly on start
+  if ('Notification' in window && Notification.permission === 'default') {
+    setTimeout(() => {
+      try { Notification.requestPermission(); } catch(e) {}
+    }, 4000);
+  }
+
   setInterval(async () => {
     if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       await CloudSync.syncChat();
     }
     updateChatBadges();
+
+    // Check and trigger live notifications for new chat, users, results, alerts
+    try { checkLiveNotifications(); } catch(e) {}
 
     // If student chat modal is open, refresh silently
     const studentModal = document.getElementById('studentChatModal');
@@ -3920,10 +3723,20 @@ function startChatLiveMonitor() {
 
     // If admin is active, also sync registered users, quiz results, and security alerts in background!
     if (state.isAdmin && typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      const prevResultCount = (state.results || []).length;
       await CloudSync.syncUsers();
       await CloudSync.syncResults();
       await CloudSync.syncAlerts();
       updateSecurityAlertBadge();
+
+      if (state.results && state.results.length > prevResultCount && prevResultCount > 0) {
+        const latest = state.results[0];
+        if (latest) {
+          try { SoundEffects.playNotify(); } catch(e) {}
+          try { showAppToast(`📊 Yangi Natija: ${latest.studentName} (${latest.partTitle}) — ${latest.percent}%`); } catch(e) {}
+        }
+      }
+
       const studentsTbody = document.getElementById('adminStudentsTableBody');
       const adminViewStudents = document.getElementById('adminViewStudents');
       if (studentsTbody && adminViewStudents && adminViewStudents.style.display === 'block') {
@@ -4391,9 +4204,11 @@ async function handleUserLogin() {
           userRec.boundDevices = userRec.boundDevices || [];
           userRec.maxDevices = parseInt(userRec.maxDevices || 1, 10);
 
+          const currentIp = state.clientIp || localStorage.getItem('ccna_cached_ip') || '';
           const alreadyBound = userRec.boundDevices.find(d => d.id === currentDev.id);
           if (alreadyBound) {
             alreadyBound.lastActive = new Date().toLocaleString('uz-UZ');
+            if (currentIp) alreadyBound.ip = currentIp;
           } else {
             // Check max devices limit (Default: 1 device)
             if (userRec.boundDevices.length >= userRec.maxDevices) {
@@ -4401,17 +4216,6 @@ async function handleUserLogin() {
               
               
               // Log Security Audit Alert for Admin (Abdulloh)
-              logSecurityDeviceAlert({
-                userId: userRec.id,
-                userName: userRec.name,
-                userLogin: userRec.login,
-                userGroup: userRec.group,
-                attemptedDevice: currentDev,
-                existingDevice: existingDev,
-                type: 'BLOCKED_UNKNOWN_DEVICE',
-                message: "Noma'lum yangi qurilmadan kirishga urinish bloklandi."
-              });
-// Log Security Audit Alert for Admin (Abdulloh)
               logSecurityDeviceAlert({
                 userId: userRec.id,
                 userName: userRec.name,
@@ -4432,6 +4236,7 @@ showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu h
                 os: currentDev.os,
                 browser: currentDev.browser,
                 screen: currentDev.screen,
+                ip: currentIp || currentDev.ip || '',
                 boundAt: new Date().toLocaleString('uz-UZ'),
                 lastActive: new Date().toLocaleString('uz-UZ')
               });
@@ -5000,6 +4805,125 @@ function renderPartsGrid() {
 
 }
 
+
+// QUIZ & TAB STATE PERSISTENCE SYSTEM
+function saveQuizProgress() {
+  try {
+    if (!state.activePartKey || state.isQuizFinished || !state.quizQuestions || state.quizQuestions.length === 0) {
+      localStorage.removeItem('ccna_active_quiz_progress');
+      return;
+    }
+    const payload = {
+      partKey: state.activePartKey,
+      partTitle: state.activePartTitle,
+      mode: state.mode || 'practice',
+      currentIndex: state.currentIndex || 0,
+      userAnswers: state.userAnswers || {},
+      checkedQuestions: state.checkedQuestions || {},
+      flaggedQuestions: state.flaggedQuestions || {},
+      examTimeSeconds: state.examTimeSeconds,
+      timestamp: Date.now(),
+      questions: state.quizQuestions.map(q => ({
+        id: q.id,
+        question: q.question,
+        options: q.options,
+        answer: q.answer,
+        explanation: q.explanation,
+        explanation_uz: q.explanation_uz,
+        source: q.source,
+        images: q.images || [],
+        image: q.image || null,
+        isDragDrop: !!q.isDragDrop,
+        pairs: q.pairs || [],
+        shuffledTerms: q.shuffledTerms || []
+      }))
+    };
+    localStorage.setItem('ccna_active_quiz_progress', JSON.stringify(payload));
+  } catch(e) {
+    console.warn("Could not save quiz progress:", e);
+  }
+}
+
+function restoreActiveQuiz() {
+  try {
+    const raw = localStorage.getItem('ccna_active_quiz_progress');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || !data.questions || data.questions.length === 0) return false;
+
+    state.activePartKey = data.partKey;
+    state.activePartTitle = data.partTitle;
+    state.mode = data.mode || 'practice';
+    state.quizQuestions = data.questions;
+    state.currentIndex = data.currentIndex || 0;
+    state.userAnswers = data.userAnswers || {};
+    state.checkedQuestions = data.checkedQuestions || {};
+    state.flaggedQuestions = data.flaggedQuestions || {};
+    state.isQuizFinished = false;
+    state.isReviewMode = false;
+    state.reviewOnlyWrong = false;
+
+    const partsView = document.getElementById('partsSelectionView');
+    const testingArea = document.getElementById('quizTestingArea');
+    const questionCard = document.getElementById('questionCard');
+    const reviewCard = document.getElementById('reviewScreenCard');
+    const finishedCard = document.getElementById('finishedCard');
+
+    if (partsView) partsView.style.display = 'none';
+    if (testingArea) testingArea.style.display = 'block';
+    if (questionCard) questionCard.style.display = 'block';
+    if (reviewCard) reviewCard.style.display = 'none';
+    if (finishedCard) finishedCard.style.display = 'none';
+
+    const titleEl = document.getElementById('activePartTitle');
+    if (titleEl) titleEl.textContent = `📁 ${data.partTitle} (${data.questions.length} ta savol)`;
+
+    const modeLabel = document.getElementById('activeModeLabel');
+    if (modeLabel) modeLabel.textContent = state.mode === 'exam' ? '⏱️ Pearson VUE Imtihon Rejimi' : '📝 Mashq Rejimi';
+
+    clearInterval(state.timerInterval);
+    const timerDisplay = document.getElementById('examTimer');
+    if (state.mode === 'exam') {
+      state.examTimeSeconds = data.examTimeSeconds || (data.questions.length * 90);
+      if (timerDisplay) timerDisplay.style.display = 'inline-block';
+      startExamTimer();
+    } else {
+      if (timerDisplay) timerDisplay.style.display = 'none';
+    }
+
+    renderPalette();
+    renderCurrentQuestion();
+    return true;
+  } catch(e) {
+    console.error("restoreActiveQuiz error:", e);
+    localStorage.removeItem('ccna_active_quiz_progress');
+    return false;
+  }
+}
+
+function restoreUserNavigationAndQuiz() {
+  const savedMainTab = localStorage.getItem('ccna_active_main_tab') || 'quiz';
+  if (savedMainTab === 'quiz') {
+    const isQuizRestored = restoreActiveQuiz();
+    if (!isQuizRestored) {
+      switchMainTab('quiz');
+    }
+  } else {
+    switchMainTab(savedMainTab);
+    if (savedMainTab === 'admin' && state.isAdmin) {
+      const savedSubTab = localStorage.getItem('ccna_active_admin_sub_tab') || 'students';
+      switchAdminTab(savedSubTab);
+      if (savedSubTab === 'chat') {
+        const savedChatUser = localStorage.getItem('ccna_active_admin_chat_user');
+        if (savedChatUser) {
+          try { selectAdminChatUser(savedChatUser); } catch(e) {}
+        }
+      }
+    }
+  }
+}
+
+
 // START PART QUIZ
 
 function startPartQuiz(part) {
@@ -5105,7 +5029,7 @@ function startPartQuiz(part) {
   renderPalette();
 
   renderCurrentQuestion();
-
+  try { saveQuizProgress(); } catch(e) {}
 }
 
 function confirmExitQuiz() {
@@ -5127,6 +5051,7 @@ function confirmExitQuiz() {
 function backToPartsList() {
 
   clearInterval(state.timerInterval);
+  try { localStorage.removeItem('ccna_active_quiz_progress'); } catch(e) {}
 
   document.getElementById('quizTestingArea').style.display = 'none';
 
@@ -5309,6 +5234,8 @@ function renderPalette() {
 
       }
 
+      renderPalette();
+
       SoundEffects.playClick();
 
     });
@@ -5389,9 +5316,17 @@ function renderCurrentQuestion() {
 
   if (total === 0) return;
 
-  const q = state.quizQuestions[state.currentIndex];
-
   const idx = state.currentIndex;
+
+  const q = state.quizQuestions[idx];
+
+  if (!q) return;
+
+  const isReview = state.isReviewMode || state.isQuizFinished;
+
+  const isChecked = isReview || !!state.checkedQuestions[idx];
+
+  const userAns = state.userAnswers[idx] || (q.isDragDrop ? {} : []);
 
   document.getElementById('currentQNum').textContent = `${idx + 1} / ${total}`;
 
@@ -5413,49 +5348,30 @@ function renderCurrentQuestion() {
 
   bookmarkBtn.innerHTML = isBookmarked ? '⭐ Saqlangan' : '☆ Saqlash';
 
-  const multiMatch = (q.question || '').match(/\(choose\s+(two|three|four|five|2|3|4|5)\)/i);
-  let expectedCount = (q.answer && q.answer.length > 1) ? q.answer.length : 1;
-  if (multiMatch) {
-    const wordMap = { 'two': 2, 'three': 3, 'four': 4, 'five': 5, '2': 2, '3': 3, '4': 4, '5': 5 };
-    expectedCount = wordMap[multiMatch[1].toLowerCase()] || expectedCount;
-  }
-  const multiAnswer = (expectedCount > 1) || (q.answer && q.answer.length > 1);
+  const expectedCount = getRequiredAnswerCount(q);
+  const multiAnswer = expectedCount > 1;
   const multiNotice = multiAnswer 
     ? `<div class="multi-choice-badge">☑️ <b>Diqqat: Ushbu savolda ${expectedCount} ta to'g'ri javobni tanlashingiz kerak!</b></div>` 
     : '';
 
-  
-
   let diagramHtml = '';
-
-  if (q.image) {
-
-    diagramHtml = `
-
-      <div class="question-diagram-wrapper">
-
-        <img src="${q.image}" class="question-diagram" onclick="openImageModal(this.src)" alt="Topology / Exhibit" title="Kattalashtirish uchun bosing">
-
+  const imgList = (Array.isArray(q.images) && q.images.length > 0) ? q.images : (q.image ? [q.image] : []);
+  if (imgList.length > 0) {
+    diagramHtml = imgList.map((imgSrc, i) => `
+      <div class="question-diagram-wrapper" style="margin-top:10px;">
+        ${imgList.length > 1 ? `<div style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Rasm / Exhibit ${i + 1}:</div>` : ''}
+        <img src="${imgSrc}" class="question-diagram" onclick="openImageModal(this.src)" alt="Topology / Exhibit" title="Kattalashtirish uchun bosing">
         <div class="diagram-hint">🔍 Kattalashtirish uchun rasm ustiga bosing</div>
-
       </div>
-
-    `;
-
+    `).join('');
   }
 
   const cleanQuestionText = (q.question || '').replace(/[\ufffd]/g, ' - ');
-document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText) + multiNotice + diagramHtml;
+  document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText) + multiNotice + diagramHtml;
 
   const listEl = document.getElementById('optionsList');
 
   listEl.innerHTML = '';
-
-  const isReview = state.isReviewMode || state.isQuizFinished;
-
-  const isChecked = isReview || !!state.checkedQuestions[idx];
-
-  const userAns = state.userAnswers[idx] || (q.isDragDrop ? {} : []);
 
   if (q.isDragDrop) {
     renderInQuizDragDrop(q, idx, isChecked, isReview);
@@ -5685,7 +5601,7 @@ document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText
 
     checkBtn.style.display = 'inline-flex';
 
-    checkBtn.disabled = !isQuestionAnswered(q, userAns) || isChecked;
+    checkBtn.disabled = !isQuestionFullyAnswered(q, userAns) || isChecked;
 
     reviewExamBtn.style.display = 'none';
 
@@ -5731,6 +5647,10 @@ function toggleOption(letter, isMulti, maxAllowed) {
 
   const idx = state.currentIndex;
 
+  if (state.checkedQuestions[idx] || state.isQuizFinished || state.isReviewMode) {
+    return;
+  }
+
   if (!state.userAnswers[idx]) {
 
     state.userAnswers[idx] = [];
@@ -5764,7 +5684,7 @@ function toggleOption(letter, isMulti, maxAllowed) {
   }
 
   renderCurrentQuestion();
-
+  try { saveQuizProgress(); } catch(e) {}
 }
 
 function checkCurrentAnswer() {
@@ -5775,8 +5695,16 @@ function checkCurrentAnswer() {
 
   const uAns = state.userAnswers[idx];
 
-  if (!isQuestionAnswered(q, uAns)) {
+  const needed = getRequiredAnswerCount(q);
+  const curCount = Array.isArray(uAns) ? uAns.length : (q && q.isDragDrop && typeof uAns === 'object' ? Object.keys(uAns).length : 0);
+
+  if (curCount === 0) {
     alert("Iltimos, avval javobni tanlang yoki kataklarga joylashtiring!");
+    return;
+  }
+
+  if (!isQuestionFullyAnswered(q, uAns)) {
+    alert(`Ushbu savolda ${needed} ta to'g'ri javobni tanlashingiz kerak!`);
     return;
   }
 
@@ -5793,10 +5721,29 @@ function checkCurrentAnswer() {
   renderCurrentQuestion();
 
   renderPalette();
-
+  try { saveQuizProgress(); } catch(e) {}
 }
 
 function nextQuestion() {
+
+  const curQ = state.quizQuestions ? state.quizQuestions[state.currentIndex] : null;
+  const curAns = state.userAnswers ? state.userAnswers[state.currentIndex] : null;
+  if (!state.isReviewMode && curQ) {
+    if (curQ.isDragDrop) {
+      const neededPairs = (curQ.pairs || []).length;
+      const matchedPairs = (curAns && typeof curAns === 'object' && !Array.isArray(curAns)) ? Object.keys(curAns).length : 0;
+      if (matchedPairs > 0 && matchedPairs < neededPairs) {
+        alert(`Barcha elementlarni moslashtiring! (${matchedPairs}/${neededPairs} ta moslashtirildi)`);
+        return;
+      }
+    } else {
+      const needed = getRequiredAnswerCount(curQ);
+      if (needed > 1 && Array.isArray(curAns) && curAns.length > 0 && curAns.length < needed) {
+        alert(`Ushbu savolda ${needed} ta to'g'ri javobni tanlashingiz kerak! (${curAns.length} ta tanlandi)`);
+        return;
+      }
+    }
+  }
 
   if (state.isReviewMode && state.reviewOnlyWrong) {
 
@@ -5841,6 +5788,8 @@ function nextQuestion() {
     state.currentIndex++;
 
     renderCurrentQuestion();
+    renderPalette();
+    try { saveQuizProgress(); } catch(e) {}
 
     scrollToQuestionTop();
 
@@ -5905,6 +5854,8 @@ function prevQuestion() {
     state.currentIndex--;
 
     renderCurrentQuestion();
+    renderPalette();
+    try { saveQuizProgress(); } catch(e) {}
 
     scrollToQuestionTop();
 
@@ -6081,6 +6032,7 @@ function toggleFlagCurrent() {
   state.flaggedQuestions[idx] = !state.flaggedQuestions[idx];
 
   renderCurrentQuestion();
+  try { saveQuizProgress(); } catch(e) {}
 
   SoundEffects.playClick();
 
@@ -6138,7 +6090,9 @@ function openExamReviewScreen() {
 
     const ans = state.userAnswers[i] || [];
 
-    const isAns = ans.length > 0;
+    const isAns = isQuestionAnswered(q, ans);
+    const isFull = isQuestionFullyAnswered(q, ans);
+    const needed = getRequiredAnswerCount(q);
 
     const isFlag = !!state.flaggedQuestions[i];
 
@@ -6148,6 +6102,16 @@ function openExamReviewScreen() {
 
     if (isFlag) flagged++;
 
+    let statusDisplay = '';
+    if (!isAns) {
+      statusDisplay = '<span style="color:var(--danger);">Javob berilmagan</span>';
+    } else if (isFull) {
+      statusDisplay = '<span style="color:var(--success);">Javob berilgan</span>';
+    } else {
+      const curCount = Array.isArray(ans) ? ans.length : Object.keys(ans).length;
+      statusDisplay = `<span style="color:var(--warning); font-weight:700;">⚠️ Chala (${curCount}/${needed} ta)</span>`;
+    }
+
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -6156,13 +6120,13 @@ function openExamReviewScreen() {
 
       <td>${escapeHtml(truncate(q.question, 65))}</td>
 
-      <td><b>${isAns ? ans.join(', ') : '<span style="color:var(--text-muted)">-</span>'}</b></td>
+      <td><b>${isAns ? (Array.isArray(ans) ? ans.join(', ') : Object.values(ans).join(', ')) : '<span style="color:var(--text-muted)">-</span>'}</b></td>
 
       <td>
 
         ${isFlag ? '<span style="color:var(--warning); font-weight:700;">★ Belgilangan</span> ' : ''}
 
-        ${isAns ? '<span style="color:var(--success);">Javob berilgan</span>' : '<span style="color:var(--danger);">Javob berilmagan</span>'}
+        ${statusDisplay}
 
       </td>
 
@@ -6211,6 +6175,7 @@ function jumpToQuestionFromReview(index) {
 function submitFinalExam() {
 
   clearInterval(state.timerInterval);
+  try { localStorage.removeItem('ccna_active_quiz_progress'); } catch(e) {}
 
   let correctCount = 0;
 
@@ -6246,6 +6211,12 @@ function submitFinalExam() {
 
   const student = state.currentUser || { name: 'Mehmon', group: 'Guruhsiz' };
 
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('uz-UZ', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+  const timeStr = now.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const fullDateStr = `${dateStr} ${timeStr}`;
+  const clientIp = state.clientIp || localStorage.getItem('ccna_cached_ip') || '';
+
   const newResult = {
 
     id: 'res_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -6254,7 +6225,9 @@ function submitFinalExam() {
 
     login: student.login ? student.login.toLowerCase() : '',
 
-    studentGroup: student.group,
+    studentGroup: student.group || 'Guruhsiz',
+
+    group: student.group || 'Guruhsiz',
 
     partKey: state.activePartKey,
 
@@ -6274,18 +6247,26 @@ function submitFinalExam() {
 
     isPass: isPass,
 
-    timestamp: new Date().toLocaleString()
+    date: fullDateStr,
+
+    timestamp: fullDateStr,
+
+    createdAt: fullDateStr,
+
+    ip: clientIp
 
   };
 
-  state.results.push(newResult);
+  state.results.unshift(newResult);
 
   state.lastFinishedResult = newResult;
 
   localStorage.setItem('ccna_results', JSON.stringify(state.results));
 
   if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
-    CloudSync.append('results', newResult);
+    // Sync full results array so admin receives it immediately in real-time
+    CloudSync.saveAll('results', state.results).catch(e => console.warn(e));
+    CloudSync.append('results', newResult).catch(e => console.warn(e));
   }
 
   if (isPass) {
@@ -6412,7 +6393,7 @@ function initStudyModule() {
 
   // Populate source dropdown
 
-  select.innerHTML = '<option value="all">Barcha Bo\'limlar (1167 ta savol)</option>';
+  select.innerHTML = '<option value="all">Barcha Bo\'limlar (' + (typeof CCNA_QUESTIONS !== 'undefined' ? CCNA_QUESTIONS.length : 1222) + ' ta savol)</option>';
 
   PARTS_CONFIG.forEach(p => {
 
@@ -6463,6 +6444,13 @@ function switchStudyView(viewName) {
   document.getElementById('studyDragDropView').style.display = viewName === 'dragdrop' ? 'block' : 'none';
 
   document.getElementById('studyKeysView').style.display = viewName === 'keys' ? 'block' : 'none';
+
+  if (viewName !== 'blitz' && typeof blitzState !== 'undefined' && blitzState.interval) {
+    clearInterval(blitzState.interval);
+    blitzState.active = false;
+    const startBtn = document.getElementById('blitzStartBtn');
+    if (startBtn) startBtn.style.display = 'inline-block';
+  }
 
   SoundEffects.playClick();
 
@@ -6531,6 +6519,14 @@ function renderStudyContent() {
     state.study.flashFlipped = false;
 
     renderCurrentFlashcard();
+
+  } else if (state.study.view === 'blitz') {
+
+    if (blitzState.active) {
+
+      nextBlitzQuestion();
+
+    }
 
   }
 
@@ -7007,176 +7003,219 @@ function handleMatchClick(btn, id, side) {
 // ==========================================
 
 const blitzState = {
-
   timer: 60,
-
   interval: null,
-
   score: 0,
-
   streak: 0,
-
   currentQ: null,
-
+  neededCount: 1,
+  selectedAnswers: [],
   active: false
-
 };
 
 function startSpeedBlitz() {
-
   blitzState.timer = 60;
-
   blitzState.score = 0;
-
   blitzState.streak = 0;
-
   blitzState.active = true;
+  blitzState.selectedAnswers = [];
 
   document.getElementById('blitzScore').textContent = '0';
-
   document.getElementById('blitzSeconds').textContent = '60';
-
   document.getElementById('blitzStreakBadge').style.display = 'none';
-
   document.getElementById('blitzStartBtn').style.display = 'none';
 
   SoundEffects.playCorrect();
 
   clearInterval(blitzState.interval);
-
   blitzState.interval = setInterval(() => {
-
     blitzState.timer--;
-
     document.getElementById('blitzSeconds').textContent = blitzState.timer;
-
     if (blitzState.timer <= 0) {
-
       clearInterval(blitzState.interval);
-
       blitzState.active = false;
-
       document.getElementById('blitzStartBtn').style.display = 'inline-block';
-
       document.getElementById('blitzStartBtn').textContent = 'Qaytadan O\'ynash 🔄';
-
       SoundEffects.playCorrect();
-
       alert(`⏱️ Vaqt tugadi! Sizning natijangiz: ${blitzState.score} ball!`);
-
     }
-
   }, 1000);
 
   nextBlitzQuestion();
-
 }
 
 function nextBlitzQuestion() {
-
   if (!blitzState.active) return;
 
-  // Pick random question with options
+  // 1. Tanlangan bo'limdan savollarni olish
+  const sourceSelect = document.getElementById('studySourceSelect');
+  const selectedSrc = sourceSelect ? sourceSelect.value : 'all';
 
-  const randQ = CCNA_QUESTIONS[Math.floor(Math.random() * CCNA_QUESTIONS.length)];
+  let pool = (state.study && state.study.questions && state.study.questions.length > 0)
+    ? state.study.questions
+    : CCNA_QUESTIONS;
+
+  if (selectedSrc !== 'all') {
+    pool = pool.filter(q => q.source === selectedSrc);
+    if (pool.length === 0) {
+      pool = CCNA_QUESTIONS.filter(q => q.source === selectedSrc);
+    }
+  }
+
+  // Faqat variantlari mavjud savollar (Drag & Drop savollar chiqarib tashlanadi)
+  const mcqPool = pool.filter(q => q.options && typeof q.options === 'object' && Object.keys(q.options).length > 0 && Array.isArray(q.answer) && q.answer.length > 0);
+
+  if (mcqPool.length === 0) {
+    alert("Tanlangan bo'limda blitz savollari topilmadi!");
+    blitzState.active = false;
+    clearInterval(blitzState.interval);
+    document.getElementById('blitzStartBtn').style.display = 'inline-block';
+    return;
+  }
+
+  // Ketma-ket bir xil savol tushmasligi uchun
+  let randQ = mcqPool[Math.floor(Math.random() * mcqPool.length)];
+  if (mcqPool.length > 1 && blitzState.currentQ && randQ.id === blitzState.currentQ.id) {
+    const otherPool = mcqPool.filter(q => q.id !== blitzState.currentQ.id);
+    if (otherPool.length > 0) {
+      randQ = otherPool[Math.floor(Math.random() * otherPool.length)];
+    }
+  }
 
   blitzState.currentQ = randQ;
+  blitzState.selectedAnswers = [];
 
-  document.getElementById('blitzQText').textContent = randQ.question;
+  const neededCount = (Array.isArray(randQ.answer) && randQ.answer.length > 1) ? randQ.answer.length : 1;
+  blitzState.neededCount = neededCount;
+
+  let diagramHtml = '';
+  const imgList = (Array.isArray(randQ.images) && randQ.images.length > 0) ? randQ.images : (randQ.image ? [randQ.image] : []);
+  if (imgList.length > 0) {
+    diagramHtml = imgList.map((imgSrc) => `
+      <div class="question-diagram-wrapper" style="margin-top:10px;">
+        <img src="${imgSrc}" class="question-diagram" style="max-height:220px;" onclick="openImageModal(this.src)" alt="Exhibit" title="Kattalashtirish uchun bosing">
+      </div>
+    `).join('');
+  }
+
+  let multiBadgeHtml = '';
+  if (neededCount > 1) {
+    multiBadgeHtml = `<div id="blitzMultiNotice" class="multi-choice-badge" style="margin:10px 0;">☑️ <b>Diqqat: Ushbu savolda ${neededCount} ta to'g'ri javobni tanlang! (<span id="blitzSelectedCount">0</span>/${neededCount} tanlandi)</b></div>`;
+  }
+
+  document.getElementById('blitzQText').innerHTML = escapeHtml(randQ.question) + multiBadgeHtml + diagramHtml;
 
   const optContainer = document.getElementById('blitzOptionsList');
-
   optContainer.innerHTML = '';
 
   const optKeys = Object.keys(randQ.options).sort();
-
   optKeys.forEach(letter => {
-
     const text = randQ.options[letter];
-
     const btn = document.createElement('div');
-
     btn.className = 'option-item';
-
     btn.innerHTML = `
-
       <div class="option-letter">${letter}</div>
-
       <div class="option-text">${formatOptionText(text)}</div>
-
     `;
-
     btn.addEventListener('click', () => handleBlitzAnswer(letter, btn));
-
     optContainer.appendChild(btn);
-
   });
-
 }
 
 function handleBlitzAnswer(chosenLetter, itemBtn) {
-
   if (!blitzState.active || !blitzState.currentQ) return;
-
   const q = blitzState.currentQ;
+  const neededCount = blitzState.neededCount || 1;
 
-  const isCorrect = q.answer.includes(chosenLetter);
-
-  if (isCorrect) {
-
-    SoundEffects.playCorrect();
-
-    itemBtn.classList.add('correct');
-
-    blitzState.streak++;
-
-    const bonus = blitzState.streak > 1 ? blitzState.streak * 5 : 0;
-
-    blitzState.score += (10 + bonus);
-
-    document.getElementById('blitzScore').textContent = blitzState.score;
-
-    const streakBadge = document.getElementById('blitzStreakBadge');
-
-    if (blitzState.streak >= 2) {
-
-      streakBadge.style.display = 'inline-block';
-
-      streakBadge.textContent = `Combo x${blitzState.streak}! 🔥`;
-
+  // 1 TALIK JAVOBLAR (Tezkor 1-bosishda tekshirish)
+  if (neededCount === 1) {
+    const isCorrect = Array.isArray(q.answer) ? q.answer.includes(chosenLetter) : (q.answer === chosenLetter);
+    if (isCorrect) {
+      SoundEffects.playCorrect();
+      itemBtn.classList.add('correct');
+      blitzState.streak++;
+      const bonus = blitzState.streak > 1 ? blitzState.streak * 5 : 0;
+      blitzState.score += (10 + bonus);
+      document.getElementById('blitzScore').textContent = blitzState.score;
+      const streakBadge = document.getElementById('blitzStreakBadge');
+      if (blitzState.streak >= 2) {
+        streakBadge.style.display = 'inline-block';
+        streakBadge.textContent = `Combo x${blitzState.streak}! 🔥`;
+      }
+      setTimeout(nextBlitzQuestion, 250);
+    } else {
+      SoundEffects.playWrong();
+      itemBtn.classList.add('wrong');
+      blitzState.streak = 0;
+      document.getElementById('blitzStreakBadge').style.display = 'none';
+      document.querySelectorAll('#blitzOptionsList .option-item').forEach(b => {
+        const l = b.querySelector('.option-letter').textContent.trim();
+        if (q.answer.includes(l)) b.classList.add('correct');
+      });
+      setTimeout(nextBlitzQuestion, 800);
     }
-
-    setTimeout(nextBlitzQuestion, 250);
-
-  } else {
-
-    SoundEffects.playWrong();
-
-    itemBtn.classList.add('wrong');
-
-    blitzState.streak = 0;
-
-    document.getElementById('blitzStreakBadge').style.display = 'none';
-
-    // Show correct
-
-    document.querySelectorAll('#blitzOptionsList .option-item').forEach(b => {
-
-      const l = b.querySelector('.option-letter').textContent.trim();
-
-      if (q.answer.includes(l)) b.classList.add('correct');
-
-    });
-
-    setTimeout(nextBlitzQuestion, 800);
-
+    return;
   }
 
+  // 2 YOKI UNDAN ORTIQ JAVOBLI SAVOLLAR (Multi-Choice)
+  blitzState.selectedAnswers = blitzState.selectedAnswers || [];
+  const existingIdx = blitzState.selectedAnswers.indexOf(chosenLetter);
+  if (existingIdx !== -1) {
+    // Tanlovni bekor qilish
+    blitzState.selectedAnswers.splice(existingIdx, 1);
+    itemBtn.classList.remove('selected');
+    SoundEffects.playClick();
+  } else {
+    // Yangi variant belgilash
+    if (blitzState.selectedAnswers.length < neededCount) {
+      blitzState.selectedAnswers.push(chosenLetter);
+      itemBtn.classList.add('selected');
+      SoundEffects.playClick();
+    }
+  }
+
+  const countSpan = document.getElementById('blitzSelectedCount');
+  if (countSpan) countSpan.textContent = blitzState.selectedAnswers.length;
+
+  // Barcha talab qilingan javoblar belgilangandan so'nggina tekshirish!
+  if (blitzState.selectedAnswers.length === neededCount) {
+    const isCorrect = arraysEqual(blitzState.selectedAnswers.slice().sort(), q.answer.slice().sort());
+    if (isCorrect) {
+      SoundEffects.playCorrect();
+      document.querySelectorAll('#blitzOptionsList .option-item').forEach(b => {
+        const l = b.querySelector('.option-letter').textContent.trim();
+        if (blitzState.selectedAnswers.includes(l)) {
+          b.classList.remove('selected');
+          b.classList.add('correct');
+        }
+      });
+      blitzState.streak++;
+      const bonus = blitzState.streak > 1 ? blitzState.streak * 5 : 0;
+      blitzState.score += (15 + bonus);
+      document.getElementById('blitzScore').textContent = blitzState.score;
+      const streakBadge = document.getElementById('blitzStreakBadge');
+      if (blitzState.streak >= 2) {
+        streakBadge.style.display = 'inline-block';
+        streakBadge.textContent = `Combo x${blitzState.streak}! 🔥`;
+      }
+      setTimeout(nextBlitzQuestion, 300);
+    } else {
+      SoundEffects.playWrong();
+      document.querySelectorAll('#blitzOptionsList .option-item').forEach(b => {
+        const l = b.querySelector('.option-letter').textContent.trim();
+        b.classList.remove('selected');
+        if (q.answer.includes(l)) {
+          b.classList.add('correct');
+        } else if (blitzState.selectedAnswers.includes(l)) {
+          b.classList.add('wrong');
+        }
+      });
+      blitzState.streak = 0;
+      document.getElementById('blitzStreakBadge').style.display = 'none';
+      setTimeout(nextBlitzQuestion, 900);
+    }
+  }
 }
-
-// ==========================================
-
-// 🎯 3. CISCO DRAG & DROP MODULE
 
 // ==========================================
 
@@ -7437,6 +7476,7 @@ let adminStudentFilterQuery = '';
 function switchAdminTab(tabName) {
 
   currentAdminSubTab = tabName;
+  try { localStorage.setItem('ccna_active_admin_sub_tab', tabName); } catch(e) {}
 
   const btnStudents = document.getElementById('adminTabBtnStudents');
 
@@ -7770,7 +7810,8 @@ function renderAdminStudentsList() {
 
     const dev = (u.boundDevices && u.boundDevices.length > 0) ? u.boundDevices[0] : null;
     const devShort = dev ? `${escapeHtml(dev.os || 'PC')} (${escapeHtml(dev.browser || 'Web')})` : 'Biriktirilmagan';
-    const devTooltip = dev ? `${escapeHtml(dev.name || '')} • ${escapeHtml(dev.screen || '')} • Faol: ${escapeHtml(dev.lastActive || dev.boundAt || '-')}` : 'Hali hech qaysi qurilma biriktirilmagan';
+    const devIp = dev ? (dev.ip || u.lastIp || '') : '';
+    const devTooltip = dev ? `${escapeHtml(dev.name || '')} • ${escapeHtml(dev.screen || '')} • IP: ${escapeHtml(devIp || "Noma'lum")} • Faol: ${escapeHtml(dev.lastActive || dev.boundAt || '-')}` : 'Hali hech qaysi qurilma biriktirilmagan';
 
     tr.innerHTML = `
 
@@ -7791,7 +7832,12 @@ function renderAdminStudentsList() {
       <td>
         ${u.isMaster 
           ? `<span style="color:var(--warning); font-size:0.8rem; font-weight:700;">👑 Cheksiz</span>`
-          : `<span style="font-size:0.8rem; cursor:help; color:var(--text-main);" title="${devTooltip}">💻 ${devShort}</span>`
+          : dev 
+            ? `<div style="font-size:0.8rem; cursor:help;" title="${devTooltip}">
+                 <div style="font-weight:600; color:var(--text-main);">💻 ${devShort}</div>
+                 ${devIp ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace; margin-top:2px;">🌐 IP: ${escapeHtml(devIp)}</div>` : ''}
+               </div>`
+            : `<span style="font-size:0.8rem; color:var(--text-muted);">Biriktirilmagan</span>`
         }
       </td>
       <td style="text-align:center;"><b>${quizCount} ta</b></td>
@@ -8122,7 +8168,11 @@ function renderAdminResultsList() {
 
       (r.studentName && r.studentName.toLowerCase().includes(query)) ||
 
+      (r.login && r.login.toLowerCase().includes(query)) ||
+
       (r.partTitle && r.partTitle.toLowerCase().includes(query)) ||
+
+      (r.studentGroup && r.studentGroup.toLowerCase().includes(query)) ||
 
       (r.group && r.group.toLowerCase().includes(query));
 
@@ -8158,6 +8208,23 @@ function renderAdminResultsList() {
 
     const isPass = r.percent >= 82.5;
 
+    let displayDate = r.date || r.timestamp || r.createdAt;
+    if (!displayDate || displayDate === '-') {
+      displayDate = r.time ? `${r.date || ''} ${r.time}` : '-';
+    }
+
+    let displayGroup = r.group || r.studentGroup;
+    if (!displayGroup || displayGroup === '-') {
+      const allUsers = getRegisteredUsers();
+      const uMatch = allUsers.find(u => (u.login && r.login && u.login.toLowerCase() === r.login.toLowerCase()) || (u.name && r.studentName && u.name.toLowerCase() === r.studentName.toLowerCase()));
+      if (uMatch && uMatch.group) {
+        displayGroup = uMatch.group;
+        r.group = uMatch.group;
+      } else {
+        displayGroup = '-';
+      }
+    }
+
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -8166,7 +8233,7 @@ function renderAdminResultsList() {
 
       <td><b>${escapeHtml(r.studentName || "Noma'lum")}</b></td>
 
-      <td>${escapeHtml(r.group || '-')}</td>
+      <td>${escapeHtml(displayGroup)}</td>
 
       <td><span style="font-weight:600; color:var(--primary);">${escapeHtml(r.partTitle || '-')}</span></td>
 
@@ -8184,7 +8251,10 @@ function renderAdminResultsList() {
 
       </td>
 
-      <td style="font-size:0.85rem; color:var(--text-muted);">${r.date || '-'}</td>
+      <td style="font-size:0.85rem; color:var(--text-muted); white-space:nowrap;">
+        <div>📅 ${escapeHtml(displayDate)}</div>
+        ${r.ip ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace; margin-top:2px;" title="Talaba test topshirgan qurilma IP manzili">🌐 IP: ${escapeHtml(r.ip)}</div>` : ''}
+      </td>
 
       <td style="text-align:center;">
 
@@ -9098,10 +9168,12 @@ function executeCliCommand(rawCmd) {
 
   addCliHistory(`${promptText} ${rawCmd}`, 'command');
 
-  const cmd = rawCmd.toLowerCase().trim().replace(/\s+/g, ' ');
+  // Strip // comments if entered by user
+  let cleanCmd = rawCmd.split('//')[0].trim();
+
+  const cmd = cleanCmd.toLowerCase().replace(/\s+/g, ' ');
 
   // Mode transitions
-
   if (cmd === 'enable' || cmd === 'en') {
 
     state.cli.mode = 'priv';
@@ -9134,7 +9206,7 @@ function executeCliCommand(rawCmd) {
 
     if (state.cli.mode.startsWith('config')) {
 
-      state.cli.mode = 'config-if';
+      state.cli.mode = cmd.includes('range') ? 'config-if-range' : 'config-if';
 
       updateCliPrompt();
 
@@ -9202,12 +9274,64 @@ function executeCliCommand(rawCmd) {
 
   } else if (cmd === '?' || cmd === 'help') {
 
-    addCliHistory("Mavjud buyruqlar: enable, disable, configure terminal, interface, vlan, router ospf, ip route, switchport, exit, end, clear. [Tab: Avto-to'ldirish]", 'info');
+    addCliHistory("Mavjud buyruqlar: enable, disable, configure terminal, interface, vlan, lldp, router ospf, ip route, switchport, show, ping, copy run start, exit, end, clear. [Tab: Avto-to'ldirish]", 'info');
+
+  }
+
+  // Realistic simulated command outputs
+  if (cmd.startsWith('copy run') || cmd.startsWith('copy running-config') || cmd === 'write' || cmd === 'wr' || cmd === 'write memory') {
+
+    addCliHistory("Destination filename [startup-config]?", 'output');
+    addCliHistory("Building configuration...", 'output');
+    addCliHistory("[OK]", 'success');
+
+  } else if (cmd.startsWith('sh lldp nei') || cmd.startsWith('show lldp nei')) {
+
+    addCliHistory("Capability codes:\n    (R) Router, (B) Bridge, (T) Telephone, (C) DOCSIS Cable Device\n    (W) WLAN Access Point, (P) Repeater, (S) Station, (O) Other\n\nDevice ID           Local Intf     Hold-time  Capability      Port ID\nSW-2                Et0/0          120        B               Et0/0\n\nTotal entries displayed: 1", 'output');
+
+  } else if (cmd.startsWith('sh vlan') || cmd.startsWith('show vlan')) {
+
+    addCliHistory("VLAN Name                             Status    Ports\n---- -------------------------------- --------- -------------------------------\n1    default                          active    Et0/0, Et0/1, Et0/2, Et0/3\n10   Engineering                      active    Et0/1\n77   User_VLAN                        active    Et0/1, Et0/2, Et0/3\n99   FINANCIAL                        active    Et0/2\n177  Voice_VLAN                       active    Et0/1, Et0/2, Et0/3", 'output');
+
+  } else if (cmd.startsWith('sh ip int') || cmd.startsWith('show ip int')) {
+
+    addCliHistory("Interface                  IP-Address      OK? Method Status                Protocol\nEthernet0/0                10.0.12.5       YES manual up                    up      \nEthernet0/1                192.168.180.17  YES manual up                    up      \nEthernet0/2                unassigned      YES unset  up                    up      \nLoopback0                  10.110.110.110  YES manual up                    up      ", 'output');
+
+  } else if (cmd.startsWith('sh ip ospf nei') || cmd.startsWith('show ip ospf nei')) {
+
+    addCliHistory("Neighbor ID     Pri   State           Dead Time   Address         Interface\n10.2.2.2          1   FULL/BDR        00:00:34    10.0.12.2       Ethernet0/0\n10.3.3.3          1   FULL/DROTHER    00:00:38    10.0.13.3       Ethernet0/1", 'output');
+
+  } else if (cmd.startsWith('sh ip nat') || cmd.startsWith('show ip nat')) {
+
+    addCliHistory("Pro Inside global      Inside local       Outside local      Outside global\ntcp 209.165.200.225:1024 10.0.12.1:1024  209.165.200.224:80 209.165.200.224:80", 'output');
+
+  } else if (cmd.startsWith('sh ntp') || cmd.startsWith('show ntp')) {
+
+    addCliHistory("Clock is synchronized, stratum 1, reference is 127.127.1.1\nnominal freq is 250.0000 Hz, actual freq is 249.9995 Hz, precision is 2**18", 'output');
+
+  } else if (cmd.startsWith('sh ip route static') || cmd.startsWith('show ip route static')) {
+
+    addCliHistory("Gateway of last resort is 10.0.13.3 to network 0.0.0.0\n\nS*    0.0.0.0/0 [1/0] via 10.0.13.3\nS     10.0.41.10/32 [1/0] via 10.0.12.2\n                    [254/0] via 10.0.13.3", 'output');
+
+  } else if (cmd.startsWith('sh int trunk') || cmd.startsWith('show int trunk') || cmd.startsWith('show interfaces trunk')) {
+
+    addCliHistory("Port        Mode             Encapsulation  Status        Native vlan\nEt0/0       on               802.1q         trunking      1\nEt0/1       on               802.1q         trunking      77\n\nPort        Vlans allowed on trunk\nEt0/0       5,6\nEt0/1       1-4094", 'output');
+
+  } else if (cmd.startsWith('sh ether') || cmd.startsWith('show ether')) {
+
+    addCliHistory("Flags:  D - down        P - bundled in port-channel\n        I - stand-alone s - suspended\nGroup  Port-channel  Protocol    Ports\n------+-------------+-----------+-----------------------------------------------\n1      Po1(SU)         LACP      Et0/0(P)    Et0/1(P)", 'output');
+
+  } else if (cmd.startsWith('sh ip access') || cmd.startsWith('show ip access')) {
+
+    addCliHistory("Extended IP access list WWW_ACL\n    10 permit tcp 10.101.1.0 0.0.0.255 any eq www (45 matches)\n    20 deny tcp any any eq www (12 matches)\n    30 deny tcp host 10.101.0.2 any eq telnet (3 matches)\n    40 permit ip any any (120 matches)", 'output');
+
+  } else if (cmd.startsWith('ping ')) {
+
+    addCliHistory("Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos, timeout is 2 seconds:\n!!!!!\nSuccess rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms", 'output');
 
   }
 
   // Check goal step with smart normalization
-
   const scenario = state.cli.scenarios[state.cli.scenarioIndex];
 
   const currentStep = scenario.steps[state.cli.currentLabStep];
@@ -9216,23 +9340,34 @@ function executeCliCommand(rawCmd) {
 
     const exp = currentStep.cmd.toLowerCase().trim().replace(/\s+/g, ' ');
 
-    
-
-    const normalizeCmd = (s) => s
-
+    const normalizeCmd = (s) => s.toLowerCase().trim()
+      .replace(/\s*\/\/\s*.*$/, '')
+      .replace(/\s+/g, ' ')
       .replace(/^conf\s+t\b/, 'configure terminal')
-
+      .replace(/^interface\s+range\s+([a-z0-9\/]+)\s*-\s*([0-9]+)/, 'interface range $1-$2')
+      .replace(/^int\s+range\s+([a-z0-9\/]+)\s*-\s*([0-9]+)/, 'interface range $1-$2')
       .replace(/^int\s+range\b/, 'interface range')
-
       .replace(/^int\s+/, 'interface ')
-
       .replace(/^sh\s+/, 'show ')
-
       .replace(/\bno\s+shut\b/, 'no shutdown')
+      .replace(/^en\b/, 'enable')
+      .replace(/^sw\s+/, 'switchport ')
+      .replace(/switchport\s+mode\s+acc\b/, 'switchport mode access')
+      .replace(/switchport\s+acc\s+vlan\b/, 'switchport access vlan')
+      .replace(/switchport\s+voice\s+vlan\b/, 'switchport voice vlan')
+      .replace(/^copy\s+run\s+start\b/, 'copy running-config startup-config')
+      .replace(/^copy\s+running-config\s+startup-config\b/, 'copy running-config startup-config')
+      .replace(/^write\s+memory\b/, 'copy running-config startup-config')
+      .replace(/^write\b/, 'copy running-config startup-config')
+      .replace(/^wr\b/, 'copy running-config startup-config')
+      .replace(/interface\s+range\s+([a-z0-9\/]+)\s*-\s*([0-9]+)/, 'interface range $1-$2')
+      .replace(/^exit\b/, 'exit_or_end')
+      .replace(/^end\b/, 'exit_or_end');
 
-      .replace(/^en\b/, 'enable');
+    const normInput = normalizeCmd(cmd);
+    const normExp = normalizeCmd(exp);
 
-    const isMatch = (cmd === exp) || (normalizeCmd(cmd) === normalizeCmd(exp));
+    const isMatch = (cmd === exp) || (normInput === normExp);
 
     if (isMatch) {
 

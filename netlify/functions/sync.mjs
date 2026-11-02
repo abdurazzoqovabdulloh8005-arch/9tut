@@ -13,13 +13,23 @@ export default async (req, context) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const action = url.searchParams.get('action');
+    const key = url.searchParams.get('key') || 'users';
+
+    // Fast IP detection endpoint for device security audit
+    if (action === 'myip' || key === 'myip') {
+      const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                       req.headers.get('client-ip') || 
+                       req.headers.get('x-nf-client-connection-ip') || 
+                       context?.ip || '127.0.0.1';
+      return new Response(JSON.stringify({ ip: clientIp }), { status: 200, headers });
+    }
+
     const store = getStore({
       name: 'ccna-cloud-db',
       consistency: 'strong'
     });
-
-    const url = new URL(req.url);
-    const key = url.searchParams.get('key') || 'users';
 
     // GET Request: Retrieve data
     if (req.method === 'GET') {
