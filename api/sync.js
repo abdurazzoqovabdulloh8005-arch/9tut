@@ -157,6 +157,19 @@ export default async function handler(req, res) {
         if (deletedList.length > 500) deletedList = deletedList.slice(-500);
         await store.set('deleted_users', deletedList);
 
+        // Also purge test results for deleted student
+        let results = (await store.get('results')) || [];
+        if (Array.isArray(results)) {
+          results = results.filter(r => {
+            if (!r) return false;
+            const rLog = String(r.login || '').trim().toLowerCase();
+            const rName = String(r.studentName || '').trim().toLowerCase();
+            if (targetLogin && (rLog === targetLogin || rName === targetLogin)) return false;
+            return true;
+          });
+          await store.set('results', results);
+        }
+
         return res.status(200).json({ success: true, count: Array.isArray(users) ? users.length : 0 });
       }
 

@@ -167,29 +167,55 @@ const CloudSync = {
     return getMasterAdmin();
   },
 
-  // Pull cloud users (Cloud is Authoritative Source of Truth)
+  // Pull cloud users (Robust Merge so local users are never wiped!)
   async syncUsers() {
     if (!this.isAvailable()) return getRegisteredUsers();
     try {
       const cloudUsers = await this.get('users');
-      if (Array.isArray(cloudUsers)) {
-        let deletedLogins = [];
-        try {
-          deletedLogins = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
-        } catch(e) {}
-        const delSet = new Set(deletedLogins.map(x => String(x).toLowerCase()));
+      let deletedLogins = [];
+      try {
+        deletedLogins = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+      } catch(e) {}
+      const delSet = new Set(deletedLogins.map(x => String(x).toLowerCase()));
 
-        // Filter out any users marked as deleted in local tombstone
-        const cleanUsers = cloudUsers.filter(u => {
-          if (!u || !u.login) return false;
+      const localUsers = getRegisteredUsers();
+      const userMap = new Map();
+
+      // Seed with local users
+      localUsers.forEach(u => {
+        if (!u || !u.login) return;
+        const uid = String(u.id || '').toLowerCase();
+        const ulog = String(u.login).trim().toLowerCase();
+        if (!delSet.has(uid) && !delSet.has(ulog)) {
+          userMap.set(ulog, u);
+        }
+      });
+
+      // Merge cloud users
+      if (Array.isArray(cloudUsers)) {
+        cloudUsers.forEach(u => {
+          if (!u || !u.login) return;
           const uid = String(u.id || '').toLowerCase();
           const ulog = String(u.login).trim().toLowerCase();
-          return !delSet.has(uid) && !delSet.has(ulog);
+          if (!delSet.has(uid) && !delSet.has(ulog)) {
+            const existing = userMap.get(ulog);
+            if (existing) {
+              userMap.set(ulog, { ...existing, ...u, isApproved: (existing.isApproved !== undefined ? existing.isApproved : u.isApproved) });
+            } else {
+              userMap.set(ulog, u);
+            }
+          }
         });
-
-        localStorage.setItem('ccna_registered_users', JSON.stringify(cleanUsers));
-        return cleanUsers;
       }
+
+      const mergedUsers = Array.from(userMap.values());
+      localStorage.setItem('ccna_registered_users', JSON.stringify(mergedUsers));
+
+      // If local has users that cloud doesn't, seed cloud
+      if (Array.isArray(cloudUsers) && mergedUsers.length > cloudUsers.length) {
+        this.saveAll('users', mergedUsers);
+      }
+      return mergedUsers;
     } catch(e) {
       console.warn("CloudSync syncUsers error:", e);
     }
@@ -201,55 +227,63 @@ const CloudSync = {
     if (!this.isAvailable()) return state.results || [];
     try {
       const cloudResults = await this.get('results');
+      let deletedResults = [];
+      try {
+        deletedResults = JSON.parse(localStorage.getItem('ccna_deleted_results') || '[]');
+      } catch(e) {}
+      const delResSet = new Set(deletedResults.map(String));
+
+      let deletedLogins = [];
+      try {
+        deletedLogins = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
+      } catch(e) {}
+      const delLogSet = new Set(deletedLogins.map(x => String(x).toLowerCase()));
+
+      const localRaw = localStorage.getItem('ccna_results');
+      const localResults = localRaw ? JSON.parse(localRaw) : [];
+      const resultMap = new Map();
+
+      const addResultIfValid = (r) => {
+        if (!r) return;
+        if (!r.date && r.timestamp) r.date = r.timestamp;
+        if (!r.group && r.studentGroup) r.group = r.studentGroup;
+        const k = String(r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`);
+        if (delResSet.has(k)) return;
+        if (r.id && delResSet.has(String(r.id))) return;
+        if (r.login && delLogSet.has(String(r.login).toLowerCase())) return;
+        if (r.studentName && delLogSet.has(String(r.studentName).toLowerCase())) return;
+        resultMap.set(k, { ...r, id: k });
+      };
+
+      localResults.forEach(addResultIfValid);
       if (Array.isArray(cloudResults)) {
-        const localRaw = localStorage.getItem('ccna_results');
-        const localResults = localRaw ? JSON.parse(localRaw) : [];
-        const resultMap = new Map();
-
-        localResults.forEach(r => {
-          if (!r) return;
-          if (!r.date && r.timestamp) r.date = r.timestamp;
-          if (!r.group && r.studentGroup) r.group = r.studentGroup;
-          const k = r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`;
-          resultMap.set(k, r);
-        });
-
-        cloudResults.forEach(r => {
-          if (!r) return;
-          if (!r.date && r.timestamp) r.date = r.timestamp;
-          if (!r.group && r.studentGroup) r.group = r.studentGroup;
-          const k = r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`;
-          resultMap.set(k, r);
-        });
-
-        const parseTs = (str) => {
-          if (!str) return 0;
-          const t = new Date(str).getTime();
-          if (!isNaN(t)) return t;
-          const m = String(str).match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-          if (m) {
-            return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]), parseInt(m[4]||0), parseInt(m[5]||0), parseInt(m[6]||0)).getTime();
-          }
-          return 0;
-        };
-
-        const merged = Array.from(resultMap.values()).sort((a,b) => {
-          const ta = parseTs(a.date || a.timestamp || a.createdAt);
-          const tb = parseTs(b.date || b.timestamp || b.createdAt);
-          return tb - ta;
-        });
-
-        state.results = merged;
-        localStorage.setItem('ccna_results', JSON.stringify(merged));
-
-        // If local had unsynced results, seed the cloud
-        if (merged.length > cloudResults.length) {
-          this.saveAll('results', merged);
-        }
-        return merged;
-      } else if (state.results && state.results.length > 0) {
-        this.saveAll('results', state.results);
+        cloudResults.forEach(addResultIfValid);
       }
+
+      const parseTs = (str) => {
+        if (!str) return 0;
+        const t = new Date(str).getTime();
+        if (!isNaN(t)) return t;
+        const m = String(str).match(/(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (m) {
+          return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]), parseInt(m[4]||0), parseInt(m[5]||0), parseInt(m[6]||0)).getTime();
+        }
+        return 0;
+      };
+
+      const merged = Array.from(resultMap.values()).sort((a,b) => {
+        const ta = parseTs(a.date || a.timestamp || a.createdAt);
+        const tb = parseTs(b.date || b.timestamp || b.createdAt);
+        return tb - ta;
+      });
+
+      state.results = merged;
+      localStorage.setItem('ccna_results', JSON.stringify(merged));
+
+      if (Array.isArray(cloudResults) && (merged.length !== cloudResults.length || delResSet.size > 0)) {
+        this.saveAll('results', merged);
+      }
+      return merged;
     } catch(e) {
       console.warn("CloudSync syncResults error:", e);
     }
@@ -4497,14 +4531,11 @@ async function handleUserRegister() {
 
   const master = getMasterAdmin();
 
-  if (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase()) {
-
-    showAuthError(errEl, "Ushbu login tizimda band! Boshqa login tanlang.");
-
+  const reservedLogins = ['admin', 'administrator', 'root', 'boshadmin', 'superadmin', 'abdulloh', master.login.toLowerCase()];
+  if (reservedLogins.includes(normalizedLogin)) {
+    showAuthError(errEl, "⚠️ Ushbu login tizim boshqaruvi uchun ajratilgan! Boshqa login tanlang.");
     loginInput.focus();
-
     return;
-
   }
 
   const existingUsers = getRegisteredUsers();
@@ -8193,9 +8224,32 @@ async function deleteStudent(studentId, studentName) {
     });
     localStorage.setItem('ccna_registered_users', JSON.stringify(users));
 
+    // Also purge all test results belonging to this student
+    const targetNameLow = String(studentName || '').toLowerCase();
+    const targetLogLow = String(targetLogin || '').toLowerCase();
+    let delResults = [];
+    try {
+      delResults = JSON.parse(localStorage.getItem('ccna_deleted_results') || '[]');
+    } catch(e) {}
+
+    state.results = (state.results || []).filter(r => {
+      const matchName = r.studentName && String(r.studentName).toLowerCase() === targetNameLow;
+      const matchLogin = targetLogLow && r.login && String(r.login).toLowerCase() === targetLogLow;
+      if (matchName || matchLogin) {
+        const k = String(r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`);
+        if (!delResults.includes(k)) delResults.push(k);
+        return false;
+      }
+      return true;
+    });
+
+    localStorage.setItem('ccna_deleted_results', JSON.stringify(delResults));
+    localStorage.setItem('ccna_results', JSON.stringify(state.results));
+
     // 3. Immediately delete from Cloud
     if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       CloudSync.deleteUser(studentId, targetLogin);
+      CloudSync.saveAll('results', state.results);
     }
 
     try { SoundEffects.playClick(); } catch(e) {}
@@ -8342,7 +8396,7 @@ function renderAdminResultsList() {
 
       <td style="text-align:center;">
 
-        <button class="btn-action-icon btn-action-danger" title="Ushbu natijani o'chirish" onclick="deleteSpecificResult(${state.results.indexOf(r)})">🗑️</button>
+        <button class="btn-action-icon btn-action-danger" title="Ushbu natijani o'chirish" onclick="deleteSpecificResult('${escapeHtml(String(r.id || (r.studentName + "_" + (r.timestamp || r.date) + "_" + r.percent)))}')">🗑️</button>
 
       </td>
 
@@ -8354,28 +8408,36 @@ function renderAdminResultsList() {
 
 }
 
-function deleteSpecificResult(index) {
+function deleteSpecificResult(targetKey) {
+  if (!confirm("Haqiqatan ham ushbu test natijasini o'chirmoqchimisiz?")) return;
+  const keyStr = String(targetKey);
+  const idx = (state.results || []).findIndex(r => {
+    const k = String(r.id || `${r.studentName}_${r.timestamp || r.date}_${r.percent}`);
+    return k === keyStr || String(r.id) === keyStr;
+  });
 
-  if (confirm("Haqiqatan ham ushbu test natijasini o'chirmoqchimisiz?")) {
+  if (idx !== -1) {
+    const deletedItem = state.results[idx];
+    const delKey = String(deletedItem.id || `${deletedItem.studentName}_${deletedItem.timestamp || deletedItem.date}_${deletedItem.percent}`);
 
-    if (index >= 0 && index < state.results.length) {
+    let delResults = [];
+    try {
+      delResults = JSON.parse(localStorage.getItem('ccna_deleted_results') || '[]');
+    } catch(e) {}
+    if (!delResults.includes(delKey)) delResults.push(delKey);
+    if (deletedItem.id && !delResults.includes(String(deletedItem.id))) delResults.push(String(deletedItem.id));
+    localStorage.setItem('ccna_deleted_results', JSON.stringify(delResults));
 
-      state.results.splice(index, 1);
+    state.results.splice(idx, 1);
+    localStorage.setItem('ccna_results', JSON.stringify(state.results));
 
-      localStorage.setItem('ccna_results', JSON.stringify(state.results));
-
-      if (typeof CloudSync !== 'undefined') {
-        CloudSync.saveAll('results', state.results);
-      }
-
-      SoundEffects.playClick();
-
-      renderAdminDashboard();
-
+    if (typeof CloudSync !== 'undefined') {
+      CloudSync.saveAll('results', state.results);
     }
 
+    try { SoundEffects.playClick(); } catch(e) {}
+    renderAdminDashboard();
   }
-
 }
 
 // SUB-VIEW 3: LEADERBOARD
