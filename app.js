@@ -2240,7 +2240,7 @@ function switchMainTab(target) {
     target = 'quiz';
 
   }
-  try { localStorage.setItem('ccna_active_main_tab', target); } catch(e) {}
+  try { sessionStorage.setItem('ccna_active_main_tab', target); localStorage.setItem('ccna_active_main_tab', target); } catch(e) {}
 
   const tabs = document.querySelectorAll('.nav-tab');
 
@@ -4813,14 +4813,24 @@ function renderPartsGrid() {
 }
 
 
-// QUIZ & TAB STATE PERSISTENCE SYSTEM
+// QUIZ & TAB STATE PERSISTENCE SYSTEM (PER-TAB & USER ISOLATED)
+function getActiveQuizKey() {
+  const user = state.currentUser;
+  const login = user && user.login ? user.login.toLowerCase().trim() : 'guest';
+  return 'ccna_active_quiz_' + login;
+}
+
 function saveQuizProgress() {
   try {
+    const key = getActiveQuizKey();
     if (!state.activePartKey || state.isQuizFinished || !state.quizQuestions || state.quizQuestions.length === 0) {
+      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
       localStorage.removeItem('ccna_active_quiz_progress');
       return;
     }
     const payload = {
+      userLogin: state.currentUser ? state.currentUser.login : 'guest',
       partKey: state.activePartKey,
       partTitle: state.activePartTitle,
       mode: state.mode || 'practice',
@@ -4845,7 +4855,12 @@ function saveQuizProgress() {
         shuffledTerms: q.shuffledTerms || []
       }))
     };
-    localStorage.setItem('ccna_active_quiz_progress', JSON.stringify(payload));
+    const str = JSON.stringify(payload);
+    // Tab darajasida saqlash (Har bir oyna yoki tab bir-biriga xalaqit bermaydi!)
+    sessionStorage.setItem(key, str);
+    sessionStorage.setItem('ccna_active_main_tab', 'quiz');
+    // Zaxira sifatida foydalanuvchi hisobiga bog'langan holda saqlash
+    localStorage.setItem(key, str);
   } catch(e) {
     console.warn("Could not save quiz progress:", e);
   }
@@ -4853,12 +4868,22 @@ function saveQuizProgress() {
 
 function restoreActiveQuiz() {
   try {
-    const raw = localStorage.getItem('ccna_active_quiz_progress');
+    const key = getActiveQuizKey();
+    // 1. Avval joriy oynaning sessionStorage tekshiriladi (tab izolyatsiyasi)
+    // Agar topilmasa, joriy foydalanuvchining localStorage keshidan olinadi
+    const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
     if (!raw) return false;
     const data = JSON.parse(raw);
     if (!data || !data.questions || data.questions.length === 0) return false;
 
-    // Asosiy tabni 'quiz' ga o'tkazish
+    // Boshqa foydalanuvchining testi bo'lsa tiklamaslik
+    if (state.currentUser && data.userLogin && data.userLogin !== 'guest') {
+      if (state.currentUser.login.toLowerCase() !== data.userLogin.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // Tabni 'quiz' ga o'tkazish
     switchMainTab('quiz');
 
     state.activePartKey = data.partKey;
@@ -4911,9 +4936,51 @@ function restoreActiveQuiz() {
 }
 
 function restoreUserNavigationAndQuiz() {
-  // 1. Agar foydalanuvchi test topshirayotgan bo'lsa (active quiz progress mavjud bo'lsa),
-  // sahifa yangilanganda testdan chiqib ketmasdan, kelgan joyidan to'liq tiklaymiz!
-  const hasActiveQuiz = localStorage.getItem('ccna_active_quiz_progress');
+  // Eski global kalitni tozalash
+  try { localStorage.removeItem('ccna_active_quiz_progress'); } catch(e) {}
+
+  // 1. Joriy oyna/tab qaysi bo'limda turganini aniqlash (sessionStorage birinchi)
+  const savedTab = sessionStorage.getItem('ccna_active_main_tab') || 
+                   localStorage.getItem('ccna_active_main_tab') || 
+                   'quiz';
+
+  // Agar bu oyna Administrator boshqaruv panelida turgan bo'lsa -> Admin panel ochiladi!
+  // Test uni aslo buzmaydi va o'rniga chiqib olmaydi!
+  if (savedTab === 'admin' && state.isAdmin) {
+    switchMainTab('admin');
+    const savedSubTab = sessionStorage.getItem('ccna_active_admin_sub_tab') || 
+                        localStorage.getItem('ccna_active_admin_sub_tab') || 
+                        'students';
+    switchAdminTab(savedSubTab);
+    if (savedSubTab === 'chat') {
+      const savedChatUser = localStorage.getItem('ccna_active_admin_chat_user');
+      if (savedChatUser) {
+        try { selectAdminChatUser(savedChatUser); } catch(e) {}
+      }
+    }
+    return;
+  }
+
+  // Agar bu oyna O'qish & Yodlash Zalida bo'lsa
+  if (savedTab === 'study') {
+    switchMainTab('study');
+    const savedStudyView = sessionStorage.getItem('ccna_active_study_view') || 
+                           localStorage.getItem('ccna_active_study_view') || 
+                           'book';
+    switchStudyView(savedStudyView);
+    return;
+  }
+
+  // Boshqa asosiy tablar (lablar, cli, lug'at, saqlanganlar)
+  if (savedTab !== 'quiz') {
+    switchMainTab(savedTab);
+    return;
+  }
+
+  // 2. Agar aynan 'quiz' bo'limida bo'lsa:
+  // Faqat ushbu oyna/tabda yoki ushbu foydalanuvchida davom etayotgan test bo'lsa tiklanadi!
+  const key = getActiveQuizKey();
+  const hasActiveQuiz = sessionStorage.getItem(key) || localStorage.getItem(key);
   if (hasActiveQuiz) {
     try {
       const isQuizRestored = restoreActiveQuiz();
@@ -4925,24 +4992,9 @@ function restoreUserNavigationAndQuiz() {
     }
   }
 
-  // 2. Aks holda oxirgi ochilgan asosiy tabni ochish
-  const savedMainTab = localStorage.getItem('ccna_active_main_tab') || 'quiz';
-  switchMainTab(savedMainTab);
-  if (savedMainTab === 'admin' && state.isAdmin) {
-    const savedSubTab = localStorage.getItem('ccna_active_admin_sub_tab') || 'students';
-    switchAdminTab(savedSubTab);
-    if (savedSubTab === 'chat') {
-      const savedChatUser = localStorage.getItem('ccna_active_admin_chat_user');
-      if (savedChatUser) {
-        try { selectAdminChatUser(savedChatUser); } catch(e) {}
-      }
-    }
-  } else if (savedMainTab === 'study') {
-    const savedStudyView = localStorage.getItem('ccna_active_study_view') || 'book';
-    switchStudyView(savedStudyView);
-  }
+  // Aks holda bo'limlar ro'yxatini ko'rsatish
+  switchMainTab('quiz');
 }
-
 
 // START PART QUIZ
 
@@ -4970,7 +5022,7 @@ function startPartQuiz(part) {
   state.activePartKey = part.key;
 
   state.activePartTitle = part.title;
-  try { localStorage.setItem('ccna_active_main_tab', 'quiz'); } catch(e) {}
+  try { sessionStorage.setItem('ccna_active_main_tab', 'quiz'); localStorage.setItem('ccna_active_main_tab', 'quiz'); } catch(e) {}
 
   const modeSelect = document.getElementById('partModeSelect');
 
@@ -5072,7 +5124,12 @@ function confirmExitQuiz() {
 function backToPartsList() {
 
   clearInterval(state.timerInterval);
-  try { localStorage.removeItem('ccna_active_quiz_progress'); } catch(e) {}
+  try {
+    const key = getActiveQuizKey();
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+    localStorage.removeItem('ccna_active_quiz_progress');
+  } catch(e) {}
 
   document.getElementById('quizTestingArea').style.display = 'none';
 
@@ -6196,7 +6253,12 @@ function jumpToQuestionFromReview(index) {
 function submitFinalExam() {
 
   clearInterval(state.timerInterval);
-  try { localStorage.removeItem('ccna_active_quiz_progress'); } catch(e) {}
+  try {
+    const key = getActiveQuizKey();
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+    localStorage.removeItem('ccna_active_quiz_progress');
+  } catch(e) {}
 
   let correctCount = 0;
 
@@ -6441,7 +6503,7 @@ function initStudyModule() {
 function switchStudyView(viewName) {
 
   state.study.view = viewName;
-  try { localStorage.setItem('ccna_active_study_view', viewName); } catch(e) {}
+  try { sessionStorage.setItem('ccna_active_study_view', viewName); localStorage.setItem('ccna_active_study_view', viewName); } catch(e) {}
 
   document.getElementById('studyTabBook').classList.toggle('active', viewName === 'book');
 
@@ -7498,7 +7560,7 @@ let adminStudentFilterQuery = '';
 function switchAdminTab(tabName) {
 
   currentAdminSubTab = tabName;
-  try { localStorage.setItem('ccna_active_admin_sub_tab', tabName); } catch(e) {}
+  try { sessionStorage.setItem('ccna_active_admin_sub_tab', tabName); localStorage.setItem('ccna_active_admin_sub_tab', tabName); } catch(e) {}
 
   const btnStudents = document.getElementById('adminTabBtnStudents');
 
