@@ -2044,6 +2044,13 @@ function initializeApp() {
 
   try { initBookmarksView(); } catch(e) { console.error("initBookmarksView", e); }
   try { restoreUserNavigationAndQuiz(); } catch(e) { console.error("restoreUserNavigationAndQuiz", e); }
+  window.addEventListener('beforeunload', () => {
+    try {
+      if (state.activePartKey && !state.isQuizFinished && state.quizQuestions && state.quizQuestions.length > 0) {
+        saveQuizProgress();
+      }
+    } catch(e) {}
+  });
 
 }
 
@@ -4851,11 +4858,14 @@ function restoreActiveQuiz() {
     const data = JSON.parse(raw);
     if (!data || !data.questions || data.questions.length === 0) return false;
 
+    // Asosiy tabni 'quiz' ga o'tkazish
+    switchMainTab('quiz');
+
     state.activePartKey = data.partKey;
     state.activePartTitle = data.partTitle;
     state.mode = data.mode || 'practice';
     state.quizQuestions = data.questions;
-    state.currentIndex = data.currentIndex || 0;
+    state.currentIndex = (typeof data.currentIndex === 'number' && data.currentIndex >= 0 && data.currentIndex < data.questions.length) ? data.currentIndex : 0;
     state.userAnswers = data.userAnswers || {};
     state.checkedQuestions = data.checkedQuestions || {};
     state.flaggedQuestions = data.flaggedQuestions || {};
@@ -4896,30 +4906,40 @@ function restoreActiveQuiz() {
     return true;
   } catch(e) {
     console.error("restoreActiveQuiz error:", e);
-    localStorage.removeItem('ccna_active_quiz_progress');
     return false;
   }
 }
 
 function restoreUserNavigationAndQuiz() {
-  const savedMainTab = localStorage.getItem('ccna_active_main_tab') || 'quiz';
-  if (savedMainTab === 'quiz') {
-    const isQuizRestored = restoreActiveQuiz();
-    if (!isQuizRestored) {
-      switchMainTab('quiz');
+  // 1. Agar foydalanuvchi test topshirayotgan bo'lsa (active quiz progress mavjud bo'lsa),
+  // sahifa yangilanganda testdan chiqib ketmasdan, kelgan joyidan to'liq tiklaymiz!
+  const hasActiveQuiz = localStorage.getItem('ccna_active_quiz_progress');
+  if (hasActiveQuiz) {
+    try {
+      const isQuizRestored = restoreActiveQuiz();
+      if (isQuizRestored) {
+        return;
+      }
+    } catch(e) {
+      console.warn("restoreActiveQuiz error:", e);
     }
-  } else {
-    switchMainTab(savedMainTab);
-    if (savedMainTab === 'admin' && state.isAdmin) {
-      const savedSubTab = localStorage.getItem('ccna_active_admin_sub_tab') || 'students';
-      switchAdminTab(savedSubTab);
-      if (savedSubTab === 'chat') {
-        const savedChatUser = localStorage.getItem('ccna_active_admin_chat_user');
-        if (savedChatUser) {
-          try { selectAdminChatUser(savedChatUser); } catch(e) {}
-        }
+  }
+
+  // 2. Aks holda oxirgi ochilgan asosiy tabni ochish
+  const savedMainTab = localStorage.getItem('ccna_active_main_tab') || 'quiz';
+  switchMainTab(savedMainTab);
+  if (savedMainTab === 'admin' && state.isAdmin) {
+    const savedSubTab = localStorage.getItem('ccna_active_admin_sub_tab') || 'students';
+    switchAdminTab(savedSubTab);
+    if (savedSubTab === 'chat') {
+      const savedChatUser = localStorage.getItem('ccna_active_admin_chat_user');
+      if (savedChatUser) {
+        try { selectAdminChatUser(savedChatUser); } catch(e) {}
       }
     }
+  } else if (savedMainTab === 'study') {
+    const savedStudyView = localStorage.getItem('ccna_active_study_view') || 'book';
+    switchStudyView(savedStudyView);
   }
 }
 
@@ -4950,6 +4970,7 @@ function startPartQuiz(part) {
   state.activePartKey = part.key;
 
   state.activePartTitle = part.title;
+  try { localStorage.setItem('ccna_active_main_tab', 'quiz'); } catch(e) {}
 
   const modeSelect = document.getElementById('partModeSelect');
 
@@ -6420,6 +6441,7 @@ function initStudyModule() {
 function switchStudyView(viewName) {
 
   state.study.view = viewName;
+  try { localStorage.setItem('ccna_active_study_view', viewName); } catch(e) {}
 
   document.getElementById('studyTabBook').classList.toggle('active', viewName === 'book');
 
