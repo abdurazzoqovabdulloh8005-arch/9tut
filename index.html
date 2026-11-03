@@ -1282,7 +1282,10 @@
 
             <div style="display:flex; gap:10px; flex:1; max-width:680px; flex-wrap:wrap;">
 
-              <input type="text" id="adminStudentSearch" class="form-control" style="flex:1; min-width:180px;" placeholder="Ism yoki login bo'yicha qidirish..." oninput="renderAdminStudentsList()">
+              <div style="position:relative; flex:1; min-width:180px; display:flex; align-items:center;">
+                <input type="search" id="adminStudentSearch" name="student_search_filter_no_autofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="form-control" style="width:100%; padding-right:28px;" placeholder="Ism yoki login bo'yicha qidirish..." oninput="renderAdminStudentsList()">
+                <button type="button" onclick="clearAdminStudentSearch()" style="position:absolute; right:8px; background:none; border:none; cursor:pointer; font-size:0.95rem; color:var(--text-muted); padding:2px 4px;" title="Qidiruvni tozalash">✕</button>
+              </div>
 
               <select id="adminRoleFilter" class="form-control" style="width:170px;" onchange="renderAdminStudentsList()">
 
@@ -1354,7 +1357,10 @@
 
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
 
-            <input type="text" id="adminResultsSearch" class="form-control" style="max-width:240px;" placeholder="Qidirish (ism, part)..." oninput="renderAdminResultsList()">
+            <div style="position:relative; display:flex; align-items:center; max-width:260px; flex:1;">
+              <input type="search" id="adminResultsSearch" name="results_search_filter_no_autofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="form-control" style="width:100%; padding-right:28px;" placeholder="Qidirish (ism, part)..." oninput="renderAdminResultsList()">
+              <button type="button" onclick="clearAdminResultsSearch()" style="position:absolute; right:8px; background:none; border:none; cursor:pointer; font-size:0.95rem; color:var(--text-muted); padding:2px 4px;" title="Qidiruvni tozalash">✕</button>
+            </div>
 
             <select id="adminResultPartFilter" class="form-control" style="width:auto;" onchange="renderAdminResultsList()">
 

@@ -7619,6 +7619,9 @@ function switchAdminTab(tabName) {
 
   if (tabName === 'students') {
 
+    const sInp = document.getElementById('adminStudentSearch');
+    if (sInp && document.activeElement !== sInp) sInp.value = '';
+
     if (btnStudents) btnStudents.classList.add('active');
 
     if (viewStudents) viewStudents.style.display = 'block';
@@ -7797,6 +7800,22 @@ function populateAdminPartFilter() {
 
 // SUB-VIEW 1: STUDENTS & ADMINS LIST & MANAGEMENT
 
+function clearAdminStudentSearch() {
+  const el = document.getElementById('adminStudentSearch');
+  if (el) {
+    el.value = '';
+    renderAdminStudentsList();
+  }
+}
+
+function clearAdminResultsSearch() {
+  const el = document.getElementById('adminResultsSearch');
+  if (el) {
+    el.value = '';
+    renderAdminResultsList();
+  }
+}
+
 function renderAdminStudentsList() {
 
   const tbody = document.getElementById('adminStudentsTableBody');
@@ -7804,6 +7823,16 @@ function renderAdminStudentsList() {
   const countText = document.getElementById('adminStudentCountText');
 
   const searchInput = document.getElementById('adminStudentSearch');
+
+  // Prevent browser autofill from secretly hiding all students
+  if (searchInput && document.activeElement !== searchInput) {
+    const val = (searchInput.value || '').trim().toLowerCase();
+    const curName = String(state.currentUser?.name || '').toLowerCase();
+    const curLog = String(state.currentUser?.login || '').toLowerCase();
+    if (val && (val === 'abdulloh' || val === curName || val === curLog)) {
+      searchInput.value = '';
+    }
+  }
 
   const groupSelect = document.getElementById('adminGroupFilter');
 
