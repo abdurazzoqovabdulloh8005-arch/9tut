@@ -200,7 +200,8 @@ const CloudSync = {
           if (!delSet.has(uid) && !delSet.has(ulog)) {
             const existing = userMap.get(ulog);
             if (existing) {
-              userMap.set(ulog, { ...existing, ...u, isApproved: (existing.isApproved !== undefined ? existing.isApproved : u.isApproved) });
+              // Cloud u takes precedence for approval, role, and device bindings!
+              userMap.set(ulog, { ...existing, ...u });
             } else {
               userMap.set(ulog, u);
             }
@@ -3969,9 +3970,18 @@ function checkAuth() {
 
     try {
 
-      const raw = localStorage.getItem('ccna_auth_session') || sessionStorage.getItem('ccna_auth_session');
-
-      if (raw) savedSession = JSON.parse(raw);
+      // Tab-isolated sessionStorage has top priority!
+      const sessionRaw = sessionStorage.getItem('ccna_auth_session');
+      if (sessionRaw) {
+        savedSession = JSON.parse(sessionRaw);
+      } else {
+        // Fallback to localStorage ONLY if this tab has no session yet
+        const localRaw = localStorage.getItem('ccna_auth_session');
+        if (localRaw) {
+          savedSession = JSON.parse(localRaw);
+          sessionStorage.setItem('ccna_auth_session', localRaw);
+        }
+      }
 
     } catch (e) {
 
@@ -4317,6 +4327,9 @@ showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu h
 
       };
 
+      // Completely reset stale in-memory quiz data from previous user
+      resetQuizState();
+
       state.currentUser = sessionData;
 
       state.isAdmin = (match.role === 'admin');
@@ -4390,19 +4403,14 @@ showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu h
       try { renderPartsGrid(); } catch(e) {}
 
       // Tab activation based on role
-
       if (state.isAdmin) {
-
         setTimeout(() => {
-
           switchMainTab('admin');
-
+          renderAdminDashboard();
         }, 50);
-
       } else {
-
         switchMainTab('quiz');
-
+        restoreUserNavigationAndQuiz();
       }
 
     } else {
@@ -4681,21 +4689,65 @@ function togglePasswordVisibility(inputId) {
 
 }
 
+function resetQuizState() {
+  try { clearInterval(state.timerInterval); } catch(e) {}
+  state.activePartKey = null;
+  state.activePartTitle = null;
+  state.quizQuestions = [];
+  state.userAnswers = {};
+  state.checkedQuestions = {};
+  state.flaggedQuestions = {};
+  state.currentIndex = 0;
+  state.isQuizFinished = false;
+  state.isReviewMode = false;
+  state.reviewOnlyWrong = false;
+  state.mode = 'practice';
+  state.examTimeSeconds = 0;
+
+  const testingArea = document.getElementById('quizTestingArea');
+  const partsView = document.getElementById('partsSelectionView');
+  const questionCard = document.getElementById('questionCard');
+  const reviewCard = document.getElementById('reviewScreenCard');
+  const finishedCard = document.getElementById('finishedCard');
+  if (testingArea) testingArea.style.display = 'none';
+  if (questionCard) questionCard.style.display = 'none';
+  if (reviewCard) reviewCard.style.display = 'none';
+  if (finishedCard) finishedCard.style.display = 'none';
+  if (partsView) partsView.style.display = 'block';
+}
+
 function logoutUser() {
 
   if (confirm("Haqiqatan ham hisobingizdan chiqmoqchimisiz?")) {
 
-    state.currentUser = null;
+    const prevKey = getActiveQuizKey();
+    const prevLogin = state.currentUser?.login;
 
+    state.currentUser = null;
     state.isAdmin = false;
 
-    localStorage.removeItem('ccna_auth_session');
-
+    // 1. Clear session-scoped auth & quiz
     sessionStorage.removeItem('ccna_auth_session');
+    sessionStorage.removeItem(prevKey);
+    sessionStorage.removeItem('ccna_active_main_tab');
+    sessionStorage.removeItem('ccna_active_admin_sub_tab');
+
+    try {
+      const localRaw = localStorage.getItem('ccna_auth_session');
+      if (localRaw) {
+        const p = JSON.parse(localRaw);
+        if (p && p.login === prevLogin) localStorage.removeItem('ccna_auth_session');
+      }
+    } catch(e) {}
+
+    // 2. Wipe in-memory quiz state so next user never sees this quiz!
+    resetQuizState();
 
     document.documentElement.classList.remove('is-authenticated');
 
     switchMainTab('quiz');
+
+    renderPartsGrid();
 
     checkAuth();
 
@@ -9784,6 +9836,11 @@ function approveUser(userId) {
 
   saveRegisteredUsers(users);
 
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    CloudSync.upsertUser(u);
+    CloudSync.saveAll('users', users);
+  }
+
   renderAdminStudentsList();
 
   updateAdminStats();
@@ -9811,6 +9868,11 @@ function toggleUserApproval(userId) {
   u.isApproved = nextState;
 
   saveRegisteredUsers(users);
+
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    CloudSync.upsertUser(u);
+    CloudSync.saveAll('users', users);
+  }
 
   renderAdminStudentsList();
 
