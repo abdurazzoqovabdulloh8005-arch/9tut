@@ -656,7 +656,13 @@ function prepareQuizQuestions(rawQuestions) {
       }
       const origKeys = Object.keys(qClone.options).sort();
       if (origKeys.length > 1) {
-        const origAns = Array.isArray(qClone.answer) ? qClone.answer : [qClone.answer];
+        const rawAns = Array.isArray(qClone.answer) ? qClone.answer : [qClone.answer];
+        const origAns = rawAns.flatMap(a => {
+          if (typeof a === 'string') {
+            return (a.match(/[A-Za-z]/g) || []);
+          }
+          return [];
+        });
         const items = origKeys.map(k => ({
           origKey: k,
           text: qClone.options[k],
