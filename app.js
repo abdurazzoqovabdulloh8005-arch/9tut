@@ -2019,7 +2019,7 @@ const PARTS_CONFIG = [
 
   { key: 'new questions.docx', title: 'New Questions', count: 306, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
 
-  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 125, desc: 'Cisco rasmiy barcha 125 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
+  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 126, desc: 'Cisco rasmiy barcha 126 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
 
   { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1331, desc: 'Barcha 1331 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
 
