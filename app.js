@@ -337,9 +337,57 @@ const CloudSync = {
 };
 
 
+
+// DYNAMIC ANSWER HEALER: Automatically heals any missing or corrupted answers from CCNA_QUESTIONS master
+function healQuestionAnswer(q) {
+  if (!q) return;
+  if (q.isDragDrop) return;
+  
+  const isValid = Array.isArray(q.answer) && 
+                  q.answer.length > 0 && 
+                  q.answer.every(a => typeof a === 'string' && /^[A-Z]$/.test(a.trim()));
+                  
+  if (isValid) return;
+
+  if (typeof CCNA_QUESTIONS !== 'undefined' && Array.isArray(CCNA_QUESTIONS)) {
+    const master = (q.id ? CCNA_QUESTIONS.find(m => m.id === q.id) : null) || 
+                   CCNA_QUESTIONS.find(m => m.question && q.question && m.question.trim() === q.question.trim());
+    
+    if (master && master.answer && master.answer.length > 0) {
+      const cleanMasterLetters = (Array.isArray(master.answer) ? master.answer : [master.answer]).flatMap(a => {
+        return typeof a === 'string' ? (a.match(/[A-Za-z]/g) || []) : [];
+      });
+
+      if (cleanMasterLetters.length > 0) {
+        if (q.options && typeof q.options === 'object' && Object.keys(q.options).length > 0) {
+          const correctTexts = cleanMasterLetters
+            .map(l => (master.options ? master.options[l] : null))
+            .filter(Boolean)
+            .map(t => t.trim().toLowerCase());
+
+          if (correctTexts.length > 0) {
+            const matchedKeys = Object.keys(q.options).filter(k => {
+              const optText = (q.options[k] || '').trim().toLowerCase();
+              return correctTexts.includes(optText);
+            });
+
+            if (matchedKeys.length > 0) {
+              q.answer = matchedKeys;
+              return;
+            }
+          }
+        }
+
+        q.answer = cleanMasterLetters;
+      }
+    }
+  }
+}
+
 // UNIVERSAL QUESTION VALIDATION HELPERS (Handles both Multi-Choice & Drag & Drop)
 function getRequiredAnswerCount(q) {
   if (!q) return 1;
+  healQuestionAnswer(q);
   if (q.isDragDrop) return (q.pairs || []).length;
   const multiMatch = (q.question || '').match(/\(choose\s+(two|three|four|five|2|3|4|5)\)/i);
   if (multiMatch) {
@@ -371,6 +419,7 @@ function isQuestionFullyAnswered(q, uAns) {
 
 function isQuestionCorrect(q, uAns) {
   if (!q || !isQuestionAnswered(q, uAns)) return false;
+  healQuestionAnswer(q);
   if (q.isDragDrop) {
     if (!Array.isArray(q.pairs)) return false;
     let matches = 0;
@@ -4979,6 +5028,7 @@ function restoreActiveQuiz() {
     state.activePartTitle = data.partTitle;
     state.mode = data.mode || 'practice';
     state.quizQuestions = data.questions;
+    if (Array.isArray(state.quizQuestions)) state.quizQuestions.forEach(healQuestionAnswer);
     state.currentIndex = (typeof data.currentIndex === 'number' && data.currentIndex >= 0 && data.currentIndex < data.questions.length) ? data.currentIndex : 0;
     state.userAnswers = data.userAnswers || {};
     state.checkedQuestions = data.checkedQuestions || {};
@@ -5486,6 +5536,7 @@ function renderCurrentQuestion() {
   const idx = state.currentIndex;
 
   const q = state.quizQuestions[idx];
+  if (q) healQuestionAnswer(q);
 
   if (!q) return;
 
@@ -5859,6 +5910,7 @@ function checkCurrentAnswer() {
   const idx = state.currentIndex;
 
   const q = state.quizQuestions[idx];
+  healQuestionAnswer(q);
 
   const uAns = state.userAnswers[idx];
 
