@@ -1997,31 +1997,31 @@ const PARTS_CONFIG = [
 
   { key: 'Part 6.docx', title: 'Part 6', count: 33, desc: 'Switching, MAC address table, Static Route, VTP asoslari + Drag & Drop' },
 
-  { key: 'Part 7.docx', title: 'Part 7', count: 50, desc: 'VLAN, Trunking (802.1Q), Inter-VLAN Routing, DHCP Relay + Drag & Drop' },
+  { key: 'Part 7.docx', title: 'Part 7', count: 54, desc: 'VLAN, Trunking (802.1Q), Inter-VLAN Routing, DHCP Relay + Drag & Drop' },
 
-  { key: 'Part 8.docx', title: 'Part 8', count: 74, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari + Drag & Drop' },
+  { key: 'Part 8.docx', title: 'Part 8', count: 82, desc: 'IPv4/IPv6 Addressing, Subnetting, OSPF Area tushunchalari + Drag & Drop' },
 
-  { key: 'Part 9.docx', title: 'Part 9', count: 101, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR + Drag & Drop' },
+  { key: 'Part 9.docx', title: 'Part 9', count: 107, desc: 'OSPF Single & Multi-Area, Router ID, Metrics, DR/BDR + Drag & Drop' },
 
-  { key: 'Part 10.docx', title: 'Part 10', count: 88, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency + Drag & Drop' },
+  { key: 'Part 10.docx', title: 'Part 10', count: 95, desc: 'Collapsed Core arxitekturasi, OSPF Neighbor Adjacency + Drag & Drop' },
 
-  { key: 'Part 11.docx', title: 'Part 11', count: 74, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks + Drag & Drop' },
+  { key: 'Part 11.docx', title: 'Part 11', count: 82, desc: 'Access Control Lists (Standard & Extended ACL), Wildcard Masks + Drag & Drop' },
 
-  { key: 'Part 12.docx', title: 'Part 12', count: 101, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari + Drag & Drop' },
+  { key: 'Part 12.docx', title: 'Part 12', count: 114, desc: 'NAT, PAT (Overload), Static & Dynamic NAT sozlamalari + Drag & Drop' },
 
-  { key: 'Part 13.docx', title: 'Part 13', count: 87, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect + Drag & Drop' },
+  { key: 'Part 13.docx', title: 'Part 13', count: 102, desc: 'Wireless LAN Controller (WLC), AP modes, FlexConnect + Drag & Drop' },
 
-  { key: 'Part 14.docx', title: 'Part 14', count: 97, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security + Drag & Drop' },
+  { key: 'Part 14.docx', title: 'Part 14', count: 106, desc: 'Tarmoq xavfsizligi, AAA, TACACS+, RADIUS, Port Security + Drag & Drop' },
 
-  { key: 'Part 15.docx', title: 'Part 15', count: 114, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya + Drag & Drop' },
+  { key: 'Part 15.docx', title: 'Part 15', count: 121, desc: 'SDN, Cisco DNA Center, REST APIs, JSON/YAML avtomatizatsiya + Drag & Drop' },
 
-  { key: 'Part 16.docx', title: 'Part 16', count: 76, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP) + Drag & Drop' },
+  { key: 'Part 16.docx', title: 'Part 16', count: 78, desc: 'EtherChannel (LACP/PAgP), Spanning Tree Protocol (STP) + Drag & Drop' },
 
-  { key: 'new questions.docx', title: 'New Questions', count: 276, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
+  { key: 'new questions.docx', title: 'New Questions', count: 306, desc: 'Eng so\'nggi yangi CCNA imtihon savollari to\'plami' },
 
-  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 29, desc: 'Cisco rasmiy barcha 29 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
+  { key: 'dragdrop', title: '🎯 Drag & Drop Amaliyot', count: 125, desc: 'Cisco rasmiy barcha 125 ta interaktiv Drag & Drop moslashtirish mashqlari', isDragDrop: true },
 
-  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1222, desc: 'Barcha 1222 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
+  { key: 'all', title: 'Full Exam (Barcha Savollar)', count: 1331, desc: 'Barcha 1331 ta savoldan iborat aralash to\'liq CCNA imtihoni', featured: true }
 
 ];
 
