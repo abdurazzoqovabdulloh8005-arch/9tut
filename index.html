@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=3.5">
+  <link rel="stylesheet" href="style.css?v=3.6">
 
   <script>
 
@@ -1276,7 +1276,7 @@
 
         <!-- SUB-VIEW 1: STUDENTS MANAGEMENT -->
 
-        <div id="adminViewStudents">
+        <div id="adminViewStudents" style="display:block;">
 
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
 
@@ -2467,16 +2467,16 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=3.5"></script>
+  <script src="data.js?v=3.6"></script>
 
-  <script src="app.js?v=3.5"></script>
+  <script src="app.js?v=3.6"></script>
 
 
   <!-- ========================================== -->
   <!-- STUDENT <-> ADMIN LIVE CHAT WIDGET & MODAL -->
   <!-- ========================================== -->
   <!-- 1. Floating Student Chat Trigger Button -->
-  <div id="studentChatFloatingBtn" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9000;">
+  <div id="studentChatFloatingBtn" class="student-chat-floating-wrap" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9000;">
     <button type="button" class="floating-chat-bubble" onclick="toggleStudentChatModal()" title="Bosh Administrator (Abdulloh) bilan bog'lanish va savol berish">
       <span style="font-size:1.35rem;">💬</span>
       <span class="chat-btn-text">Ustoz bilan Chat</span>

@@ -9,7 +9,7 @@ echo ========================================================
 echo       CCNA PRO LOYIHASINI GITHUBGA YUKLASH TIZIMI
 echo ========================================================
 echo.
-cd /d "c:\Users\user\Desktop\quiz"
+cd /d "%~dp0"
 
 echo [1/4] Repozitoriy va commit tekshirilmoqda...
 git config user.name "abdurazzoqovabdulloh8005-arch"

@@ -76,10 +76,21 @@ function cancelAdminImageAttach() {
 // and security device alerts across all computers and phones!
 // ========================================================
 const CloudSync = {
-  endpoint: '/api/sync',
+  get endpoint() {
+    if (typeof window !== 'undefined' && window.location) {
+      const host = window.location.hostname || '';
+      // Agar Vercel jonli saytida ochilgan bo'lsa
+      if (host.includes('vercel.app')) {
+        return '/api/sync';
+      }
+      // Agar localhost, Wi-Fi lokal IP (192.168.x.x) yoki file:// bo'lsa, to'g'ridan-to'g'ri jonli bulut API'ga ulanadi!
+      return 'https://abdullohtut9.vercel.app/api/sync';
+    }
+    return '/api/sync';
+  },
 
   isAvailable() {
-    return typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http');
+    return typeof window !== 'undefined';
   },
 
   async get(key) {
@@ -212,8 +223,8 @@ const CloudSync = {
       const mergedUsers = Array.from(userMap.values());
       localStorage.setItem('ccna_registered_users', JSON.stringify(mergedUsers));
 
-      // If local has users that cloud doesn't, seed cloud
-      if (Array.isArray(cloudUsers) && mergedUsers.length > cloudUsers.length) {
+      // If local has users that cloud doesn't, seed cloud (FAQAT Admin bo'lsa)
+      if (state.isAdmin && Array.isArray(cloudUsers) && mergedUsers.length > cloudUsers.length) {
         this.saveAll('users', mergedUsers);
       }
       return mergedUsers;
@@ -3821,10 +3832,23 @@ function startChatLiveMonitor() {
     // If admin is active, also sync registered users, quiz results, and security alerts in background!
     if (state.isAdmin && typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       const prevResultCount = (state.results || []).length;
-      await CloudSync.syncUsers();
+      const prevUsers = getRegisteredUsers();
+      const prevUserCount = prevUsers.length;
+
+      const syncedUsers = await CloudSync.syncUsers();
       await CloudSync.syncResults();
       await CloudSync.syncAlerts();
       updateSecurityAlertBadge();
+
+      // Yangi foydalanuvchi ro'yxatdan o'tgan bo'lsa darhol bildirishnoma va jadvalni yangilash
+      if (Array.isArray(syncedUsers) && syncedUsers.length > prevUserCount && prevUserCount > 0) {
+        const addedUsers = syncedUsers.slice(prevUserCount);
+        addedUsers.forEach(u => {
+          try { SoundEffects.playNotify(); } catch(e) {}
+          try { showAppToast(`👤 Yangi Foydalanuvchi: ${u.name} (${u.login}) ro'yxatdan o'tdi!`); } catch(e) {}
+        });
+        renderAdminStudentsList();
+      }
 
       if (state.results && state.results.length > prevResultCount && prevResultCount > 0) {
         const latest = state.results[0];
@@ -3836,7 +3860,7 @@ function startChatLiveMonitor() {
 
       const studentsTbody = document.getElementById('adminStudentsTableBody');
       const adminViewStudents = document.getElementById('adminViewStudents');
-      if (studentsTbody && adminViewStudents && adminViewStudents.style.display === 'block') {
+      if (studentsTbody && adminViewStudents && (adminViewStudents.style.display === 'block' || adminViewStudents.style.display !== 'none')) {
         renderAdminStudentsList();
       }
       const resultsTbody = document.getElementById('adminResultsTableBody');
@@ -3903,7 +3927,7 @@ function saveRegisteredUsers(users) {
       });
     }
     localStorage.setItem('ccna_registered_users', JSON.stringify(users));
-    if (typeof CloudSync !== 'undefined') {
+    if (state.isAdmin && typeof CloudSync !== 'undefined') {
       CloudSync.saveAll('users', users);
     }
   } catch(e) {}
@@ -4645,11 +4669,28 @@ async function handleUserRegister() {
     localStorage.setItem('ccna_deleted_logins', JSON.stringify(delList));
   } catch(e) {}
 
-  existingUsers.push(newUser);
+  const regBtn = document.getElementById('authRegisterBtn');
+  const origBtnText = regBtn ? regBtn.innerHTML : '';
+  if (regBtn) {
+    regBtn.disabled = true;
+    regBtn.innerHTML = '⏳ Hisob yaratilmoqda...';
+  }
 
-  saveRegisteredUsers(existingUsers);
-  if (typeof CloudSync !== 'undefined') {
-    CloudSync.upsertUser(newUser);
+  // Bulutga darhol yuborish va kutish (Cross-device sync kafolati!)
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    try {
+      await CloudSync.upsertUser(newUser);
+    } catch(e) {
+      console.warn("CloudSync upsert user error:", e);
+    }
+  }
+
+  existingUsers.push(newUser);
+  localStorage.setItem('ccna_registered_users', JSON.stringify(existingUsers));
+
+  if (regBtn) {
+    regBtn.disabled = false;
+    regBtn.innerHTML = origBtnText;
   }
 
   // Reset inputs

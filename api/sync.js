@@ -177,6 +177,23 @@ export default async function handler(req, res) {
       if (payload.action === 'save_all') {
         let toSave = payload.data || [];
         if (key === 'users' && Array.isArray(toSave)) {
+          let currentUsers = (await store.get('users')) || [];
+          if (!Array.isArray(currentUsers)) currentUsers = [];
+
+          // SMART MERGE: Never allow incoming partial user list to wipe existing users!
+          const userMap = new Map();
+          currentUsers.forEach(u => {
+            if (u && u.login) userMap.set(String(u.login).trim().toLowerCase(), u);
+          });
+          toSave.forEach(u => {
+            if (u && u.login) {
+              const k = String(u.login).trim().toLowerCase();
+              const existing = userMap.get(k);
+              userMap.set(k, { ...(existing || {}), ...u });
+            }
+          });
+          toSave = Array.from(userMap.values());
+
           let deletedList = (await store.get('deleted_users')) || [];
           if (deletedList.length > 0) {
             const delSet = new Set(deletedList.map(s => String(s).toLowerCase()));
@@ -189,7 +206,7 @@ export default async function handler(req, res) {
           }
         }
         await store.set(key, toSave);
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, count: Array.isArray(toSave) ? toSave.length : 0 });
       }
 
       // UPSERT USER
