@@ -173,6 +173,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, count: Array.isArray(users) ? users.length : 0 });
       }
 
+      // CLEAR ALL USERS action
+      if (payload.action === 'clear_all_users') {
+        await store.set('users', []);
+        await store.set('deleted_users', []);
+        return res.status(200).json({ success: true, count: 0, message: 'All users cleared from cloud database.' });
+      }
+
       // SAVE ALL
       if (payload.action === 'save_all') {
         let toSave = payload.data || [];

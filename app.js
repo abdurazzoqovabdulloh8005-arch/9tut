@@ -132,6 +132,20 @@ const CloudSync = {
     }
   },
 
+  async clearAllUsers() {
+    if (!this.isAvailable()) return false;
+    try {
+      const resp = await fetch(`${this.endpoint}?key=users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear_all_users' })
+      });
+      return resp.ok;
+    } catch(e) {
+      return false;
+    }
+  },
+
   async upsertUser(user) {
     if (!this.isAvailable()) return false;
     try {
@@ -7965,6 +7979,14 @@ function switchAdminTab(tabName) {
 
     renderAdminStudentsList();
 
+    // Cross-device sync: Instantly pull latest registered students from cloud!
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      CloudSync.syncUsers().then(() => {
+        renderAdminStudentsList();
+        updateAdminStats();
+      }).catch(e => console.warn(e));
+    }
+
   } else if (tabName === 'results') {
 
     if (btnResults) btnResults.classList.add('active');
@@ -10109,7 +10131,7 @@ function closeImageModal() {
 
 // ADMIN USER APPROVAL SYSTEM
 
-function approveUser(userId) {
+async function approveUser(userId) {
 
   const users = getRegisteredUsers();
 
@@ -10122,8 +10144,10 @@ function approveUser(userId) {
   saveRegisteredUsers(users);
 
   if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
-    CloudSync.upsertUser(u);
-    CloudSync.saveAll('users', users);
+    try {
+      await CloudSync.upsertUser(u);
+      await CloudSync.saveAll('users', users);
+    } catch(e) {}
   }
 
   renderAdminStudentsList();
@@ -10132,11 +10156,11 @@ function approveUser(userId) {
 
   try { SoundEffects.playCorrect(); } catch(e) {}
 
-  alert(`✅ ${u.name} muvaffaqiyatli tasdiqlandi! Endi bu foydalanuvchi tizimga kira oladi.`);
+  alert(`✅ ${u.name} muvaffaqiyatli tasdiqlandi! Endi bu foydalanuvchi istalgan qurilmadan tizimga kira oladi.`);
 
 }
 
-function toggleUserApproval(userId) {
+async function toggleUserApproval(userId) {
 
   const users = getRegisteredUsers();
 
@@ -10155,8 +10179,10 @@ function toggleUserApproval(userId) {
   saveRegisteredUsers(users);
 
   if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
-    CloudSync.upsertUser(u);
-    CloudSync.saveAll('users', users);
+    try {
+      await CloudSync.upsertUser(u);
+      await CloudSync.saveAll('users', users);
+    } catch(e) {}
   }
 
   renderAdminStudentsList();
@@ -10165,6 +10191,50 @@ function toggleUserApproval(userId) {
 
   try { SoundEffects.playClick(); } catch(e) {}
 
+}
+
+async function manualSyncAdminStudents() {
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    try {
+      const synced = await CloudSync.syncUsers();
+      renderAdminStudentsList();
+      updateAdminStats();
+      try { SoundEffects.playNotify(); } catch(e) {}
+      alert(`✅ Bulut bilan to'liq sinxronlandi! Jami ro'yxatdan o'tganlar: ${Array.isArray(synced) ? synced.length : 0} ta.`);
+    } catch(e) {
+      console.warn("Manual sync error:", e);
+      renderAdminStudentsList();
+    }
+  }
+}
+
+async function clearAllStudents() {
+  if (!state.isAdmin) return;
+  const users = getRegisteredUsers();
+  const studentCount = users.filter(u => u.role !== 'admin').length;
+  
+  if (!confirm(`⚠️ DIQQAT!\n\nBarcha ro'yxatdan o'tgan talabalar (${studentCount} ta) hisobini butunlay o'chirib, bazani tozalashni xohlaysizmi?\n\nBu amal bekor qilinmaydi va bulutdagi barcha talabalar hisoblari o'chiriladi.`)) {
+    return;
+  }
+  
+  // 1. Clear local
+  const adminUsers = users.filter(u => u.role === 'admin');
+  localStorage.setItem('ccna_registered_users', JSON.stringify(adminUsers));
+  localStorage.setItem('ccna_deleted_logins', '[]');
+  
+  // 2. Clear cloud
+  if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+    try {
+      await CloudSync.clearAllUsers();
+    } catch(e) {
+      console.warn("CloudSync clear error:", e);
+    }
+  }
+  
+  renderAdminStudentsList();
+  updateAdminStats();
+  try { SoundEffects.playNotify(); } catch(e) {}
+  alert("✅ Barcha talabalar bazasi muvaffaqiyatli tozalandi! Baza 0 dan boshlanishga to'liq tayyor.");
 }
 
 // ========================================================
