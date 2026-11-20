@@ -437,12 +437,24 @@ function isQuestionCorrect(q, uAns) {
   if (!q || !isQuestionAnswered(q, uAns)) return false;
   healQuestionAnswer(q);
   if (q.isDragDrop) {
-    if (!Array.isArray(q.pairs)) return false;
-    let matches = 0;
-    q.pairs.forEach((p, sIdx) => {
-      if (uAns[sIdx] === p.term) matches++;
-    });
-    return matches === q.pairs.length;
+    if (!Array.isArray(q.pairs) || typeof uAns !== 'object' || Array.isArray(uAns)) return false;
+    if (Object.keys(uAns).length !== q.pairs.length) return false;
+    
+    // Check no duplicate terms chosen by student
+    const chosen = Object.values(uAns).map(v => String(v || '').trim().toLowerCase());
+    if (new Set(chosen).size !== chosen.length) return false;
+    
+    // Check every slot matches its category definition (supports grouped definitions like 3 non-overlapping channels)
+    for (let sIdx = 0; sIdx < q.pairs.length; sIdx++) {
+      const userTerm = String(uAns[sIdx] || '').trim().toLowerCase();
+      if (!userTerm) return false;
+      const defNorm = String(q.pairs[sIdx].def || '').trim().toLowerCase();
+      const validTerms = q.pairs
+        .filter(p => String(p.def || '').trim().toLowerCase() === defNorm)
+        .map(p => String(p.term || '').trim().toLowerCase());
+      if (!validTerms.includes(userTerm)) return false;
+    }
+    return true;
   }
   if (!Array.isArray(uAns) || !Array.isArray(q.answer)) return false;
   return arraysEqual(uAns.slice().sort(), q.answer.slice().sort());
@@ -576,7 +588,14 @@ function renderInQuizDragDrop(q, idx, isChecked, isReview) {
 
   q.pairs.forEach((pair, sIdx) => {
     const assignedVal = userMatches[sIdx];
-    const isCorrect = (assignedVal === pair.term);
+    
+    // Support grouped definitions (e.g., 3 non-overlapping channels has 3 valid standards)
+    const defNorm = String(pair.def || '').trim().toLowerCase();
+    const validTermsForSlot = q.pairs
+      .filter(p => String(p.def || '').trim().toLowerCase() === defNorm)
+      .map(p => p.term);
+    
+    const isCorrect = assignedVal && validTermsForSlot.some(t => t.trim().toLowerCase() === assignedVal.trim().toLowerCase());
 
     const row = document.createElement('div');
     row.className = 'in-quiz-dd-row';
@@ -622,9 +641,14 @@ function renderInQuizDragDrop(q, idx, isChecked, isReview) {
     defBox.className = 'in-quiz-def-box';
     let statusBadge = '';
     if (isChecked) {
-      statusBadge = isCorrect 
-        ? `<div style="color:#10b981; font-weight:800; font-size:0.85rem; margin-top:4px;">✅ To'g'ri moslashtirildi</div>`
-        : `<div style="color:#ef4444; font-weight:800; font-size:0.85rem; margin-top:4px;">❌ To'g'ri javob: <u>${escapeHtml(pair.term)}</u></div>`;
+      if (isCorrect) {
+        statusBadge = `<div style="color:#10b981; font-weight:800; font-size:0.85rem; margin-top:4px;">✅ To'g'ri moslashtirildi</div>`;
+      } else {
+        const hintText = validTermsForSlot.length > 1
+          ? `To'g'ri javob: <b>${escapeHtml(validTermsForSlot.join(' yoki '))}</b>`
+          : `To'g'ri javob: <u>${escapeHtml(pair.term)}</u>`;
+        statusBadge = `<div style="color:#ef4444; font-weight:800; font-size:0.85rem; margin-top:4px;">❌ ${hintText}</div>`;
+      }
     }
     defBox.innerHTML = `<div class="in-quiz-def-text">${escapeHtml(pair.def)}</div>${statusBadge}`;
 
@@ -5574,14 +5598,7 @@ function renderPalette() {
 
     const isChecked = !!state.checkedQuestions[i];
 
-    let isCorrect = false;
-    if (q.isDragDrop) {
-      let matches = 0;
-      q.pairs.forEach((p, sIdx) => { if (userAns[sIdx] === p.term) matches++; });
-      isCorrect = (matches === q.pairs.length);
-    } else if (Array.isArray(userAns)) {
-      isCorrect = arraysEqual(userAns.slice().sort(), q.answer.slice().sort());
-    }
+    const isCorrect = isQuestionCorrect(q, userAns);
 
     if (state.isQuizFinished) {
 
@@ -7824,7 +7841,13 @@ function checkDragDropAnswers() {
 
     const targetArea = document.getElementById(`ddSlotArea_${slotIdx}`);
 
-    if (userVal && userVal.toLowerCase() === pair.term.toLowerCase()) {
+    const defNorm = String(pair.def || '').trim().toLowerCase();
+    const validTerms = ex.pairs
+      .filter(p => String(p.def || '').trim().toLowerCase() === defNorm)
+      .map(p => String(p.term || '').trim().toLowerCase());
+    const isSlotOk = userVal && validTerms.includes(userVal.trim().toLowerCase());
+
+    if (isSlotOk) {
 
       targetArea.classList.remove('checked-wrong');
 
