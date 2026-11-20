@@ -113,14 +113,8 @@ header {
   padding: 4px 6px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.nav-tabs::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .nav-tab {
@@ -128,9 +122,9 @@ header {
   white-space: nowrap;
   border: none;
   background: transparent;
-  padding: 8px 14px;
+  padding: 7px 12px;
   border-radius: 8px;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -2110,23 +2104,15 @@ pre.code-block {
   .nav-tabs {
     width: 100%;
     display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 6px !important;
-    padding: 6px 4px !important;
-    white-space: nowrap !important;
-  }
-
-  .nav-tabs::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    padding: 5px !important;
   }
 
   .nav-tab {
     flex: 0 0 auto !important;
-    padding: 7px 13px !important;
-    font-size: 0.83rem !important;
+    padding: 5px 9px !important;
+    font-size: 0.78rem !important;
     justify-content: center;
     white-space: nowrap !important;
   }
@@ -2560,21 +2546,14 @@ html.is-authenticated .nav-tabs {
   .nav-tabs {
     width: 100% !important;
     display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    flex-wrap: wrap !important;
     gap: 6px !important;
     padding: 5px !important;
-    white-space: nowrap !important;
-  }
-  .nav-tabs::-webkit-scrollbar {
-    display: none;
   }
   .nav-tab {
     flex: 0 0 auto !important;
     min-width: max-content;
-    padding: 6px 12px !important;
+    padding: 6px 11px !important;
     font-size: 0.82rem !important;
     justify-content: center;
     text-align: center;
