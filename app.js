@@ -2781,10 +2781,52 @@ function checkActiveSessionHealth() {
   if (!state.currentUser || state.isAdmin) return;
   const users = getRegisteredUsers();
   const current = users.find(u => u.login.toLowerCase() === state.currentUser.login.toLowerCase());
-  if (current && current.currentSessionToken && state.currentUser.sessionToken) {
+  
+  // 1. Agar talaba admin tomonidan o'chirilgan yoki baza tozalangan bo'lsa
+  if (!current) {
+    handleSessionTerminatedByAdmin("Hisobingiz administrator tomonidan o'chirilgan yoki yangilangan. Qaytadan ro'yxatdan o'ting.");
+    return;
+  }
+  
+  // 2. Agar talabaning ruxsati admin tomonidan bekor qilingan (bloklangan) bo'lsa
+  if (current.isApproved === false) {
+    handleSessionTerminatedByAdmin("Hisobingiz administrator tomonidan tasdiqlanmagan yoki bloklangan. Iltimos, administrator tasdiqlashini kuting.");
+    return;
+  }
+
+  // 3. Agar admin talabaning qurilmasini uzgan bo'lsa (boundDevices bo'shatilgan)
+  if (Array.isArray(current.boundDevices) && current.boundDevices.length === 0) {
+    handleSessionTerminatedByAdmin("Qurilmangiz administrator tomonidan uzildi. Yangi qurilmangizdan qaytadan kiring.");
+    return;
+  }
+
+  // 4. Boshqa qurilmadan parallel kirish tekshiruvi
+  if (current.currentSessionToken && state.currentUser.sessionToken) {
     if (current.currentSessionToken !== state.currentUser.sessionToken) {
       handleSessionKickedOut();
     }
+  }
+}
+
+function handleSessionTerminatedByAdmin(msg) {
+  try { SoundEffects.playWrong(); } catch(e) {}
+  
+  state.currentUser = null;
+  state.isAdmin = false;
+  try {
+    localStorage.removeItem('ccna_current_user');
+    localStorage.removeItem('ccna_auth_session');
+    sessionStorage.removeItem('ccna_auth_session');
+  } catch(e) {}
+  document.documentElement.classList.remove('is-authenticated');
+
+  const mainContent = document.querySelector('main');
+  if (mainContent) mainContent.style.display = 'none';
+
+  openAuthModal('login');
+  const errEl = document.getElementById('authErrorMsg');
+  if (errEl) {
+    showAuthError(errEl, `🔴 ${msg || "Sizning sessiyangiz yakunlandi. Iltimos, qaytadan kiring."}`);
   }
 }
 
@@ -8103,6 +8145,14 @@ function renderAdminDashboard() {
 
   }
 
+}
+
+function updateAdminStats() {
+  try {
+    renderAdminDashboard();
+  } catch(e) {
+    console.warn("updateAdminStats error:", e);
+  }
 }
 
 function populateAdminGroupFilter() {

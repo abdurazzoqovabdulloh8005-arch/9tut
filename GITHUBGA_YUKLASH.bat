@@ -20,7 +20,7 @@ git branch -M main
 
 echo [2/3] O'zgarishlar saqlanmoqda...
 git add -A
-git commit -m "feat: update online trainer, cross-device sync & mobile chat" 2>nul
+git commit -m "feat: sync cross-device, session enforcement, Drag & Drop fixes, bump v=4.1" 2>nul
 
 echo.
 echo ========================================================
