@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=4.2">
+  <link rel="stylesheet" href="style.css?v=4.3">
 
   <script>
 
@@ -867,15 +867,17 @@
 
       <div class="filter-card">
 
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
 
           <label style="font-weight:700; font-size:0.88rem; color:var(--text-muted);">Bo'limni tanlang:</label>
 
-          <select id="studySourceSelect" class="form-control" style="width:auto; padding:8px 14px;" onchange="renderStudyContent()">
-
-            <option value="all">Barcha Bo'limlar (1331 ta savol)</option>
-
-          </select>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button type="button" class="btn btn-secondary" onclick="navStudyPart('prev')" title="Oldingi bo'lim" style="padding:6px 11px; font-weight:700; font-size:0.85rem; border-radius:6px; cursor:pointer;">◀</button>
+            <select id="studySourceSelect" class="form-control" style="width:auto; padding:8px 14px; min-width:210px;" onchange="onStudyPartChange(this.value)">
+              <option value="all">Barcha Bo'limlar (1331 ta savol)</option>
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="navStudyPart('next')" title="Keyingi bo'lim" style="padding:6px 11px; font-weight:700; font-size:0.85rem; border-radius:6px; cursor:pointer;">▶</button>
+          </div>
 
         </div>
 
@@ -2509,9 +2511,36 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=4.2"></script>
+  <script src="data.js?v=4.3"></script>
 
-  <script src="app.js?v=4.2"></script>
+  <script src="app.js?v=4.3"></script>
+
+
+  <!-- ========================================== -->
+  <!-- FLOATING QUICK PART NAVIGATOR (Study Mode) -->
+  <!-- ========================================== -->
+  <div id="floatingQuickPartNav" class="floating-quick-part-nav" style="display:none;">
+    <button type="button" class="fqp-btn fqp-nav-btn" onclick="navStudyPart('prev')" title="Oldingi Bo'lim (Part)">
+      <span>◀</span>
+      <span class="fqp-label">Oldingi</span>
+    </button>
+    
+    <div class="fqp-select-wrap">
+      <span class="fqp-select-icon">📂</span>
+      <select id="floatingStudyPartSelect" class="fqp-select" onchange="onStudyPartChange(this.value)">
+        <option value="all">Barcha Bo'limlar</option>
+      </select>
+    </div>
+    
+    <button type="button" class="fqp-btn fqp-nav-btn" onclick="navStudyPart('next')" title="Keyingi Bo'lim (Part)">
+      <span class="fqp-label">Keyingi</span>
+      <span>▶</span>
+    </button>
+    
+    <button type="button" class="fqp-btn fqp-top-btn" onclick="window.scrollTo({top:0, behavior:'smooth'})" title="Sahifa boshiga qaytish">
+      <span>⬆️</span>
+    </button>
+  </div>
 
 
   <!-- ========================================== -->

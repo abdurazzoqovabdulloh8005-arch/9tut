@@ -2402,6 +2402,18 @@ function switchMainTab(target) {
 
   if (activeContent) activeContent.classList.add('active');
 
+  const floatPartNav = document.getElementById('floatingQuickPartNav');
+  const studentChatBtn = document.getElementById('studentChatFloatingBtn');
+  if (floatPartNav) {
+    if (target === 'study') {
+      floatPartNav.style.display = 'flex';
+      if (studentChatBtn) studentChatBtn.classList.add('chat-raised-for-study');
+    } else {
+      floatPartNav.style.display = 'none';
+      if (studentChatBtn) studentChatBtn.classList.remove('chat-raised-for-study');
+    }
+  }
+
   if (target === 'admin') {
 
     renderAdminDashboard();
@@ -6889,33 +6901,58 @@ function printCertificate() {
 function initStudyModule() {
 
   const select = document.getElementById('studySourceSelect');
+  const floatSelect = document.getElementById('floatingStudyPartSelect');
 
   if (!select) return;
 
-  // Populate source dropdown
-
-  select.innerHTML = '<option value="all">Barcha Bo\'limlar (' + (typeof CCNA_QUESTIONS !== 'undefined' ? CCNA_QUESTIONS.length : 1222) + ' ta savol)</option>';
+  // Populate source dropdowns
+  const totalCount = (typeof CCNA_QUESTIONS !== 'undefined' ? CCNA_QUESTIONS.length : 1331);
+  let optionsHtml = '<option value="all">Barcha Bo\'limlar (' + totalCount + ' ta savol)</option>';
 
   PARTS_CONFIG.forEach(p => {
-
     if (p.key !== 'all') {
-
-      const opt = document.createElement('option');
-
-      opt.value = p.key;
-
-      opt.textContent = `${p.title} (${p.count} ta savol)`;
-
-      select.appendChild(opt);
-
+      optionsHtml += `<option value="${p.key}">${p.title} (${p.count} ta savol)</option>`;
     }
-
   });
 
-  // Render keywords matrix
+  select.innerHTML = optionsHtml;
+  if (floatSelect) {
+    floatSelect.innerHTML = optionsHtml;
+  }
 
+  // Render keywords matrix
   renderKeywordTable();
 
+}
+
+function onStudyPartChange(val) {
+  const select = document.getElementById('studySourceSelect');
+  const floatSelect = document.getElementById('floatingStudyPartSelect');
+
+  if (select && select.value !== val) select.value = val;
+  if (floatSelect && floatSelect.value !== val) floatSelect.value = val;
+
+  renderStudyContent();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  SoundEffects.playClick();
+}
+
+function navStudyPart(direction) {
+  const select = document.getElementById('studySourceSelect');
+  if (!select || !select.options || select.options.length === 0) return;
+
+  let curIdx = select.selectedIndex;
+  if (curIdx < 0) curIdx = 0;
+
+  let newIdx = curIdx;
+  if (direction === 'prev') {
+    newIdx = curIdx > 0 ? curIdx - 1 : select.options.length - 1;
+  } else if (direction === 'next') {
+    newIdx = curIdx < select.options.length - 1 ? curIdx + 1 : 0;
+  }
+
+  const newPartKey = select.options[newIdx].value;
+  onStudyPartChange(newPartKey);
 }
 
 function switchStudyView(viewName) {
@@ -6975,10 +7012,15 @@ function switchStudyView(viewName) {
 function renderStudyContent() {
 
   const sourceSelect = document.getElementById('studySourceSelect');
+  const floatSelect = document.getElementById('floatingStudyPartSelect');
 
   const searchInput = document.getElementById('studySearchInput');
 
   const selectedSrc = sourceSelect ? sourceSelect.value : 'all';
+
+  if (floatSelect && floatSelect.value !== selectedSrc) {
+    floatSelect.value = selectedSrc;
+  }
 
   const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
@@ -7160,6 +7202,41 @@ function renderStudyBookList(questions) {
 
     container.appendChild(moreNotice);
 
+  }
+
+  // Bottom Part Navigator Card
+  const select = document.getElementById('studySourceSelect');
+  if (select && select.options && select.options.length > 0) {
+    const curIdx = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+    const prevIdx = curIdx > 0 ? curIdx - 1 : select.options.length - 1;
+    const nextIdx = curIdx < select.options.length - 1 ? curIdx + 1 : 0;
+
+    const prevOptText = select.options[prevIdx].textContent.split('(')[0].trim();
+    const nextOptText = select.options[nextIdx].textContent.split('(')[0].trim();
+
+    const bottomNav = document.createElement('div');
+    bottomNav.className = 'study-bottom-nav-card';
+    bottomNav.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:14px;">
+        <span style="font-size:1.5rem;">🎉</span>
+        <div>
+          <div style="font-weight:700; font-size:1.05rem; color:var(--text-main);">Ushbu bo'limdagi barcha savollar ko'rib chiqildi!</div>
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Keyingi bo'limga o'tish yoki boshqa bo'limni tanlash:</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" onclick="navStudyPart('prev')" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-weight:600; cursor:pointer;">
+          <span>◀</span> <span>${escapeHtml(prevOptText)}</span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="window.scrollTo({top:0, behavior:'smooth'})" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; cursor:pointer;">
+          <span>⬆️</span> <span>Boshiga qaytish</span>
+        </button>
+        <button type="button" class="btn btn-primary" onclick="navStudyPart('next')" style="display:inline-flex; align-items:center; gap:6px; padding:10px 22px; font-weight:700; cursor:pointer; box-shadow:0 4px 15px rgba(0,118,206,0.4);">
+          <span>${escapeHtml(nextOptText)}</span> <span>▶</span>
+        </button>
+      </div>
+    `;
+    container.appendChild(bottomNav);
   }
 
 }
