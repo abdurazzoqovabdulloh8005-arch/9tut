@@ -3997,35 +3997,50 @@ html.is-authenticated .nav-tabs {
   bottom: 84px !important;
 }
 
+#studySearchInput:-webkit-autofill,
+#studySearchInput:-webkit-autofill:hover,
+#studySearchInput:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-main) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
+  box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 @media (max-width: 768px) {
   .floating-quick-part-nav {
     bottom: 12px;
-    padding: 5px 8px;
-    gap: 5px;
+    padding: 5px 10px;
+    gap: 6px;
     border-radius: 30px;
   }
   .fqp-label {
     display: none;
   }
   .fqp-btn {
-    padding: 6px 9px;
-    font-size: 0.8rem;
+    padding: 6px 10px;
+    font-size: 0.85rem;
   }
   .fqp-select {
-    max-width: 135px;
-    font-size: 0.8rem;
+    max-width: 175px;
+    font-size: 0.84rem;
   }
   .fqp-select-wrap {
-    padding: 3px 6px;
+    padding: 3px 8px;
   }
+  #studentChatFloatingBtn.chat-raised-for-study {
+    bottom: 74px !important;
+  }
+}
+
+@media (max-width: 480px) {
   #studentChatFloatingBtn.chat-raised-for-study {
     bottom: 68px !important;
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 380px) {
   .fqp-select {
-    max-width: 110px;
+    max-width: 130px;
   }
 }
 

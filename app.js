@@ -2407,10 +2407,16 @@ function switchMainTab(target) {
   if (floatPartNav) {
     if (target === 'study') {
       floatPartNav.style.display = 'flex';
-      if (studentChatBtn) studentChatBtn.classList.add('chat-raised-for-study');
+      if (studentChatBtn) {
+        studentChatBtn.classList.add('chat-raised-for-study');
+        studentChatBtn.style.setProperty('bottom', window.innerWidth <= 768 ? '68px' : '82px', 'important');
+      }
     } else {
       floatPartNav.style.display = 'none';
-      if (studentChatBtn) studentChatBtn.classList.remove('chat-raised-for-study');
+      if (studentChatBtn) {
+        studentChatBtn.classList.remove('chat-raised-for-study');
+        studentChatBtn.style.removeProperty('bottom');
+      }
     }
   }
 
@@ -6902,22 +6908,27 @@ function initStudyModule() {
 
   const select = document.getElementById('studySourceSelect');
   const floatSelect = document.getElementById('floatingStudyPartSelect');
+  const searchInput = document.getElementById('studySearchInput');
+
+  if (searchInput) searchInput.value = '';
 
   if (!select) return;
 
   // Populate source dropdowns
   const totalCount = (typeof CCNA_QUESTIONS !== 'undefined' ? CCNA_QUESTIONS.length : 1331);
   let optionsHtml = '<option value="all">Barcha Bo\'limlar (' + totalCount + ' ta savol)</option>';
+  let floatOptionsHtml = '<option value="all">Barcha Savollar (' + totalCount + ')</option>';
 
   PARTS_CONFIG.forEach(p => {
     if (p.key !== 'all') {
       optionsHtml += `<option value="${p.key}">${p.title} (${p.count} ta savol)</option>`;
+      floatOptionsHtml += `<option value="${p.key}">${p.title} (${p.count})</option>`;
     }
   });
 
   select.innerHTML = optionsHtml;
   if (floatSelect) {
-    floatSelect.innerHTML = optionsHtml;
+    floatSelect.innerHTML = floatOptionsHtml;
   }
 
   // Render keywords matrix
@@ -6925,9 +6936,29 @@ function initStudyModule() {
 
 }
 
+function clearStudySearch() {
+  const searchInput = document.getElementById('studySearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  const clearBtn = document.getElementById('studySearchClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderStudyContent();
+  SoundEffects.playClick();
+}
+
 function onStudyPartChange(val) {
   const select = document.getElementById('studySourceSelect');
   const floatSelect = document.getElementById('floatingStudyPartSelect');
+  const searchInput = document.getElementById('studySearchInput');
+
+  // Reset search filter so new part questions are always visible
+  if (searchInput && searchInput.value) {
+    searchInput.value = '';
+    const clearBtn = document.getElementById('studySearchClearBtn');
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
 
   if (select && select.value !== val) select.value = val;
   if (floatSelect && floatSelect.value !== val) floatSelect.value = val;
@@ -7015,6 +7046,7 @@ function renderStudyContent() {
   const floatSelect = document.getElementById('floatingStudyPartSelect');
 
   const searchInput = document.getElementById('studySearchInput');
+  const clearBtn = document.getElementById('studySearchClearBtn');
 
   const selectedSrc = sourceSelect ? sourceSelect.value : 'all';
 
@@ -7023,6 +7055,9 @@ function renderStudyContent() {
   }
 
   const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  if (clearBtn) {
+    clearBtn.style.display = query ? 'block' : 'none';
+  }
 
   let list = CCNA_QUESTIONS.slice();
 
@@ -7088,14 +7123,27 @@ function renderStudyBookList(questions) {
 
   if (questions.length === 0) {
 
+    const searchInput = document.getElementById('studySearchInput');
+    const rawQuery = (searchInput ? searchInput.value : '').trim();
+    const sourceSelect = document.getElementById('studySourceSelect');
+    const selectedSrc = sourceSelect ? sourceSelect.value : 'all';
+    const srcTitle = selectedSrc === 'all' ? 'Barcha savollar' : selectedSrc;
+
     container.innerHTML = `
-
-      <div style="background:var(--bg-card); padding:30px; text-align:center; border-radius:var(--radius); border:1px solid var(--border); color:var(--text-muted);">
-
-        Savollar topilmadi.
-
+      <div style="background:var(--bg-card); padding:35px 20px; text-align:center; border-radius:var(--radius); border:1px solid var(--border); color:var(--text-muted); margin:15px 0;">
+        <div style="font-size:2.4rem; margin-bottom:10px;">🔍</div>
+        <div style="font-weight:700; font-size:1.15rem; color:var(--text-main); margin-bottom:8px;">
+          ${rawQuery ? `"${escapeHtml(rawQuery)}" bo'yicha hech qanday savol topilmadi` : 'Bu bo\'limda savollar mavjud emas'}
+        </div>
+        ${rawQuery ? `
+          <p style="font-size:0.9rem; margin-bottom:16px; color:var(--text-muted);">
+            Qidiruv maydonida so'z kiritilganligi sababli savollar ko'rinmayapti. Barcha savollarni ko'rish uchun quyidagi tugmani bosing:
+          </p>
+          <button type="button" class="btn btn-primary" onclick="clearStudySearch()" style="padding:10px 22px; font-weight:700; border-radius:8px; cursor:pointer;">
+            ✕ Qidiruvni tozalash (${escapeHtml(srcTitle)})
+          </button>
+        ` : ''}
       </div>
-
     `;
 
     return;

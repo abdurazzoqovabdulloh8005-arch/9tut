@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=4.3">
+  <link rel="stylesheet" href="style.css?v=4.4">
 
   <script>
 
@@ -883,7 +883,10 @@
 
         <div style="display:flex; gap:8px; align-items:center;">
 
-          <input type="text" id="studySearchInput" class="form-control" placeholder="Kalit so'z bo'yicha tezkor qidirish..." style="max-width:320px;" oninput="renderStudyContent()">
+          <div style="position:relative; display:flex; align-items:center; max-width:320px; width:100%;">
+            <input type="search" id="studySearchInput" name="study_keyword_search_no_autofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="form-control" placeholder="Kalit so'z bo'yicha tezkor qidirish..." style="padding-right:32px; width:100%;" oninput="renderStudyContent()">
+            <button type="button" id="studySearchClearBtn" onclick="clearStudySearch()" style="position:absolute; right:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:1.05rem; display:none; padding:4px;" title="Qidiruvni tozalash">✕</button>
+          </div>
 
           <span id="studyResultsCount" style="font-size:0.85rem; font-weight:700; color:var(--primary); white-space:nowrap;">0 ta savol</span>
 
@@ -2511,9 +2514,9 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=4.3"></script>
+  <script src="data.js?v=4.4"></script>
 
-  <script src="app.js?v=4.3"></script>
+  <script src="app.js?v=4.4"></script>
 
 
   <!-- ========================================== -->
