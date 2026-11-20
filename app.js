@@ -7084,23 +7084,7 @@ function renderStudyBookList(questions) {
 
       const text = q.options[letter];
 
-      optsHtml += `
-
-        <div class="study-opt-item ${isCorrect ? 'is-correct' : ''}">
-
-          <div class="study-opt-letter">${letter}</div>
-
-          <div style="flex:1;">
-
-            ${formatOptionText(text)}
-
-            ${isCorrect ? ' <span style="color:var(--success); font-weight:800; margin-left:8px;">✅ TO\'G\'RI JAVOB</span>' : ''}
-
-          </div>
-
-        </div>
-
-      `;
+      optsHtml += `<div class="study-opt-item ${isCorrect ? 'is-correct' : ''}"><div class="study-opt-letter">${letter}</div><div class="study-opt-text">${formatOptionText(text)}${isCorrect ? ' <span class="study-correct-badge">✅ TO\'G\'RI JAVOB</span>' : ''}</div></div>`;
 
     });
 
