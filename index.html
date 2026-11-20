@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=3.7">
+  <link rel="stylesheet" href="style.css?v=3.8">
 
   <script>
 
@@ -351,27 +351,25 @@
       <div class="header-actions">
 
         <button id="openAuthModalBtn" class="btn-icon" onclick="openAuthModal()" style="display:none; background:var(--primary); color:#fff; font-weight:700;">🔑 Kirish</button>
-
         
-        <!-- Admin Security Notification Bell -->
-        <button id="adminAlertBellBtn" type="button" class="btn-icon" onclick="openSecurityAlertsModal()" style="display:none; background:rgba(239, 68, 68, 0.14); border:1px solid rgba(239, 68, 68, 0.4); color:#ef4444; font-weight:700; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; cursor:pointer;" title="Xavfsizlik & Noma'lum qurilmalar ogohlantirishlari">
-          🔔 <span id="adminAlertBellText">Xavfsizlik</span>
-          <span id="securityAlertCountBadge" style="background:#ef4444; color:white; border-radius:10px; padding:2px 7px; font-size:0.75rem; font-weight:800;">0</span>
+        <!-- Admin Security Notification Bell (Sleek Modern Icon) -->
+        <button id="adminAlertBellBtn" type="button" class="btn-icon alert-bell-btn" onclick="openSecurityAlertsModal()" style="display:none;" title="Xavfsizlik & Noma'lum qurilmalar ogohlantirishlari">
+          <span style="font-size:1.15rem;">🔔</span>
+          <span id="securityAlertCountBadge" class="bell-badge" style="display:none;">0</span>
         </button>
 
-        <div id="currentUserBadge" class="user-badge" style="display:none; align-items:center; gap:6px;">
-
-          <span>👤 <span id="currentUserName">Foydalanuvchi</span></span>
-
-          <button type="button" onclick="openChangePasswordModal()" class="badge-pwd-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); color:inherit; cursor:pointer; font-size:0.75rem; padding:2px 7px; border-radius:5px; font-weight:600;" title="Hisobingiz parolini o'zgartirish">🔑 Parol</button>
-
-          <button onclick="logoutUser()" style="background:none; border:none; color:inherit; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:4px;">Chiqish</button>
-
+        <!-- Current User Badge (Sleek Profile Capsule) -->
+        <div id="currentUserBadge" class="user-badge" style="display:none;">
+          <span style="font-size:1rem;">👤</span>
+          <span id="currentUserName" style="font-weight:700;">Foydalanuvchi</span>
+          <button type="button" onclick="openChangePasswordModal()" class="badge-action-btn" title="Parolni o'zgartirish">🔑</button>
+          <button type="button" onclick="logoutUser()" class="badge-action-btn" title="Chiqish">🚪</button>
         </div>
 
         <button id="soundToggleBtn" class="btn-icon" onclick="toggleSound()" title="Ovozni yoqish/o'chirish">🔊 Ovoz</button>
 
-        <button id="adminLoginBtn" class="btn-icon" onclick="openAdminPrompt()">📊 Natijalar</button>
+        <!-- Redundant button hidden, adminNavTab handles admin navigation cleanly -->
+        <button id="adminLoginBtn" class="btn-icon" onclick="openAdminPrompt()" style="display:none !important;">📊 Natijalar</button>
 
         <button id="themeToggleBtn" class="btn-icon" onclick="toggleTheme()">🌙 Tungi</button>
 
@@ -389,34 +387,70 @@
 
     <section id="quizSection" class="tab-content active">
 
-      <!-- View A: Part Selection Cards -->
+      <!-- View A: Part Selection Cards with Modern Trainer Hero Dashboard -->
 
       <div id="partsSelectionView">
 
-        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-
-          <div>
-
-            <h2 style="font-size:1.4rem; color:var(--text-main);">📚 CCNA Quiz Bo'limlari (Partlar)</h2>
-
-            <p style="color:var(--text-muted); font-size:0.95rem;">Bo'lim ustiga bosing. Pearson VUE standartidagi savollar xaritasi (Question Palette) bilan qulay ishlang.</p>
-
+        <!-- TRAINER HERO DASHBOARD & QUICK RESUME -->
+        <div class="trainer-hero-card">
+          <div class="hero-main-info">
+            <div class="hero-greeting">
+              <div class="hero-badge">CCNA 200-301 PLATFORMA</div>
+              <h2 class="hero-title">Xush kelibsiz, <span id="heroStudentName">Talaba</span>! 🎯</h2>
+              <p class="hero-desc">1331 ta rasmiy savol, 21 ta amaliy laboratoriya va Pearson VUE simulyatori. Qulay rejimni tanlang va bilimingizni mustahkamlang.</p>
+            </div>
+            <div id="heroResumeBox" class="hero-resume-box" style="display:none;">
+              <div style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Oxirgi faollik:</div>
+              <div id="heroResumeTitle" style="font-weight:800; font-size:1.05rem; color:var(--text-main); margin:3px 0 8px;">Part 1</div>
+              <button type="button" id="heroResumeBtn" class="btn-primary hero-resume-btn" onclick="resumeLastActiveQuiz()">
+                Davom ettirish ⚡
+              </button>
+            </div>
           </div>
 
-          <div style="display:flex; gap:10px; align-items:center;">
+          <!-- Overall Mastery Progress Bar -->
+          <div class="hero-progress-section">
+            <div class="hero-progress-header">
+              <span style="font-weight:700; font-size:0.88rem; color:var(--text-main);">📈 Umumiy Tayyorgarlik Ko'rsatkichi</span>
+              <span id="heroProgressStats" style="font-weight:800; font-size:0.9rem; color:var(--primary);">0 / 1331 ta savol (0%)</span>
+            </div>
+            <div class="hero-progress-track">
+              <div id="heroProgressBar" class="hero-progress-bar" style="width:0%;"></div>
+            </div>
+          </div>
 
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">Test Rejimi:</label>
-
-            <select id="partModeSelect" class="form-control" style="width:auto; padding:8px 12px;">
-
-              <option value="practice">Mashq Rejimi (Har savoldan so'ng javob ko'rinadi)</option>
-
-              <option value="exam">Imtihon Rejimi (Pearson VUE: Vaqtli, ko'rib chiqish va yakuniy ball)</option>
-
+          <!-- Segmented Quiz Mode Switcher -->
+          <div class="hero-mode-bar">
+            <span style="font-weight:700; font-size:0.88rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+              ⚙️ Test Rejimi:
+            </span>
+            <div class="mode-segmented-pills">
+              <button type="button" id="modePillPractice" class="mode-pill active" onclick="setQuizMode('practice')">
+                <span class="mode-pill-icon">🎯</span>
+                <div>
+                  <div class="mode-pill-name">Mashq Rejimi</div>
+                  <div class="mode-pill-desc">Har bir savoldan so'ng darhol tahlil & to'g'ri javob</div>
+                </div>
+              </button>
+              <button type="button" id="modePillExam" class="mode-pill" onclick="setQuizMode('exam')">
+                <span class="mode-pill-icon">⏱️</span>
+                <div>
+                  <div class="mode-pill-name">Real Imtihon Rejimi</div>
+                  <div class="mode-pill-desc">Vaqtli sinov, Flaglash, yakunda rasmiy ball & sertifikat</div>
+                </div>
+              </button>
+            </div>
+            <!-- Hidden native select to maintain 100% backward compatibility with existing JS -->
+            <select id="partModeSelect" class="form-control" style="display:none;">
+              <option value="practice" selected>practice</option>
+              <option value="exam">exam</option>
             </select>
-
           </div>
+        </div>
 
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="font-size:1.15rem; color:var(--text-main); font-weight:700;">📚 Test Bo'limlari (Partlar)</h3>
+          <span style="font-size:0.85rem; color:var(--text-muted);">Kerakli bo'lim ustiga bosing</span>
         </div>
 
         <div id="partsGrid" class="part-grid"></div>
@@ -2467,9 +2501,9 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=3.7"></script>
+  <script src="data.js?v=3.8"></script>
 
-  <script src="app.js?v=3.7"></script>
+  <script src="app.js?v=3.8"></script>
 
 
   <!-- ========================================== -->

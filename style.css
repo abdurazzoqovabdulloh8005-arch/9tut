@@ -110,13 +110,22 @@ header {
   display: flex;
   gap: 6px;
   background: var(--bg-main);
-  padding: 4px;
-  border-radius: 10px;
+  padding: 4px 6px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
   border: none;
   background: transparent;
   padding: 8px 14px;
@@ -126,7 +135,7 @@ header {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
 }
@@ -2087,20 +2096,29 @@ pre.code-block {
   .nav-tabs {
     width: 100%;
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     gap: 6px !important;
-    padding: 5px !important;
-    overflow-x: visible !important;
-    white-space: normal !important;
+    padding: 6px 4px !important;
+    white-space: nowrap !important;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-tab {
-    flex: 1 1 auto;
-    min-width: max-content;
-    padding: 7px 11px;
-    font-size: 0.82rem;
+    flex: 0 0 auto !important;
+    padding: 7px 13px !important;
+    font-size: 0.83rem !important;
     justify-content: center;
-    white-space: nowrap;
+    white-space: nowrap !important;
+  }
+
+  .hotkeys-hint {
+    display: none !important;
   }
 
   .header-actions {
@@ -3526,3 +3544,308 @@ html.is-authenticated .nav-tabs {
   from { opacity: 0; transform: translateX(40px) scale(0.95); }
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
+
+/* ======================================================== */
+/* MODERN PROFESSIONAL TRAINER HERO & POLISHED UI (v=3.8)    */
+/* ======================================================== */
+
+.trainer-hero-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.trainer-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--primary), #00b4d8);
+}
+
+.hero-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.hero-greeting {
+  flex: 1;
+  min-width: 280px;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(0, 118, 206, 0.12);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.hero-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+
+.hero-desc {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 620px;
+}
+
+.hero-resume-box {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  border-radius: 12px;
+  text-align: right;
+  min-width: 210px;
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-resume-btn {
+  padding: 8px 18px !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 3px 10px rgba(0, 118, 206, 0.35) !important;
+}
+
+@media (max-width: 768px) {
+  .trainer-hero-card {
+    padding: 16px 18px;
+  }
+  .hero-resume-box {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+.hero-progress-section {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.hero-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hero-progress-track {
+  height: 9px;
+  background: var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hero-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #10b981);
+  border-radius: 10px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* SEGMENTED MODE SWITCHER */
+.hero-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.mode-segmented-pills {
+  display: flex;
+  gap: 10px;
+  background: var(--bg-main);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.mode-pill {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.mode-pill-icon {
+  font-size: 1.35rem;
+  transition: transform 0.2s;
+}
+
+.mode-pill-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.mode-pill-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.mode-pill:hover {
+  background: var(--bg-card);
+}
+
+.mode-pill.active {
+  background: var(--bg-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+}
+
+.mode-pill.active .mode-pill-name {
+  color: var(--primary);
+}
+
+.mode-pill.active .mode-pill-icon {
+  transform: scale(1.12);
+}
+
+@media (max-width: 768px) {
+  .mode-segmented-pills {
+    width: 100%;
+    flex-direction: column;
+  }
+  .mode-pill {
+    width: 100%;
+  }
+}
+
+/* SLEEK NOTIFICATION BELL & BADGE */
+.alert-bell-btn {
+  position: relative !important;
+  padding: 8px 11px !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-radius: 10px !important;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  border-radius: 12px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.45);
+}
+
+/* SLEEK USER BADGE */
+.user-badge {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+  padding: 5px 12px !important;
+  border-radius: 20px !important;
+  font-weight: 600 !important;
+  font-size: 0.86rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border: 1px solid rgba(0, 118, 206, 0.22) !important;
+}
+
+.badge-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+.badge-action-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.15);
+}
+
+/* OPTION ITEM REFINEMENT */
+.option-item {
+  border: 1.5px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 14px 18px !important;
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.option-item:hover:not(.disabled) {
+  border-color: var(--primary) !important;
+  background: var(--primary-light) !important;
+  transform: translateY(-1px);
+}
+
+.option-item.selected {
+  border-color: var(--primary) !important;
+  background: var(--primary-light) !important;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.option-item.correct {
+  border-color: var(--success) !important;
+  background: var(--success-bg) !important;
+  box-shadow: 0 0 0 1px var(--success);
+}
+
+.option-item.wrong {
+  border-color: var(--danger) !important;
+  background: var(--danger-bg) !important;
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+/* EXPLANATION BOX POLISH */
+.explanation-box {
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  border-left: 4px solid var(--primary) !important;
+  padding: 16px 20px !important;
+  background: var(--bg-card) !important;
+  box-shadow: var(--shadow-sm);
+  margin-top: 18px !important;
+}
+

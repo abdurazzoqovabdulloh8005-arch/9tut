@@ -4882,9 +4882,159 @@ function openAdminPrompt() {
 
 }
 
+// ==========================================
+// MODERN HERO DASHBOARD & MODE SWITCHER
+// ==========================================
+
+function setQuizMode(mode) {
+  state.mode = (mode === 'exam') ? 'exam' : 'practice';
+  
+  const pillPractice = document.getElementById('modePillPractice');
+  const pillExam = document.getElementById('modePillExam');
+  const selectElem = document.getElementById('partModeSelect');
+  
+  if (pillPractice && pillExam) {
+    if (state.mode === 'exam') {
+      pillExam.classList.add('active');
+      pillPractice.classList.remove('active');
+    } else {
+      pillPractice.classList.add('active');
+      pillExam.classList.remove('active');
+    }
+  }
+  
+  if (selectElem) {
+    selectElem.value = state.mode;
+  }
+  
+  try {
+    localStorage.setItem('ccna_preferred_quiz_mode', state.mode);
+  } catch(e) {}
+  
+  SoundEffects.playClick();
+}
+
+function updateHeroDashboard() {
+  try {
+    // 1. Student Name
+    const nameElem = document.getElementById('heroStudentName');
+    if (nameElem) {
+      nameElem.textContent = (state.currentUser && state.currentUser.name) 
+        ? state.currentUser.name 
+        : 'Talaba';
+    }
+    
+    // 2. Preferred Mode
+    try {
+      const savedMode = localStorage.getItem('ccna_preferred_quiz_mode');
+      if (savedMode && (savedMode === 'practice' || savedMode === 'exam')) {
+        state.mode = savedMode;
+        const pillPractice = document.getElementById('modePillPractice');
+        const pillExam = document.getElementById('modePillExam');
+        const selectElem = document.getElementById('partModeSelect');
+        if (pillPractice && pillExam) {
+          pillPractice.classList.toggle('active', state.mode === 'practice');
+          pillExam.classList.toggle('active', state.mode === 'exam');
+        }
+        if (selectElem) selectElem.value = state.mode;
+      }
+    } catch(e) {}
+
+    // 3. Mastery & Solved Questions Progress
+    const currentStudentName = (state.currentUser && state.currentUser.name)
+      ? String(state.currentUser.name).trim().toLowerCase()
+      : '';
+    
+    let totalSolved = 0;
+    if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
+      const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+      const partBestMap = {};
+      userResults.forEach(r => {
+        const pKey = r.partKey || r.partTitle || r.part || 'unknown';
+        const c = Number(r.correct) || 0;
+        if (!partBestMap[pKey] || c > partBestMap[pKey]) {
+          partBestMap[pKey] = c;
+        }
+      });
+      totalSolved = Object.values(partBestMap).reduce((a, b) => a + b, 0);
+    }
+    
+    const totalQuestions = (typeof CCNA_QUESTIONS !== 'undefined' && Array.isArray(CCNA_QUESTIONS)) ? CCNA_QUESTIONS.length : 1331;
+    const cappedSolved = Math.min(totalSolved, totalQuestions);
+    const pct = totalQuestions > 0 ? Math.round((cappedSolved / totalQuestions) * 100) : 0;
+    
+    const statsElem = document.getElementById('heroProgressStats');
+    const barElem = document.getElementById('heroProgressBar');
+    if (statsElem) {
+      statsElem.textContent = `${cappedSolved} / ${totalQuestions} ta savol (${pct}%)`;
+    }
+    if (barElem) {
+      barElem.style.width = `${pct}%`;
+    }
+    
+    // 4. Quick Resume Box
+    const resumeBox = document.getElementById('heroResumeBox');
+    const resumeTitle = document.getElementById('heroResumeTitle');
+    if (resumeBox && resumeTitle) {
+      const key = getActiveQuizKey();
+      const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          if (data && data.partTitle && data.questions && data.questions.length > 0) {
+            resumeTitle.textContent = `${data.partTitle} (${(data.currentIndex || 0) + 1}/${data.questions.length})`;
+            resumeBox.style.display = 'block';
+            return;
+          }
+        } catch(e) {}
+      }
+      
+      if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
+        const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+        if (userResults.length > 0) {
+          const last = userResults[userResults.length - 1];
+          resumeTitle.textContent = `${last.partTitle || 'Oxirgi Part'} (${last.percent || 0}%)`;
+          resumeBox.style.display = 'block';
+          return;
+        }
+      }
+      resumeBox.style.display = 'none';
+    }
+  } catch(err) {
+    console.warn("updateHeroDashboard error:", err);
+  }
+}
+
+function resumeLastActiveQuiz() {
+  SoundEffects.playClick();
+  if (typeof restoreActiveQuiz === 'function' && restoreActiveQuiz()) {
+    return;
+  }
+  const currentStudentName = (state.currentUser && state.currentUser.name)
+    ? String(state.currentUser.name).trim().toLowerCase()
+    : '';
+  if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
+    const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+    if (userResults.length > 0) {
+      const last = userResults[userResults.length - 1];
+      const partKey = last.partKey || last.part;
+      const targetPart = PARTS_CONFIG.find(p => p.key === partKey || p.title === last.partTitle);
+      if (targetPart) {
+        startPartQuiz(targetPart);
+        return;
+      }
+    }
+  }
+  if (Array.isArray(PARTS_CONFIG) && PARTS_CONFIG.length > 0) {
+    startPartQuiz(PARTS_CONFIG[0]);
+  }
+}
+
 // PART GRID
 
 function renderPartsGrid() {
+
+  updateHeroDashboard();
 
   const grid = document.getElementById('partsGrid');
 
