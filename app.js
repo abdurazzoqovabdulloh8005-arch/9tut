@@ -164,7 +164,10 @@ const CloudSync = {
   async syncMasterAdmin() {
     if (!this.isAvailable()) return getMasterAdmin();
     try {
-      const cloudMaster = await this.get('master_admin');
+      let cloudMaster = await this.get('master_admin');
+      if (typeof cloudMaster === 'string') {
+        try { cloudMaster = JSON.parse(cloudMaster); } catch(e) {}
+      }
       if (cloudMaster && typeof cloudMaster === 'object' && cloudMaster.hash) {
         localStorage.setItem('ccna_master_admin_custom', JSON.stringify(cloudMaster));
         return cloudMaster;
@@ -174,7 +177,9 @@ const CloudSync = {
           this.saveAll('master_admin', localMaster);
         }
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn("syncMasterAdmin error:", e);
+    }
     return getMasterAdmin();
   },
 
@@ -2444,11 +2449,11 @@ function getMasterAdmin() {
 
 }
 
-function saveMasterAdmin(adminObj) {
+async function saveMasterAdmin(adminObj) {
   try {
     localStorage.setItem('ccna_master_admin_custom', JSON.stringify(adminObj));
-    if (typeof CloudSync !== 'undefined') {
-      CloudSync.saveAll('master_admin', adminObj);
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+      await CloudSync.saveAll('master_admin', adminObj);
     }
   } catch(e) {}
 }
@@ -4237,17 +4242,21 @@ async function handleUserLogin() {
     // 1. Dynamic Master Admin & User Check
 
     // 1. Sync latest Master Admin & Users from Cloud Database
-    if (typeof CloudSync !== 'undefined') {
+    let cloudMaster = null;
+    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       try {
-        await Promise.allSettled([
+        const syncResults = await Promise.allSettled([
           CloudSync.syncMasterAdmin(),
           CloudSync.syncUsers()
         ]);
+        if (syncResults[0].status === 'fulfilled' && syncResults[0].value) {
+          cloudMaster = syncResults[0].value;
+        }
       } catch(e) {}
     }
 
     let match = null;
-    const master = getMasterAdmin();
+    const master = cloudMaster || getMasterAdmin();
 
     let computedHash = "";
     try {
@@ -4268,6 +4277,10 @@ async function handleUserLogin() {
             role: 'admin',
             group: 'Administrator'
           };
+        } else if (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005') {
+          showAuthError(errEl, "⚠️ Eski standart parol bekor qilingan! Iltimos, o'zgartirilgan yangi parolingizni kiriting.");
+          passwordInput.focus();
+          return;
         }
       } else {
         // Standart holatda: Abdulloh8005 yoki standart hash
@@ -8956,7 +8969,7 @@ async function saveNewPassword() {
 
     master.isPasswordChanged = true;
 
-    saveMasterAdmin(master);
+    await saveMasterAdmin(master);
 
     SoundEffects.playCorrect();
 
