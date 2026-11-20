@@ -12,9 +12,9 @@ if (!globalThis.__ccna_mem_store) {
 
 async function getStorage() {
   // Option 1: Upstash / Vercel KV REST
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    const url = process.env.KV_REST_API_URL;
-    const token = process.env.KV_REST_API_TOKEN;
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url && token) {
     return {
       async get(key) {
         try {
