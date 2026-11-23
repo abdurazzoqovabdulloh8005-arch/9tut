@@ -10170,87 +10170,183 @@ function addCliHistory(text, type) {
 // BOOKMARKS VIEW
 
 function initBookmarksView() {
-
   renderBookmarksList();
+}
 
+function removeBookmark(questionId) {
+  const idx = state.bookmarks.indexOf(questionId);
+  if (idx >= 0) {
+    state.bookmarks.splice(idx, 1);
+    localStorage.setItem('ccna_bookmarks', JSON.stringify(state.bookmarks));
+    renderBookmarksList();
+    SoundEffects.playClick();
+  }
+}
+
+function clearAllBookmarks() {
+  if (!state.bookmarks || state.bookmarks.length === 0) return;
+  if (!confirm("Haqiqatan ham barcha saqlangan savollarni o'chirmoqchimisiz?")) return;
+  state.bookmarks = [];
+  localStorage.setItem('ccna_bookmarks', JSON.stringify([]));
+  renderBookmarksList();
+  SoundEffects.playClick();
+}
+
+function practiceBookmarkedQuestion(qId) {
+  const q = CCNA_QUESTIONS.find(item => item.id === qId);
+  if (!q) return;
+
+  const part = PARTS_CONFIG.find(p => p.key === q.source || p.title === q.source) || PARTS_CONFIG[0];
+  switchMainTab('quiz');
+  startPartQuiz(part);
+
+  // Topilgan savol indeksiga o'tish
+  const idx = state.quizQuestions.findIndex(item => item.id === qId);
+  if (idx >= 0) {
+    state.currentIndex = idx;
+    renderCurrentQuestion();
+    renderPalette();
+  }
 }
 
 function renderBookmarksList() {
-
   const container = document.getElementById('bookmarksListContainer');
-
   if (!container) return;
 
   const bookmarkedQuestions = CCNA_QUESTIONS.filter(q => state.bookmarks.includes(q.id));
 
   container.innerHTML = `
-
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-
-      <h2>⭐ Saqlangan Savollar (${bookmarkedQuestions.length} ta)</h2>
-
+      <h2 style="margin:0; font-size:1.35rem; display:flex; align-items:center; gap:8px;">
+        ⭐ Saqlangan Savollar (${bookmarkedQuestions.length} ta)
+      </h2>
+      ${bookmarkedQuestions.length > 0 ? `
+        <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllBookmarks()" style="color:var(--danger); border-color:rgba(239,68,68,0.3); font-size:0.82rem; padding:6px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          🗑️ Barchasini tozalash
+        </button>
+      ` : ''}
     </div>
-
   `;
 
   if (bookmarkedQuestions.length === 0) {
-
     container.innerHTML += `
-
-      <div style="background:var(--bg-card); padding:30px; text-align:center; border-radius:var(--radius); border:1px solid var(--border); color:var(--text-muted);">
-
-        Hozircha saqlangan savollar yo'q. Test yechish davomida savol ustidagi "☆ Saqlash" tugmasini bosing.
-
+      <div style="background:var(--bg-card); padding:40px 20px; text-align:center; border-radius:var(--radius); border:1px solid var(--border); color:var(--text-muted);">
+        <div style="font-size:2.5rem; margin-bottom:10px;">⭐</div>
+        <div style="font-weight:700; font-size:1.1rem; color:var(--text-main); margin-bottom:6px;">Hozircha saqlangan savollar yo'q</div>
+        <div style="font-size:0.9rem;">Test yechish davomida qiyin yoki muhim savollar ustidagi <b>"☆ Saqlash"</b> tugmasini bossangiz, ular bu yerda to'liq variantlari va tushuntirishlari bilan saqlanadi.</div>
       </div>
-
     `;
-
     return;
-
   }
 
-  const grid = document.createElement('div');
+  const list = document.createElement('div');
+  list.style.display = 'flex';
+  list.style.flexDirection = 'column';
+  list.style.gap = '16px';
 
-  grid.style.display = 'flex';
-
-  grid.style.flexDirection = 'column';
-
-  grid.style.gap = '12px';
-
-  bookmarkedQuestions.forEach(q => {
-
+  bookmarkedQuestions.forEach((q, idx) => {
     const card = document.createElement('div');
+    card.className = 'study-card';
+    card.style.position = 'relative';
 
-    card.style.background = 'var(--bg-card)';
+    // Options HTML
+    let optsHtml = '';
+    if (q.options && typeof q.options === 'object') {
+      const optKeys = Object.keys(q.options).sort();
+      optKeys.forEach(letter => {
+        const isCorrect = Array.isArray(q.answer) ? q.answer.includes(letter) : (q.answer === letter);
+        const text = q.options[letter];
+        optsHtml += `
+          <div class="study-opt-item ${isCorrect ? 'is-correct' : ''}">
+            <div class="study-opt-letter">${letter}</div>
+            <div class="study-opt-text">
+              ${formatOptionText(text)}
+              ${isCorrect ? ' <span class="study-correct-badge">✅ TO\'G\'RI JAVOB</span>' : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
 
-    card.style.border = '1px solid var(--border)';
+    // Drag & Drop pairs if applicable
+    if (q.isDragDrop && Array.isArray(q.dragDropPairs)) {
+      optsHtml += '<div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">';
+      q.dragDropPairs.forEach(pair => {
+        optsHtml += `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
+            <span style="font-weight:600; color:var(--text-main);">${escapeHtml(pair.left || '')}</span>
+            <span style="color:var(--primary); font-weight:700;">➔</span>
+            <span style="color:var(--success); font-weight:600;">${escapeHtml(pair.right || '')}</span>
+          </div>
+        `;
+      });
+      optsHtml += '</div>';
+    }
 
-    card.style.borderRadius = '8px';
+    // Explanation Box
+    let cueHtml = '';
+    const expText = q.explanation_uz || q.explanation || '';
+    if (expText) {
+      cueHtml = `
+        <div class="study-cue-box" style="margin-top:12px;">
+          <span style="font-size:1.1rem;">💡</span>
+          <div>
+            <b>Nega to'g'ri? (Tushuntirish):</b><br>
+            <div style="margin-top:4px;">${q.explanation_uz || escapeHtml(q.explanation)}</div>
+            ${q.explanation_uz && q.explanation ? `
+              <details style="margin-top:8px; font-size:0.8rem; color:var(--text-muted); cursor:pointer;">
+                <summary>📖 Asl inglizcha tushuntirish</summary>
+                <div style="margin-top:4px; padding:6px 10px; background:rgba(0,0,0,0.2); border-radius:4px;">${escapeHtml(q.explanation)}</div>
+              </details>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
 
-    card.style.padding = '16px';
+    // Diagram / Image
+    let imgHtml = '';
+    if (q.image) {
+      imgHtml = `
+        <div class="question-diagram-wrapper" style="margin:10px 0;">
+          <img src="${q.image}" class="question-diagram" onclick="openImageModal(this.src)" alt="Diagram" title="Kattalashtirish uchun bosing">
+        </div>
+      `;
+    }
+
+    const answerStr = Array.isArray(q.answer) ? q.answer.join(', ') : (q.answer || '');
 
     card.innerHTML = `
-
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-
-        <span class="badge-source">${q.source}</span>
-
-        <span style="color:var(--success); font-weight:700;">Javob: ${q.answer.join(', ')}</span>
-
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="study-card-num">${escapeHtml(q.source || 'CCNA')} — Savol ${idx + 1}</span>
+          <span style="font-size:0.85rem; font-weight:700; color:var(--success); background:rgba(16,185,129,0.1); padding:2px 8px; border-radius:4px;">
+            To'g'ri javob: ${escapeHtml(answerStr)}
+          </span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="practiceBookmarkedQuestion(${q.id})" style="font-size:0.8rem; padding:4px 10px; cursor:pointer;" title="Ushbu savolni test rejimida yechish">
+            🚀 Testda yechish
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="removeBookmark(${q.id})" style="color:var(--danger); border-color:rgba(239,68,68,0.3); font-size:0.8rem; padding:4px 10px; cursor:pointer;" title="Saqlanganlardan o'chirish">
+            🗑️ O'chirish
+          </button>
+        </div>
       </div>
 
-      <div style="font-weight:600; margin-bottom:8px;">${escapeHtml(q.question)}</div>
+      <div class="study-q-text">${escapeHtml(q.question)}</div>
 
-      <div style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(q.explanation || '')}</div>
+      ${imgHtml}
 
+      <div class="study-options">${optsHtml}</div>
+
+      ${cueHtml}
     `;
 
-    grid.appendChild(card);
-
+    list.appendChild(card);
   });
 
-  container.appendChild(grid);
-
+  container.appendChild(list);
 }
 
 // UTILITY HELPERS
