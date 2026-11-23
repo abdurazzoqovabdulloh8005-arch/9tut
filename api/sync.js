@@ -23,7 +23,17 @@ async function getStorage() {
           });
           const d = await res.json();
           if (!d || d.result === null || d.result === undefined) return null;
-          return typeof d.result === 'string' ? JSON.parse(d.result) : d.result;
+          let val = d.result;
+          while (typeof val === 'string') {
+            try {
+              const parsed = JSON.parse(val);
+              if (parsed === val) break;
+              val = parsed;
+            } catch(e) {
+              break;
+            }
+          }
+          return val;
         } catch (e) {
           console.warn('KV get error:', e);
           return null;
@@ -31,15 +41,16 @@ async function getStorage() {
       },
       async set(key, val) {
         try {
-          await fetch(`${url}/set/${encodeURIComponent(key)}`, {
+          const stringified = typeof val === 'string' ? val : JSON.stringify(val);
+          const res = await fetch(`${url}`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(JSON.stringify(val))
+            body: JSON.stringify(['SET', key, stringified])
           });
-          return true;
+          return res.ok;
         } catch (e) {
           console.warn('KV set error:', e);
           return false;
@@ -113,9 +124,21 @@ export default async function handler(req, res) {
     // GET Request
     if (req.method === 'GET') {
       let data = await store.get(key);
+      while (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed === data) break;
+          data = parsed;
+        } catch(e) {
+          break;
+        }
+      }
       if (key === 'users' && Array.isArray(data)) {
         let deletedList = (await store.get('deleted_users')) || [];
-        if (deletedList.length > 0) {
+        while (typeof deletedList === 'string') {
+          try { deletedList = JSON.parse(deletedList); } catch(e) { break; }
+        }
+        if (Array.isArray(deletedList) && deletedList.length > 0) {
           const delSet = new Set(deletedList.map(s => String(s).toLowerCase()));
           data = data.filter(u => {
             if (!u) return false;
@@ -138,6 +161,9 @@ export default async function handler(req, res) {
         const targetLogin = String(payload.login || '').trim().toLowerCase();
 
         let users = (await store.get('users')) || [];
+        while (typeof users === 'string') {
+          try { users = JSON.parse(users); } catch(e) { break; }
+        }
         if (Array.isArray(users)) {
           users = users.filter(u => {
             if (!u) return false;
@@ -151,6 +177,9 @@ export default async function handler(req, res) {
         }
 
         let deletedList = (await store.get('deleted_users')) || [];
+        while (typeof deletedList === 'string') {
+          try { deletedList = JSON.parse(deletedList); } catch(e) { break; }
+        }
         if (!Array.isArray(deletedList)) deletedList = [];
         if (targetLogin && !deletedList.includes(targetLogin)) deletedList.push(targetLogin);
         if (targetId && !deletedList.includes(targetId)) deletedList.push(targetId);
@@ -159,6 +188,9 @@ export default async function handler(req, res) {
 
         // Also purge test results for deleted student
         let results = (await store.get('results')) || [];
+        while (typeof results === 'string') {
+          try { results = JSON.parse(results); } catch(e) { break; }
+        }
         if (Array.isArray(results)) {
           results = results.filter(r => {
             if (!r) return false;
@@ -183,8 +215,15 @@ export default async function handler(req, res) {
       // SAVE ALL
       if (payload.action === 'save_all') {
         let toSave = payload.data || [];
+        while (typeof toSave === 'string') {
+          try { toSave = JSON.parse(toSave); } catch(e) { break; }
+        }
+
         if (key === 'users' && Array.isArray(toSave)) {
           let currentUsers = (await store.get('users')) || [];
+          while (typeof currentUsers === 'string') {
+            try { currentUsers = JSON.parse(currentUsers); } catch(e) { break; }
+          }
           if (!Array.isArray(currentUsers)) currentUsers = [];
 
           // SMART MERGE: Never allow incoming partial user list to wipe existing users!
@@ -202,7 +241,10 @@ export default async function handler(req, res) {
           toSave = Array.from(userMap.values());
 
           let deletedList = (await store.get('deleted_users')) || [];
-          if (deletedList.length > 0) {
+          while (typeof deletedList === 'string') {
+            try { deletedList = JSON.parse(deletedList); } catch(e) { break; }
+          }
+          if (Array.isArray(deletedList) && deletedList.length > 0) {
             const delSet = new Set(deletedList.map(s => String(s).toLowerCase()));
             toSave = toSave.filter(u => {
               if (!u) return false;
@@ -212,6 +254,38 @@ export default async function handler(req, res) {
             });
           }
         }
+
+        if (key === 'results' && Array.isArray(toSave)) {
+          let currentResults = (await store.get('results')) || [];
+          while (typeof currentResults === 'string') {
+            try { currentResults = JSON.parse(currentResults); } catch(e) { break; }
+          }
+          if (!Array.isArray(currentResults)) currentResults = [];
+
+          // SMART MERGE: Never allow one user's quiz completion to wipe other users' test results!
+          const resMap = new Map();
+          currentResults.forEach(r => {
+            if (r) {
+              const k = r.id || `${r.login || r.studentName}_${r.partKey || r.partTitle}_${r.timestamp || r.date}`;
+              resMap.set(k, r);
+            }
+          });
+          toSave.forEach(r => {
+            if (r) {
+              const k = r.id || `${r.login || r.studentName}_${r.partKey || r.partTitle}_${r.timestamp || r.date}`;
+              resMap.set(k, r);
+            }
+          });
+          toSave = Array.from(resMap.values());
+          // Sort newest first
+          toSave.sort((a, b) => {
+            const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+            const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+            return tb - ta;
+          });
+          if (toSave.length > 3000) toSave = toSave.slice(0, 3000);
+        }
+
         await store.set(key, toSave);
         return res.status(200).json({ success: true, count: Array.isArray(toSave) ? toSave.length : 0 });
       }
@@ -219,10 +293,16 @@ export default async function handler(req, res) {
       // UPSERT USER
       if (payload.action === 'upsert_user') {
         let users = (await store.get('users')) || [];
+        while (typeof users === 'string') {
+          try { users = JSON.parse(users); } catch(e) { break; }
+        }
         if (!Array.isArray(users)) users = [];
         const newUser = payload.user;
 
         let deletedList = (await store.get('deleted_users')) || [];
+        while (typeof deletedList === 'string') {
+          try { deletedList = JSON.parse(deletedList); } catch(e) { break; }
+        }
         if (Array.isArray(deletedList) && newUser) {
           const uId = String(newUser.id || '');
           const uLog = String(newUser.login || '').toLowerCase();
@@ -245,10 +325,30 @@ export default async function handler(req, res) {
       // APPEND
       if (payload.action === 'append') {
         let list = (await store.get(key)) || [];
+        while (typeof list === 'string') {
+          try { list = JSON.parse(list); } catch(e) { break; }
+        }
         if (!Array.isArray(list)) list = [];
-        if (payload.data) {
-          list.push(payload.data);
-          if (list.length > 1500) list = list.slice(-1500);
+        const item = payload.data || payload.item;
+        if (item) {
+          if (key === 'results') {
+            // Deduplicate by result id or composite key
+            const itemKey = item.id || `${item.login || item.studentName}_${item.partKey || item.partTitle}_${item.timestamp || item.date}`;
+            const existingIdx = list.findIndex(r => {
+              if (!r) return false;
+              const rKey = r.id || `${r.login || r.studentName}_${r.partKey || r.partTitle}_${r.timestamp || r.date}`;
+              return rKey === itemKey;
+            });
+            if (existingIdx >= 0) {
+              list[existingIdx] = { ...list[existingIdx], ...item };
+            } else {
+              list.unshift(item); // Newest at top
+            }
+            if (list.length > 3000) list = list.slice(0, 3000);
+          } else {
+            list.push(item);
+            if (list.length > 1500) list = list.slice(-1500);
+          }
           await store.set(key, list);
         }
         return res.status(200).json({ success: true, count: list.length });

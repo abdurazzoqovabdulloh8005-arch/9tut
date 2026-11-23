@@ -98,7 +98,17 @@ const CloudSync = {
     try {
       const resp = await fetch(`${this.endpoint}?key=${key}&_t=${Date.now()}`);
       if (resp.ok) {
-        return await resp.json();
+        let data = await resp.json();
+        while (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed === data) break;
+            data = parsed;
+          } catch(e) {
+            break;
+          }
+        }
+        return data;
       }
     } catch(e) {}
     return null;
@@ -166,7 +176,7 @@ const CloudSync = {
       const resp = await fetch(`${this.endpoint}?key=${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'append', item })
+        body: JSON.stringify({ action: 'append', data: item, item: item })
       });
       return resp.ok;
     } catch(e) {
@@ -201,7 +211,14 @@ const CloudSync = {
   async syncUsers() {
     if (!this.isAvailable()) return getRegisteredUsers();
     try {
-      const cloudUsers = await this.get('users');
+      let cloudUsers = await this.get('users');
+      while (typeof cloudUsers === 'string') {
+        try {
+          const parsed = JSON.parse(cloudUsers);
+          if (parsed === cloudUsers) break;
+          cloudUsers = parsed;
+        } catch(e) { break; }
+      }
       let deletedLogins = [];
       try {
         deletedLogins = JSON.parse(localStorage.getItem('ccna_deleted_logins') || '[]');
@@ -242,9 +259,23 @@ const CloudSync = {
       const mergedUsers = Array.from(userMap.values());
       localStorage.setItem('ccna_registered_users', JSON.stringify(mergedUsers));
 
-      // If local has users that cloud doesn't, seed cloud (FAQAT Admin bo'lsa)
-      if (state.isAdmin && Array.isArray(cloudUsers) && mergedUsers.length > cloudUsers.length) {
-        this.saveAll('users', mergedUsers);
+      // Localda mavjud, lekin bulutda yo'q foydalanuvchilarni bulutga uzatish (barcha qurilmalardan)
+      if (Array.isArray(cloudUsers)) {
+        const cloudLogins = new Set(cloudUsers.map(u => String(u.login || '').trim().toLowerCase()));
+        const missingFromCloud = localUsers.filter(u => {
+          if (!u || !u.login) return false;
+          const ulog = String(u.login).trim().toLowerCase();
+          return !cloudLogins.has(ulog) && !delSet.has(ulog);
+        });
+        if (missingFromCloud.length > 0) {
+          if (state.isAdmin) {
+            this.saveAll('users', mergedUsers);
+          } else {
+            for (const mu of missingFromCloud) {
+              this.upsertUser(mu).catch(() => {});
+            }
+          }
+        }
       }
       return mergedUsers;
     } catch(e) {
@@ -257,7 +288,14 @@ const CloudSync = {
   async syncResults() {
     if (!this.isAvailable()) return state.results || [];
     try {
-      const cloudResults = await this.get('results');
+      let cloudResults = await this.get('results');
+      while (typeof cloudResults === 'string') {
+        try {
+          const parsed = JSON.parse(cloudResults);
+          if (parsed === cloudResults) break;
+          cloudResults = parsed;
+        } catch(e) { break; }
+      }
       let deletedResults = [];
       try {
         deletedResults = JSON.parse(localStorage.getItem('ccna_deleted_results') || '[]');
@@ -5087,10 +5125,24 @@ function updateHeroDashboard() {
         } catch(e) {}
       }
       
-      if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
-        const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+      const currentStudentLogin = (state.currentUser && state.currentUser.login)
+        ? String(state.currentUser.login).trim().toLowerCase()
+        : '';
+      if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
+        const userResults = state.results.filter(r => {
+          if (!r) return false;
+          const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
+          const rLogin = r.login ? String(r.login).trim().toLowerCase() : '';
+          return (currentStudentLogin && rLogin === currentStudentLogin) ||
+                 (currentStudentName && rName === currentStudentName);
+        });
         if (userResults.length > 0) {
-          const last = userResults[userResults.length - 1];
+          userResults.sort((a, b) => {
+            const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+            const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+            return tb - ta;
+          });
+          const last = userResults[0]; // Yangi oxirgi natija
           resumeTitle.textContent = `${last.partTitle || 'Oxirgi Part'} (${last.percent || 0}%)`;
           resumeBox.style.display = 'block';
           return;
@@ -5111,10 +5163,24 @@ function resumeLastActiveQuiz() {
   const currentStudentName = (state.currentUser && state.currentUser.name)
     ? String(state.currentUser.name).trim().toLowerCase()
     : '';
-  if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
-    const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+  const currentStudentLogin = (state.currentUser && state.currentUser.login)
+    ? String(state.currentUser.login).trim().toLowerCase()
+    : '';
+  if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
+    const userResults = state.results.filter(r => {
+      if (!r) return false;
+      const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
+      const rLogin = r.login ? String(r.login).trim().toLowerCase() : '';
+      return (currentStudentLogin && rLogin === currentStudentLogin) ||
+             (currentStudentName && rName === currentStudentName);
+    });
     if (userResults.length > 0) {
-      const last = userResults[userResults.length - 1];
+      userResults.sort((a, b) => {
+        const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+        const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+        return tb - ta;
+      });
+      const last = userResults[0]; // Yangi oxirgi natija
       const partKey = last.partKey || last.part;
       const targetPart = PARTS_CONFIG.find(p => p.key === partKey || p.title === last.partTitle);
       if (targetPart) {
@@ -5175,9 +5241,12 @@ function renderPartsGrid() {
         });
 
         if (partResults.length > 0) {
-
-          lastResult = partResults[partResults.length - 1];
-
+          partResults.sort((a, b) => {
+            const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+            const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+            return tb - ta;
+          });
+          lastResult = partResults[0]; // Eng oxirgi yangi natija olinadi!
         }
 
       }
