@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=5.1">
+  <link rel="stylesheet" href="style.css?v=5.2">
 
   <script>
 
@@ -1500,23 +1500,26 @@
             <div class="admin-chat-main">
               <!-- Active thread header -->
               <div id="adminActiveChatHeader" class="admin-chat-thread-header" style="display:none;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <div id="adminChatActiveAvatar" style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem;">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                  <button type="button" class="admin-chat-back-btn" onclick="adminCloseActiveChat()" title="Talabalar ro'yxatiga qaytish">
+                    ← Talabalar
+                  </button>
+                  <div id="adminChatActiveAvatar" style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1rem; flex-shrink:0;">
                     👤
                   </div>
-                  <div>
-                    <div id="adminChatActiveName" style="font-weight:700; font-size:1rem; color:var(--text-main);">
+                  <div style="min-width:0; flex:1;">
+                    <div id="adminChatActiveName" style="font-weight:700; font-size:0.95rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                       Talaba
                     </div>
-                    <div id="adminChatActiveSub" style="font-size:0.8rem; color:var(--text-muted);">
+                    <div id="adminChatActiveSub" style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                       Login • Guruh • Bog'langan qurilma
                     </div>
                   </div>
                 </div>
 
                 <!-- Quick actions inside chat -->
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <button type="button" id="adminChatResetDevBtn" onclick="adminQuickApproveDeviceFromChat()" class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; padding:6px 12px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px;" title="Talabaning yangi qurilmasiga darhol ruxsat berish">
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                  <button type="button" id="adminChatResetDevBtn" onclick="adminQuickApproveDeviceFromChat()" class="btn-action-icon" style="background:#10b981; color:white; border-color:#059669; padding:5px 10px; border-radius:6px; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:4px;" title="Talabaning yangi qurilmasiga darhol ruxsat berish">
                     📱 Yangi qurilmaga ruxsat
                   </button>
                 </div>
@@ -2514,9 +2517,9 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=5.1"></script>
+  <script src="data.js?v=5.2"></script>
 
-  <script src="app.js?v=5.1"></script>
+  <script src="app.js?v=5.2"></script>
 
 
   <!-- ========================================== -->

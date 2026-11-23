@@ -3609,7 +3609,9 @@ function updateChatBadges() {
 
   // 2. Admin badge
   if (state.isAdmin) {
-    const unreadForAdmin = msgs.filter(m => m.toLogin === 'abdulloh' && !m.isRead).length;
+    const regUsers = getRegisteredUsers();
+    const validStudentLogins = new Set(regUsers.filter(u => u.role !== 'admin').map(u => (u.login || '').toLowerCase()));
+    const unreadForAdmin = msgs.filter(m => m.toLogin === 'abdulloh' && !m.isRead && validStudentLogins.has((m.fromLogin || '').toLowerCase())).length;
     const adminBadge = document.getElementById('adminChatBadge');
     if (adminBadge) adminBadge.textContent = unreadForAdmin;
 
@@ -3688,6 +3690,10 @@ function selectAdminChatUser(studentLogin) {
 
   activeAdminChatUser = user;
   try { localStorage.setItem('ccna_active_admin_chat_user', studentLogin); } catch(e) {}
+  
+  const chatContainer = document.querySelector('.admin-chat-container');
+  if (chatContainer) chatContainer.classList.add('has-active-chat');
+
   markChatDialogueAsRead(studentLogin, 'admin');
 
   // Update Header
@@ -3711,6 +3717,30 @@ function selectAdminChatUser(studentLogin) {
 
   const replyInput = document.getElementById('adminChatReplyInput');
   if (replyInput) setTimeout(() => replyInput.focus(), 100);
+}
+
+function adminCloseActiveChat() {
+  activeAdminChatUser = null;
+  try { localStorage.removeItem('ccna_active_admin_chat_user'); } catch(e) {}
+  const chatContainer = document.querySelector('.admin-chat-container');
+  if (chatContainer) chatContainer.classList.remove('has-active-chat');
+
+  const header = document.getElementById('adminActiveChatHeader');
+  const form = document.getElementById('adminChatReplyForm');
+  if (header) header.style.display = 'none';
+  if (form) form.style.display = 'none';
+
+  const container = document.getElementById('adminChatMessagesArea');
+  if (container) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:50px 20px; color:var(--text-muted); margin:auto;">
+        <div style="font-size:2.8rem; margin-bottom:10px;">💬</div>
+        <h4 style="color:var(--text-main); margin-bottom:6px;">Suhbat tanlanmagan</h4>
+        <p style="font-size:0.88rem; max-width:320px; margin:0 auto;">Talaba bilan yozishish uchun ro'yxatdan birini tanlang.</p>
+      </div>
+    `;
+  }
+  renderAdminChatConversations();
 }
 
 function renderAdminActiveChatMessages() {
@@ -8338,6 +8368,13 @@ function switchAdminTab(tabName) {
     if (btnChat) btnChat.classList.add('active');
     if (viewChat) viewChat.style.display = 'block';
     renderAdminChatConversations();
+    const chatContainer = document.querySelector('.admin-chat-container');
+    if (activeAdminChatUser) {
+      if (chatContainer) chatContainer.classList.add('has-active-chat');
+      renderAdminActiveChatMessages();
+    } else {
+      if (chatContainer) chatContainer.classList.remove('has-active-chat');
+    }
   }
 
   SoundEffects.playClick();
