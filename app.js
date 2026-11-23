@@ -2228,8 +2228,11 @@ function initializeApp() {
   try { restoreUserNavigationAndQuiz(); } catch(e) { console.error("restoreUserNavigationAndQuiz", e); }
   window.addEventListener('beforeunload', () => {
     try {
-      if (state.activePartKey && !state.isQuizFinished && state.quizQuestions && state.quizQuestions.length > 0) {
+      if (state.currentTab === 'quiz' && state.activePartKey && !state.isQuizFinished && state.quizQuestions && state.quizQuestions.length > 0) {
         saveQuizProgress();
+        sessionStorage.setItem('ccna_is_inside_active_quiz', 'true');
+      } else {
+        sessionStorage.removeItem('ccna_is_inside_active_quiz');
       }
     } catch(e) {}
   });
@@ -2495,6 +2498,15 @@ function initNavigation() {
 
         return;
 
+      }
+
+      if (target === 'quiz') {
+        sessionStorage.removeItem('ccna_is_inside_active_quiz');
+        const partsView = document.getElementById('partsSelectionView');
+        const testingArea = document.getElementById('quizTestingArea');
+        if (partsView) partsView.style.display = 'block';
+        if (testingArea) testingArea.style.display = 'none';
+        renderPartsGrid();
       }
 
       switchMainTab(target);
@@ -5367,7 +5379,6 @@ function saveQuizProgress() {
     const str = JSON.stringify(payload);
     // Tab darajasida saqlash (Har bir oyna yoki tab bir-biriga xalaqit bermaydi!)
     sessionStorage.setItem(key, str);
-    sessionStorage.setItem('ccna_active_main_tab', 'quiz');
     // Zaxira sifatida foydalanuvchi hisobiga bog'langan holda saqlash
     localStorage.setItem(key, str);
   } catch(e) {
@@ -5455,7 +5466,6 @@ function restoreUserNavigationAndQuiz() {
                    'quiz';
 
   // Agar bu oyna Administrator boshqaruv panelida turgan bo'lsa -> Admin panel ochiladi!
-  // Test uni aslo buzmaydi va o'rniga chiqib olmaydi!
   if (savedTab === 'admin' && state.isAdmin) {
     switchMainTab('admin');
     const savedSubTab = sessionStorage.getItem('ccna_active_admin_sub_tab') || 
@@ -5488,10 +5498,13 @@ function restoreUserNavigationAndQuiz() {
   }
 
   // 2. Agar aynan 'quiz' bo'limida bo'lsa:
-  // Faqat ushbu oyna/tabda yoki ushbu foydalanuvchida davom etayotgan test bo'lsa tiklanadi!
+  // FAQAT ushbu oyna oldinroq aynan test savollarini yechish ichida turgan bo'lsa ('ccna_is_inside_active_quiz' === 'true')
+  // va haqiqatan davom etayotgan test bo'lsagina testga kiradi!
+  const isInsideQuiz = sessionStorage.getItem('ccna_is_inside_active_quiz') === 'true';
   const key = getActiveQuizKey();
-  const hasActiveQuiz = sessionStorage.getItem(key) || localStorage.getItem(key);
-  if (hasActiveQuiz) {
+  const rawQuiz = isInsideQuiz ? (sessionStorage.getItem(key) || localStorage.getItem(key)) : null;
+
+  if (isInsideQuiz && rawQuiz) {
     try {
       const isQuizRestored = restoreActiveQuiz();
       if (isQuizRestored) {
@@ -5502,8 +5515,13 @@ function restoreUserNavigationAndQuiz() {
     }
   }
 
-  // Aks holda bo'limlar ro'yxatini ko'rsatish
+  // Aks holda FAQAT bo'limlar tanlash ro'yxatini (Parts Grid) ko'rsatish (Testga kirmaslik!)
   switchMainTab('quiz');
+  const partsView = document.getElementById('partsSelectionView');
+  const testingArea = document.getElementById('quizTestingArea');
+  if (partsView) partsView.style.display = 'block';
+  if (testingArea) testingArea.style.display = 'none';
+  renderPartsGrid();
 }
 
 // START PART QUIZ
@@ -5532,7 +5550,11 @@ function startPartQuiz(part) {
   state.activePartKey = part.key;
 
   state.activePartTitle = part.title;
-  try { sessionStorage.setItem('ccna_active_main_tab', 'quiz'); localStorage.setItem('ccna_active_main_tab', 'quiz'); } catch(e) {}
+  try { 
+    sessionStorage.setItem('ccna_active_main_tab', 'quiz'); 
+    localStorage.setItem('ccna_active_main_tab', 'quiz'); 
+    sessionStorage.setItem('ccna_is_inside_active_quiz', 'true');
+  } catch(e) {}
 
   const modeSelect = document.getElementById('partModeSelect');
 
@@ -5634,9 +5656,14 @@ function confirmExitQuiz() {
 function backToPartsList() {
 
   clearInterval(state.timerInterval);
+  state.activePartKey = null;
+  state.activePartTitle = null;
+  state.quizQuestions = [];
+  state.isQuizFinished = false;
   try {
     const key = getActiveQuizKey();
     sessionStorage.removeItem(key);
+    sessionStorage.removeItem('ccna_is_inside_active_quiz');
     localStorage.removeItem(key);
     localStorage.removeItem('ccna_active_quiz_progress');
   } catch(e) {}
@@ -6880,6 +6907,14 @@ function submitFinalExam() {
   state.isReviewMode = false;
 
   state.reviewOnlyWrong = false;
+
+  try {
+    const key = getActiveQuizKey();
+    sessionStorage.removeItem(key);
+    sessionStorage.removeItem('ccna_is_inside_active_quiz');
+    localStorage.removeItem(key);
+    localStorage.removeItem('ccna_active_quiz_progress');
+  } catch(e) {}
 
   const wrongBadge = document.getElementById('wrongCountBadge');
 
