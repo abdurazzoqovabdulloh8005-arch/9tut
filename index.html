@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=5.7">
+  <link rel="stylesheet" href="style.css?v=5.8">
 
   <script>
 
@@ -448,9 +448,16 @@
           </div>
         </div>
 
-        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="font-size:1.15rem; color:var(--text-main); font-weight:700;">📚 Test Bo'limlari (Partlar)</h3>
-          <span style="font-size:0.85rem; color:var(--text-muted);">Kerakli bo'lim ustiga bosing</span>
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h3 style="font-size:1.15rem; color:var(--text-main); font-weight:700; margin:0;">📚 Test Bo'limlari (Partlar)</h3>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="partsSortSelect" style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">Tartiblash:</label>
+            <select id="partsSortSelect" class="form-control" style="padding:4px 10px; font-size:0.82rem; width:auto; height:32px; border-radius:6px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border);" onchange="try { localStorage.setItem('ccna_parts_sort_mode', this.value); } catch(e){} renderPartsGrid();">
+              <option value="highest_score" selected>Eng yuqori foizlar tepada 🏆</option>
+              <option value="default">Part bo'yicha (Part 5..20)</option>
+              <option value="unattempted">Topshirilmaganlar birinchi</option>
+            </select>
+          </div>
         </div>
 
         <div id="partsGrid" class="part-grid"></div>
@@ -2598,9 +2605,9 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=5.7"></script>
+  <script src="data.js?v=5.8"></script>
 
-  <script src="app.js?v=5.7"></script>
+  <script src="app.js?v=5.8"></script>
 
 
   <!-- ========================================== -->

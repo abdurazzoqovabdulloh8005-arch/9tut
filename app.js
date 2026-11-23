@@ -5253,7 +5253,7 @@ function updateHeroDashboard() {
       });
       const partBestMap = {};
       userResults.forEach(r => {
-        const pKey = r.partKey || r.partTitle || r.part || 'unknown';
+        const pKey = (r.partTitle || r.partKey || r.part || 'unknown').toLowerCase().replace('.docx', '').trim();
         let c = Number(r.correct) || 0;
         if (!c && r.percent) {
           c = Math.round((Number(r.percent) / 100) * (r.total || 50));
@@ -5377,127 +5377,128 @@ function renderPartsGrid() {
   grid.innerHTML = '';
 
   const currentStudentName = (state.currentUser && state.currentUser.name) 
-
     ? String(state.currentUser.name).trim().toLowerCase() 
-
     : '';
   const currentStudentLogin = (state.currentUser && state.currentUser.login) 
-
     ? String(state.currentUser.login).trim().toLowerCase() 
-
     : '';
 
-  PARTS_CONFIG.forEach(part => {
-
+  // Get user preference for sorting (default: 'highest_score' — eng yuqori foizlar tepada)
+  const sortSelect = document.getElementById('partsSortSelect');
+  let sortMode = 'highest_score';
+  if (sortSelect) {
     try {
-
-      let lastResult = null;
-
-      if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
-
-        const partResults = state.results.filter(r => {
-
-          if (!r) return false;
-
-          const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
-          const rLog = r.login ? String(r.login).trim().toLowerCase() : '';
-          const isMe = (currentStudentLogin && rLog === currentStudentLogin) || (currentStudentName && rName === currentStudentName);
-          if (!isMe) return false;
-
-          const rTitle = r.partTitle ? String(r.partTitle).toLowerCase() : '';
-
-          const rKey = r.partKey ? String(r.partKey).toLowerCase() : '';
-
-          const pTitle = part.title.toLowerCase();
-
-          const pKey = part.key.toLowerCase();
-
-          return rTitle.includes(pTitle) || rKey === pKey || (r.part && String(r.part).toLowerCase().includes(pTitle));
-
-        });
-
-        if (partResults.length > 0) {
-          partResults.sort((a, b) => {
-            const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
-            const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
-            return tb - ta;
-          });
-          lastResult = partResults[0]; // Eng oxirgi yangi natija olinadi!
-        }
-
+      const saved = localStorage.getItem('ccna_parts_sort_mode');
+      if (saved) {
+        sortSelect.value = saved;
       }
+    } catch(e) {}
+    sortMode = sortSelect.value || 'highest_score';
+  } else {
+    try {
+      sortMode = localStorage.getItem('ccna_parts_sort_mode') || 'highest_score';
+    } catch(e) {}
+  }
 
+  // Pre-calculate best score for each part
+  const partsWithScores = PARTS_CONFIG.map((part, originalIndex) => {
+    let bestResult = null;
+    if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
+      const partResults = state.results.filter(r => {
+        if (!r) return false;
+        const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
+        const rLog = r.login ? String(r.login).trim().toLowerCase() : '';
+        const isMe = (currentStudentLogin && rLog === currentStudentLogin) || (currentStudentName && rName === currentStudentName);
+        if (!isMe) return false;
+
+        const rTitle = r.partTitle ? String(r.partTitle).toLowerCase().replace('.docx', '').trim() : '';
+        const rKey = r.partKey ? String(r.partKey).toLowerCase().replace('.docx', '').trim() : '';
+        const pTitle = part.title.toLowerCase().replace('.docx', '').trim();
+        const pKey = part.key.toLowerCase().replace('.docx', '').trim();
+
+        return rTitle === pTitle || rKey === pKey || rTitle.includes(pTitle) || pTitle.includes(rTitle) || (r.part && String(r.part).toLowerCase().includes(pTitle));
+      });
+
+      if (partResults.length > 0) {
+        // Har doim eng yuqori natija (eng yuqori foiz) tanlanadi!
+        partResults.sort((a, b) => {
+          const pa = Number(a.percent) || 0;
+          const pb = Number(b.percent) || 0;
+          if (pb !== pa) return pb - pa; // Eng yuqori foiz birinchi
+          const ca = Number(a.correct) || 0;
+          const cb = Number(b.correct) || 0;
+          if (cb !== ca) return cb - ca;
+          const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+          const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+          return tb - ta;
+        });
+        bestResult = partResults[0];
+      }
+    }
+    return { part, bestResult, originalIndex };
+  });
+
+  // Apply sorting
+  if (sortMode === 'highest_score') {
+    partsWithScores.sort((a, b) => {
+      const pa = a.bestResult ? (Number(a.bestResult.percent) || 0) : -1;
+      const pb = b.bestResult ? (Number(b.bestResult.percent) || 0) : -1;
+      if (pb !== pa) return pb - pa; // Yuqori foizlar tepada
+      return a.originalIndex - b.originalIndex;
+    });
+  } else if (sortMode === 'unattempted') {
+    partsWithScores.sort((a, b) => {
+      const pa = a.bestResult ? 1 : 0;
+      const pb = b.bestResult ? 1 : 0;
+      if (pa !== pb) return pa - pb; // Topshirilmaganlar birinchi
+      return a.originalIndex - b.originalIndex;
+    });
+  }
+  // 'default' retains originalIndex order
+
+  partsWithScores.forEach(({ part, bestResult }) => {
+    try {
       const card = document.createElement('div');
-
       card.className = `part-card ${part.featured ? 'featured' : ''}`;
 
       let scoreBadge = '';
-
-      if (lastResult) {
-
-        const isPass = (lastResult.percent || 0) >= 82.5;
-
-        let cCount = lastResult.correct;
+      if (bestResult) {
+        const isPass = (bestResult.percent || 0) >= 82.5;
+        let cCount = bestResult.correct;
         if (cCount === undefined || cCount === null) {
-          cCount = Math.round(((lastResult.percent || 0) / 100) * (lastResult.total || part.count));
+          cCount = Math.round(((bestResult.percent || 0) / 100) * (bestResult.total || part.count));
         }
-
         scoreBadge = `
-
           <span class="part-last-score" style="color: ${isPass ? 'var(--success)' : 'var(--danger)'}">
-
-            ${isPass ? '✅' : '⚠️'} Natija: <b>${lastResult.percent}%</b> (${cCount}/${lastResult.total || part.count})
-
+            ${isPass ? '✅' : '⚠️'} Natija: <b>${bestResult.percent}%</b> (${cCount}/${bestResult.total || part.count})
           </span>
-
         `;
-
       } else {
-
         scoreBadge = `<span class="part-last-score" style="color:var(--text-muted)">Topshirilmagan</span>`;
-
       }
 
       card.innerHTML = `
-
         <div>
-
           <div class="part-card-header">
-
             <div class="part-card-title">📁 ${escapeHtml(part.title)}</div>
-
             <span class="part-card-count">${part.count} ta savol</span>
-
           </div>
-
           <p class="part-card-desc">${escapeHtml(part.desc || '')}</p>
-
         </div>
-
         <div class="part-card-footer">
-
           ${scoreBadge}
-
           <button class="btn-primary" style="padding:7px 16px; font-size:0.85rem;">Boshlash 🚀</button>
-
         </div>
-
       `;
 
       card.addEventListener('click', () => {
-
         startPartQuiz(part);
-
       });
 
       grid.appendChild(card);
-
     } catch(err) {
-
       console.warn("Error rendering part card", part, err);
-
     }
-
   });
 
 }
