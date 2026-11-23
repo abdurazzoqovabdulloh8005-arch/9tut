@@ -247,8 +247,10 @@ const CloudSync = {
           if (!delSet.has(uid) && !delSet.has(ulog)) {
             const existing = userMap.get(ulog);
             if (existing) {
-              // Cloud u takes precedence for approval, role, and device bindings!
-              userMap.set(ulog, { ...existing, ...u });
+              const mergedBoundDevices = (u.boundDevices && u.boundDevices.length > 0)
+                ? u.boundDevices 
+                : (existing.boundDevices || []);
+              userMap.set(ulog, { ...existing, ...u, boundDevices: mergedBoundDevices });
             } else {
               userMap.set(ulog, u);
             }
@@ -2907,12 +2909,12 @@ function getDeviceFingerprint() {
   };
 }
 
-// Session Security Monitor (Single Active Session Enforcement)
+// Session Security Monitor (Ensures deleted or blocked accounts cannot continue)
 function startSessionSecurityMonitor() {
   if (window._sessionSecurityInterval) clearInterval(window._sessionSecurityInterval);
   window._sessionSecurityInterval = setInterval(() => {
     checkActiveSessionHealth();
-  }, 2500);
+  }, 15000);
 
   window.addEventListener('storage', (e) => {
     if (e.key === 'ccna_registered_users' && state.currentUser && !state.isAdmin) {
@@ -2926,9 +2928,9 @@ function checkActiveSessionHealth() {
   const users = getRegisteredUsers();
   const current = users.find(u => u.login.toLowerCase() === state.currentUser.login.toLowerCase());
   
-  // 1. Agar talaba admin tomonidan o'chirilgan yoki baza tozalangan bo'lsa
+  // 1. Agar talaba admin tomonidan bazadan butunlay o'chirilgan bo'lsa
   if (!current) {
-    handleSessionTerminatedByAdmin("Hisobingiz administrator tomonidan o'chirilgan yoki yangilangan. Qaytadan ro'yxatdan o'ting.");
+    handleSessionTerminatedByAdmin("Hisobingiz administrator tomonidan o'chirilgan. Qaytadan ro'yxatdan o'ting.");
     return;
   }
   
@@ -2936,19 +2938,6 @@ function checkActiveSessionHealth() {
   if (current.isApproved === false) {
     handleSessionTerminatedByAdmin("Hisobingiz administrator tomonidan tasdiqlanmagan yoki bloklangan. Iltimos, administrator tasdiqlashini kuting.");
     return;
-  }
-
-  // 3. Agar admin talabaning qurilmasini uzgan bo'lsa (boundDevices bo'shatilgan)
-  if (Array.isArray(current.boundDevices) && current.boundDevices.length === 0) {
-    handleSessionTerminatedByAdmin("Qurilmangiz administrator tomonidan uzildi. Yangi qurilmangizdan qaytadan kiring.");
-    return;
-  }
-
-  // 4. Boshqa qurilmadan parallel kirish tekshiruvi
-  if (current.currentSessionToken && state.currentUser.sessionToken) {
-    if (current.currentSessionToken !== state.currentUser.sessionToken) {
-      handleSessionKickedOut();
-    }
   }
 }
 
@@ -4380,6 +4369,8 @@ function checkAuth() {
     if (loginBtn) loginBtn.style.display = 'none';
 
     if (authModal) authModal.style.display = 'none';
+    const kickedModal = document.getElementById('sessionKickedModal');
+    if (kickedModal) kickedModal.style.display = 'none';
 
     if (mainContent) mainContent.style.display = 'block';
 
@@ -4679,6 +4670,9 @@ showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu h
           userRec.currentSessionToken = newSessionToken;
           match.sessionToken = newSessionToken;
           saveRegisteredUsers(registeredUsers);
+          if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+            CloudSync.upsertUser(userRec).catch(() => {});
+          }
         }
       }
 
