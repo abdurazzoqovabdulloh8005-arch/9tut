@@ -6145,7 +6145,7 @@ function renderCurrentQuestion() {
   }
 
   const cleanQuestionText = (q.question || '').replace(/[\ufffd]/g, ' - ');
-  document.getElementById('questionText').innerHTML = escapeHtml(cleanQuestionText) + multiNotice + diagramHtml;
+  document.getElementById('questionText').innerHTML = formatQuestionText(cleanQuestionText) + multiNotice + diagramHtml;
 
   const listEl = document.getElementById('optionsList');
 
@@ -7502,7 +7502,7 @@ function renderStudyBookList(questions) {
 
       </div>
 
-      <div class="study-q-text">${escapeHtml(q.question)}</div>
+      <div class="study-q-text">${formatQuestionText(q.question)}</div>
 
       ${imgHtml}
 
@@ -10733,7 +10733,7 @@ function renderBookmarksList() {
         </div>
       </div>
 
-      <div class="study-q-text">${escapeHtml(q.question)}</div>
+      <div class="study-q-text">${formatQuestionText(q.question)}</div>
 
       ${imgHtml}
 
@@ -10788,25 +10788,118 @@ function escapeHtml(text) {
 
 }
 
-function formatOptionText(text) {
-
+function formatQuestionText(text) {
   if (!text) return '';
+  if (typeof text !== 'string') return escapeHtml(String(text));
 
+  const cleanText = text.replace(/[�]/g, ' - ');
+  const lines = cleanText.split('\n');
+
+  const isCliStart = /^(?:[A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>]\s*|[A-Za-z]:\\[^>]*>|[A-Za-z0-9_\-]+[$]\s*|\[[^\]]+\][#$]\s*|\[output omitted\]|--output omitted--|[-+=\s]{5,}$)/i;
+  const isCliTableOrConfig = /^(?:Group\s+Port-channel|Neighbor ID\s+|Gateway of last resort|Entry\s*#|cisco_\w+|interface\s+\w+|int\s+\w+|ip\s+route|router\s+\w+|conf\s+t|configure\s+terminal)/i;
+  const isProseQuestion = /^(?:Which|What|How|Where|Why|When|If\s+[A-Za-z0-9]|Shortly after|An engineer|Users at|A network administrator|A network engineer|Drag and drop|Choose|Select)\b/i;
+
+  const blocks = [];
+  let currentBlock = [];
+  let currentMode = 'text';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      if (currentMode === 'cli') {
+        let nextIsCli = false;
+        for (let j = i + 1; j < lines.length; j++) {
+          const nxt = lines[j].trim();
+          if (nxt) {
+            if (isCliStart.test(nxt) || isCliTableOrConfig.test(nxt)) {
+              nextIsCli = true;
+            } else if (!isProseQuestion.test(nxt) && !(nxt.endsWith('?') && nxt.length > 20)) {
+              if (/[\/|%]|via\b|connected\b|subnet\b|Protocol\b|Fa|Gi|TenG|Ethernet\b/i.test(nxt)) {
+                nextIsCli = true;
+              }
+            }
+            break;
+          }
+        }
+        if (nextIsCli) {
+          currentBlock.push(line);
+          continue;
+        } else {
+          if (currentBlock.length > 0) {
+            blocks.push({ type: currentMode, content: currentBlock.join('\n') });
+            currentBlock = [];
+          }
+          currentMode = 'text';
+        }
+      }
+      currentBlock.push(line);
+      continue;
+    }
+
+    const lineStartsCli = isCliStart.test(trimmed) || isCliTableOrConfig.test(trimmed);
+    const lineIsProse = (trimmed.endsWith('?') && trimmed.length > 20 && !isCliStart.test(trimmed)) ||
+                        (isProseQuestion.test(trimmed) && trimmed.length > 15 && !isCliStart.test(trimmed));
+
+    if (currentMode === 'text') {
+      if (lineStartsCli && !lineIsProse) {
+        if (currentBlock.length > 0) {
+          blocks.push({ type: 'text', content: currentBlock.join('\n') });
+          currentBlock = [];
+        }
+        currentMode = 'cli';
+        currentBlock.push(line);
+      } else {
+        currentBlock.push(line);
+      }
+    } else {
+      if (lineIsProse) {
+        if (currentBlock.length > 0) {
+          blocks.push({ type: 'cli', content: currentBlock.join('\n') });
+          currentBlock = [];
+        }
+        currentMode = 'text';
+        currentBlock.push(line);
+      } else {
+        currentBlock.push(line);
+      }
+    }
+  }
+
+  if (currentBlock.length > 0) {
+    blocks.push({ type: currentMode, content: currentBlock.join('\n') });
+  }
+
+  const hasCliBlock = blocks.some(b => b.type === 'cli');
+  if (!hasCliBlock) {
+    return escapeHtml(cleanText);
+  }
+
+  return blocks.map(b => {
+    if (b.type === 'cli') {
+      const cleanCli = b.content.trim();
+      return `<div class="cli-terminal-block"><div class="cli-terminal-bar"><div class="cli-dots"><span class="cli-dot red"></span><span class="cli-dot yellow"></span><span class="cli-dot green"></span></div><span class="cli-title">Cisco Terminal Exhibit</span></div><pre class="cli-terminal-code"><code>${escapeHtml(cleanCli)}</code></pre></div>`;
+    } else {
+      const cleanTxt = b.content.trim();
+      if (!cleanTxt) return '';
+      return `<div class="question-text-segment">${escapeHtml(cleanTxt)}</div>`;
+    }
+  }).filter(Boolean).join('');
+}
+
+function formatOptionText(text) {
+  if (!text) return '';
   if (typeof text === 'string') {
-
     const trimmed = text.trim();
-
     if (trimmed.startsWith('data:image/') || (trimmed.startsWith('images/') && /\.(jpeg|jpg|png|gif|webp)$/i.test(trimmed))) {
-
       return `<img src="${escapeHtml(trimmed)}" style="max-width:100%; max-height:240px; border-radius:6px; display:block; margin:6px 0; cursor:zoom-in;" onclick="event.stopPropagation(); openImageModal('${escapeHtml(trimmed)}')" alt="Option diagram">`;
-
     }
 
     // Strict detection: ONLY genuine Cisco CLI prompts or actual configuration syntax!
-    // (Never match ordinary English prose that happens to mention words like interface or network)
     const hasPrompt = /\b[A-Za-z0-9_\-]+(?:\([A-Za-z0-9_\-]+\))?[#>](?:\s*[a-zA-Z0-9]|$)/.test(trimmed);
-    const cmdStart = /^(?:interface\s+[a-zA-Z0-9\/]+|switchport\s+|ip\s+(?:route|address|dhcp|access-list|arp|verify)|router\s+(?:ospf|bgp|eigrp)|crypto\s+key|access-list\s+\d+|standby\s+\d+|spanning-tree\s+|line\s+vty)\b/i.test(trimmed);
-    const isMultilineConfig = trimmed.includes('\n') && /^(?:interface|switchport|ip|router|no shutdown|crypto|access-list)\b/im.test(trimmed);
+    const cmdStart = /^(?:(?:interface|int)\s+[a-zA-Z0-9\/\-]+|switchport\s+|channel-group\s+\d+|ip\s+(?:route|address|dhcp|access-list|arp|verify|nat|domain|helper-address)|router\s+(?:ospf|bgp|eigrp|rip)|crypto\s+key|access-list\s+\d+|standby\s+\d+|spanning-tree\s+|line\s+(?:vty|con|console)\s*\d*|vlan\s+\d+|hostname\s+|encapsulation\s+|conf\s+t|configure\s+terminal|no\s+shutdown|shutdown|default-gateway|permit\s+|deny\s+|transport\s+input)\b/i.test(trimmed);
+    const isMultilineConfig = trimmed.includes('\n') && /^(?:interface|int|switchport|channel-group|ip|router|no\s+|shutdown|crypto|access-list|standby|spanning-tree|line|vlan|permit|deny|conf\s+t|configure\s+terminal)\b/im.test(trimmed);
 
     if (hasPrompt || cmdStart || isMultilineConfig) {
       let formatted = trimmed;
@@ -10817,9 +10910,7 @@ function formatOptionText(text) {
       return `<div class="cli-option-block">${escapeHtml(formatted)}</div>`;
     }
   }
-
   return escapeHtml(text);
-
 }
 
 // IMAGE VIEWER MODAL

@@ -4111,3 +4111,98 @@ html.is-authenticated .nav-tabs {
 }
 
 
+
+
+/* ==========================================================================
+   Cisco CLI Terminal Exhibit Block in Question Body
+   ========================================================================== */
+.question-text-segment {
+  margin-bottom: 12px;
+  white-space: pre-line;
+}
+.question-text-segment:last-child {
+  margin-bottom: 0;
+}
+
+.cli-terminal-block {
+  margin: 16px 0 20px 0;
+  background: #090d16;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  white-space: normal;
+}
+
+.cli-terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.cli-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cli-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cli-dot.red { background: #ef4444; }
+.cli-dot.yellow { background: #f59e0b; }
+.cli-dot.green { background: #10b981; }
+
+.cli-title {
+  font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.cli-terminal-code {
+  margin: 0;
+  padding: 14px 18px;
+  font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace !important;
+  font-size: 0.92rem !important;
+  line-height: 1.55 !important;
+  white-space: pre !important;
+  overflow-x: auto;
+  color: #38bdf8 !important;
+  background: transparent !important;
+}
+
+.cli-terminal-code code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  white-space: pre !important;
+  color: inherit !important;
+}
+
+[data-theme="light"] .cli-terminal-block {
+  background: #0f172a;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .cli-terminal-bar {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="light"] .cli-title {
+  color: #cbd5e1;
+}
+
+[data-theme="light"] .cli-terminal-code {
+  color: #38bdf8 !important;
+}
