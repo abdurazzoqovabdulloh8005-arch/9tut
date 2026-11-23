@@ -2237,7 +2237,16 @@ function initializeApp() {
 
   if (typeof CloudSync !== 'undefined') {
     CloudSync.syncAll().then(() => {
-      try { updateSecurityAlertBadge(); updateChatBadges(); } catch(e) {}
+      try { 
+        updateSecurityAlertBadge(); 
+        updateChatBadges(); 
+        renderPartsGrid();
+        updateHeroDashboard();
+        if (state.currentTab === 'admin') {
+          if (state.isAdmin) renderAdminDashboard();
+          else renderStudentPersonalResults();
+        }
+      } catch(e) {}
     }).catch(e => console.warn("CloudSync initial sync:", e));
   }
 
@@ -2457,7 +2466,7 @@ function initHotkeys() {
 
 function switchMainTab(target) {
 
-  if (target === 'admin' && !state.isAdmin) {
+  if (target === 'admin' && !state.currentUser) {
 
     target = 'quiz';
 
@@ -2500,11 +2509,28 @@ function switchMainTab(target) {
 
   if (target === 'admin') {
 
-    renderAdminDashboard();
-    if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
-      Promise.allSettled([CloudSync.syncUsers(), CloudSync.syncResults()]).then(() => {
-        renderAdminDashboard();
-      });
+    const adminPanel = document.getElementById('adminControlPanel');
+    const studentPanel = document.getElementById('studentResultsPanel');
+
+    if (state.isAdmin) {
+      if (adminPanel) adminPanel.style.display = 'block';
+      if (studentPanel) studentPanel.style.display = 'none';
+      renderAdminDashboard();
+      if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+        Promise.allSettled([CloudSync.syncUsers(), CloudSync.syncResults()]).then(() => {
+          renderAdminDashboard();
+        });
+      }
+    } else {
+      if (adminPanel) adminPanel.style.display = 'none';
+      if (studentPanel) studentPanel.style.display = 'block';
+      renderStudentPersonalResults();
+      if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
+        CloudSync.syncResults().then(() => {
+          renderStudentPersonalResults();
+          renderPartsGrid();
+        });
+      }
     }
 
   } else if (target === 'study') {
@@ -2531,9 +2557,10 @@ function initNavigation() {
 
       if (target === 'admin' && !state.isAdmin) {
 
-        openAdminPrompt();
-
-        return;
+        if (!state.currentUser) {
+          openAuthModal('login');
+          return;
+        }
 
       }
 
@@ -4053,6 +4080,19 @@ function startChatLiveMonitor() {
   setInterval(async () => {
     if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
       await CloudSync.syncChat();
+      // Periodically sync quiz results for all users so results are always live
+      const prevResultCount = (state.results || []).length;
+      await CloudSync.syncResults();
+      if ((state.results || []).length !== prevResultCount) {
+        try {
+          renderPartsGrid();
+          updateHeroDashboard();
+          if (state.currentTab === 'admin') {
+            if (state.isAdmin) renderAdminDashboard();
+            else renderStudentPersonalResults();
+          }
+        } catch(e) {}
+      }
     }
     updateChatBadges();
 
@@ -4347,39 +4387,43 @@ function checkAuth() {
 
     
 
-    // Only Admin can see admin panel tab
-
+    // Admin or Student Results Nav Tab
     if (adminNav) {
-
-      adminNav.style.display = state.isAdmin ? 'inline-flex' : 'none';
-
+      if (state.isAdmin) {
+        adminNav.style.display = 'inline-flex';
+        adminNav.innerHTML = `📊 Natijalar (Admin) <span id="adminNavUnreadBadge" style="display:none; background:#ef4444; color:white; border-radius:10px; padding:2px 7px; font-size:0.75rem; font-weight:800; margin-left:4px;">0</span>`;
+        adminNav.style.color = 'var(--warning)';
+      } else if (state.currentUser) {
+        adminNav.style.display = 'inline-flex';
+        adminNav.innerHTML = `📊 Mening Natijalarim`;
+        adminNav.style.color = '#38bdf8';
+      } else {
+        adminNav.style.display = 'none';
+      }
     }
-    try { updateSecurityAlertBadge(); } catch(e) {}
-    try { updateChatBadges(); } catch(e) {}
     try { updateSecurityAlertBadge(); } catch(e) {}
     try { updateChatBadges(); } catch(e) {}
 
     // Hide duplicate standalone results button in header when logged in
-
     const headerAdminBtn = document.getElementById('adminLoginBtn');
-
     if (headerAdminBtn) {
-
       headerAdminBtn.style.display = 'none';
-
     }
 
-    // STRICT SECURITY: If not admin, close adminSection immediately!
-
-    if (!state.isAdmin) {
-
-      const adminSection = document.getElementById('adminSection');
-
-      if (adminSection && adminSection.classList.contains('active')) {
-
-        switchMainTab('quiz');
-
+    // Adjust admin vs student view if adminSection is active
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection && adminSection.classList.contains('active')) {
+      const adminPanel = document.getElementById('adminControlPanel');
+      const studentPanel = document.getElementById('studentResultsPanel');
+      if (state.isAdmin) {
+        if (adminPanel) adminPanel.style.display = 'block';
+        if (studentPanel) studentPanel.style.display = 'none';
+      } else {
+        if (adminPanel) adminPanel.style.display = 'none';
+        if (studentPanel) studentPanel.style.display = 'block';
+        renderStudentPersonalResults();
       }
+    }
 
     }
 
@@ -5186,14 +5230,26 @@ function updateHeroDashboard() {
     const currentStudentName = (state.currentUser && state.currentUser.name)
       ? String(state.currentUser.name).trim().toLowerCase()
       : '';
+    const currentStudentLogin = (state.currentUser && state.currentUser.login)
+      ? String(state.currentUser.login).trim().toLowerCase()
+      : '';
     
     let totalSolved = 0;
-    if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
-      const userResults = state.results.filter(r => r && r.studentName && String(r.studentName).trim().toLowerCase() === currentStudentName);
+    if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
+      const userResults = state.results.filter(r => {
+        if (!r) return false;
+        const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
+        const rLogin = r.login ? String(r.login).trim().toLowerCase() : '';
+        return (currentStudentLogin && rLogin === currentStudentLogin) ||
+               (currentStudentName && rName === currentStudentName);
+      });
       const partBestMap = {};
       userResults.forEach(r => {
         const pKey = r.partKey || r.partTitle || r.part || 'unknown';
-        const c = Number(r.correct) || 0;
+        let c = Number(r.correct) || 0;
+        if (!c && r.percent) {
+          c = Math.round((Number(r.percent) / 100) * (r.total || 50));
+        }
         if (!partBestMap[pKey] || c > partBestMap[pKey]) {
           partBestMap[pKey] = c;
         }
@@ -5317,6 +5373,11 @@ function renderPartsGrid() {
     ? String(state.currentUser.name).trim().toLowerCase() 
 
     : '';
+  const currentStudentLogin = (state.currentUser && state.currentUser.login) 
+
+    ? String(state.currentUser.login).trim().toLowerCase() 
+
+    : '';
 
   PARTS_CONFIG.forEach(part => {
 
@@ -5324,15 +5385,16 @@ function renderPartsGrid() {
 
       let lastResult = null;
 
-      if (currentStudentName && Array.isArray(state.results) && state.results.length > 0) {
+      if ((currentStudentName || currentStudentLogin) && Array.isArray(state.results) && state.results.length > 0) {
 
         const partResults = state.results.filter(r => {
 
-          if (!r || !r.studentName) return false;
+          if (!r) return false;
 
-          const rName = String(r.studentName).trim().toLowerCase();
-
-          if (rName !== currentStudentName) return false;
+          const rName = r.studentName ? String(r.studentName).trim().toLowerCase() : '';
+          const rLog = r.login ? String(r.login).trim().toLowerCase() : '';
+          const isMe = (currentStudentLogin && rLog === currentStudentLogin) || (currentStudentName && rName === currentStudentName);
+          if (!isMe) return false;
 
           const rTitle = r.partTitle ? String(r.partTitle).toLowerCase() : '';
 
@@ -5367,11 +5429,16 @@ function renderPartsGrid() {
 
         const isPass = (lastResult.percent || 0) >= 82.5;
 
+        let cCount = lastResult.correct;
+        if (cCount === undefined || cCount === null) {
+          cCount = Math.round(((lastResult.percent || 0) / 100) * (lastResult.total || part.count));
+        }
+
         scoreBadge = `
 
           <span class="part-last-score" style="color: ${isPass ? 'var(--success)' : 'var(--danger)'}">
 
-            ${isPass ? '✅' : '⚠️'} Natija: <b>${lastResult.percent}%</b> (${lastResult.correct}/${lastResult.total})
+            ${isPass ? '✅' : '⚠️'} Natija: <b>${lastResult.percent}%</b> (${cCount}/${lastResult.total || part.count})
 
           </span>
 
@@ -7064,19 +7131,21 @@ function submitFinalExam() {
 
 // CERTIFICATE
 
-function openCertificateModal() {
+function openCertificateModal(customResult = null) {
 
-  const r = state.lastFinishedResult;
+  const r = customResult || state.lastFinishedResult;
 
   if (!r) return;
 
-  document.getElementById('certRecipientName').textContent = r.studentName;
+  const recipientEl = document.getElementById('certRecipientName');
+  const partEl = document.getElementById('certPartTitle');
+  const percentEl = document.getElementById('certScorePercent');
+  const dateEl = document.getElementById('certDateText');
 
-  document.getElementById('certPartTitle').textContent = r.partTitle;
-
-  document.getElementById('certScorePercent').textContent = `${r.percent}%`;
-
-  document.getElementById('certDateText').textContent = new Date().toLocaleDateString();
+  if (recipientEl) recipientEl.textContent = r.studentName || (state.currentUser ? state.currentUser.name : 'Talaba');
+  if (partEl) partEl.textContent = r.partTitle || r.part || 'CCNA 200-301';
+  if (percentEl) percentEl.textContent = `${r.percent}%`;
+  if (dateEl) dateEl.textContent = r.date || new Date().toLocaleDateString('uz-UZ');
 
   document.getElementById('certModal').style.display = 'flex';
 
@@ -9052,7 +9121,14 @@ function renderAdminResultsList() {
 
   const statusFilter = statusSelect ? statusSelect.value : 'all';
 
-  let filtered = results.slice().reverse().filter(r => {
+  // Sort newest first
+  let sortedResults = results.slice().sort((a, b) => {
+    const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+    const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+    return tb - ta;
+  });
+
+  let filtered = sortedResults.filter(r => {
 
     const matchQuery = !query ||
 
@@ -9115,6 +9191,8 @@ function renderAdminResultsList() {
       }
     }
 
+    let cVal = (r.correct !== undefined && r.correct !== null) ? r.correct : Math.round(((r.percent || 0)/100)*(r.total || 50));
+
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -9127,7 +9205,7 @@ function renderAdminResultsList() {
 
       <td><span style="font-weight:600; color:var(--primary);">${escapeHtml(r.partTitle || '-')}</span></td>
 
-      <td><b>${r.correct} / ${r.total}</b></td>
+      <td><b>${cVal} / ${r.total || 50}</b></td>
 
       <td><b style="font-size:1.05rem; color:${isPass ? 'var(--success)' : 'var(--danger)'};">${r.percent}%</b></td>
 
@@ -9158,6 +9236,178 @@ function renderAdminResultsList() {
 
   });
 
+}
+
+// STUDENT PERSONAL RESULTS RENDERING
+function renderStudentPersonalResults() {
+  const tbody = document.getElementById('studentResultsTableBody');
+  const countText = document.getElementById('studentResultCountText');
+  const searchInput = document.getElementById('studentResultSearch');
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+  const totalQuizzesEl = document.getElementById('studentTotalQuizzes');
+  const avgScoreEl = document.getElementById('studentAvgScore');
+  const passedQuizzesEl = document.getElementById('studentPassedQuizzes');
+  const totalCertsEl = document.getElementById('studentTotalCerts');
+
+  const titleEl = document.getElementById('studentResultsTitle');
+  const subEl = document.getElementById('studentResultsSubtitle');
+
+  if (!state.currentUser) return;
+  const myLogin = (state.currentUser.login || '').trim().toLowerCase();
+  const myName = (state.currentUser.name || '').trim().toLowerCase();
+
+  if (titleEl) {
+    titleEl.innerHTML = `📊 ${escapeHtml(state.currentUser.name)} — Test Natijalari Tarixi`;
+  }
+  if (subEl) {
+    subEl.textContent = `Login: ${state.currentUser.login} • Guruh: ${state.currentUser.group || 'Guruhsiz'} • Barcha topshirgan testlaringiz va sertifikatlaringiz`;
+  }
+
+  const allResults = state.results || [];
+  const myResults = allResults.filter(r => {
+    if (!r) return false;
+    const rLog = (r.login || '').trim().toLowerCase();
+    const rName = (r.studentName || '').trim().toLowerCase();
+    return (myLogin && rLog === myLogin) || (myName && rName === myName);
+  });
+
+  // Sort newest first
+  myResults.sort((a, b) => {
+    const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+    const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+    return tb - ta;
+  });
+
+  // Calculate statistics
+  const totalCount = myResults.length;
+  const avgPercent = totalCount > 0 
+    ? Math.round(myResults.reduce((acc, r) => acc + (r.percent || 0), 0) / totalCount) 
+    : 0;
+  const passedCount = myResults.filter(r => (r.percent || 0) >= 82.5).length;
+  const certsCount = myResults.filter(r => (r.percent || 0) >= 85).length;
+
+  if (totalQuizzesEl) totalQuizzesEl.textContent = `${totalCount} ta`;
+  if (avgScoreEl) {
+    avgScoreEl.textContent = `${avgPercent}%`;
+    avgScoreEl.style.color = avgPercent >= 82.5 ? 'var(--success)' : (avgPercent > 0 ? 'var(--warning)' : 'var(--text-main)');
+  }
+  if (passedQuizzesEl) passedQuizzesEl.textContent = `${passedCount} ta`;
+  if (totalCertsEl) totalCertsEl.textContent = `${certsCount} ta`;
+
+  // Filter
+  let filtered = myResults;
+  if (query) {
+    filtered = myResults.filter(r => {
+      const pTitle = (r.partTitle || r.partKey || r.part || '').toLowerCase();
+      const dateStr = (r.date || r.timestamp || '').toLowerCase();
+      return pTitle.includes(query) || dateStr.includes(query);
+    });
+  }
+
+  if (countText) {
+    countText.textContent = `Ko'rsatilmoqda: ${filtered.length} / ${myResults.length} ta test`;
+  }
+
+  if (!tbody) return;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center; padding:40px 15px; color:var(--text-muted);">
+          <div style="font-size:2.2rem; margin-bottom:8px;">📝</div>
+          <b>${myResults.length === 0 ? "Hozircha birorta ham test topshirmagansiz." : "Qidiruv bo'yicha test natijasi topilmadi."}</b><br>
+          <span style="font-size:0.85rem;">Bilimingizni sinash uchun 'Part Quizlar' bo'limiga o'ting va test yechishni boshlang!</span>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r, idx) => {
+    const isPass = (r.percent || 0) >= 82.5;
+    const isCert = (r.percent || 0) >= 85;
+    const partName = r.partTitle || r.partKey || r.part || 'CCNA Quiz';
+    const dateStr = r.date || r.timestamp || '-';
+    let cCount = r.correct;
+    if (cCount === undefined || cCount === null) {
+      cCount = Math.round(((r.percent || 0) / 100) * (r.total || 50));
+    }
+    const scoreStr = `${cCount} / ${r.total || 50}`;
+
+    return `
+      <tr>
+        <td style="font-weight:700; color:var(--text-muted); text-align:center;">${idx + 1}</td>
+        <td style="font-weight:700; color:var(--text-main);">
+          📁 ${escapeHtml(partName)}
+        </td>
+        <td style="text-align:center; font-weight:600;">
+          ${escapeHtml(scoreStr)}
+        </td>
+        <td style="text-align:center;">
+          <span style="font-weight:800; font-size:0.95rem; color:${isPass ? '#10b981' : '#ef4444'}; background:${isPass ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'}; padding:3px 10px; border-radius:6px; border:1px solid ${isPass ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
+            ${r.percent}%
+          </span>
+        </td>
+        <td style="text-align:center;">
+          ${isPass 
+            ? `<span style="background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.35); padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.78rem;">✅ Muvaffaqiyatli</span>`
+            : `<span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.35); padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.78rem;">⚠️ Qayta topshirish</span>`
+          }
+        </td>
+        <td style="font-size:0.82rem; color:var(--text-muted); white-space:nowrap;">
+          🕒 ${escapeHtml(dateStr)}
+        </td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:6px; align-items:center;">
+            ${isCert ? `
+              <button type="button" class="btn-action-icon" onclick="openStudentCertificateDirect('${escapeHtml(r.id || idx)}')" style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; border-color:rgba(245, 158, 11, 0.35); padding:4px 8px; border-radius:6px; font-size:0.78rem; font-weight:700;" title="CCNA Sertifikatini ko'rish va yuklab olish">
+                🎓 Sertifikat
+              </button>
+            ` : ''}
+            <button type="button" class="btn-action-icon" onclick="retakeStudentPartDirect('${escapeHtml(partName)}')" style="background:rgba(2, 132, 199, 0.12); color:#0284c7; border-color:rgba(2, 132, 199, 0.3); padding:4px 8px; border-radius:6px; font-size:0.78rem; font-weight:700;" title="Ushbu bo'lim testini qaytadan yechish">
+              🚀 Qayta yechish
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openStudentCertificateDirect(resultIdOrIdx) {
+  const myLogin = (state.currentUser?.login || '').trim().toLowerCase();
+  const myName = (state.currentUser?.name || '').trim().toLowerCase();
+  const allResults = state.results || [];
+  const myResults = allResults.filter(r => {
+    if (!r) return false;
+    const rLog = (r.login || '').trim().toLowerCase();
+    const rName = (r.studentName || '').trim().toLowerCase();
+    return (myLogin && rLog === myLogin) || (myName && rName === myName);
+  });
+  myResults.sort((a, b) => {
+    const ta = new Date(a.date || a.timestamp || a.createdAt || 0).getTime() || 0;
+    const tb = new Date(b.date || b.timestamp || b.createdAt || 0).getTime() || 0;
+    return tb - ta;
+  });
+
+  let target = myResults.find(r => r.id === resultIdOrIdx);
+  if (!target && !isNaN(resultIdOrIdx)) {
+    target = myResults[parseInt(resultIdOrIdx)];
+  }
+  if (!target) target = myResults[0];
+  if (target) {
+    openCertificateModal(target);
+  }
+}
+
+function retakeStudentPartDirect(partName) {
+  switchMainTab('quiz');
+  const pName = (partName || '').toLowerCase();
+  const found = PARTS_CONFIG.find(p => p.title.toLowerCase() === pName || pName.includes(p.title.toLowerCase()) || p.key.toLowerCase() === pName);
+  if (found) {
+    startPartQuiz(found);
+  }
 }
 
 function deleteSpecificResult(targetKey) {

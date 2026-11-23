@@ -18,7 +18,7 @@
 
   <title>CCNA Professional Quiz & Practical Labs</title>
 
-  <link rel="stylesheet" href="style.css?v=5.2">
+  <link rel="stylesheet" href="style.css?v=5.3">
 
   <script>
 
@@ -1170,7 +1170,8 @@
 
     <section id="adminSection" class="tab-content">
 
-      <div class="admin-card">
+      <!-- ADMIN CONTROL PANEL -->
+      <div class="admin-card" id="adminControlPanel">
 
         <div class="admin-header">
 
@@ -1995,6 +1996,86 @@
 
         </div>
 
+      </div>
+
+      <!-- STUDENT PERSONAL RESULTS PANEL -->
+      <div class="admin-card" id="studentResultsPanel" style="display:none;">
+        <div class="admin-header">
+          <div>
+            <h2 id="studentResultsTitle" style="font-size:1.45rem; display:flex; align-items:center; gap:8px;">
+              📊 Mening Test Natijalarim & Ko'rsatkichlarim
+            </h2>
+            <p id="studentResultsSubtitle" style="color:var(--text-muted); font-size:0.92rem;">
+              Topshirgan barcha testlaringiz tarixi, to'plangan ballar va CCNA sertifikatlari
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-primary" onclick="switchMainTab('quiz')" style="font-weight:700;">
+              🚀 Yangi Test Yechish
+            </button>
+          </div>
+        </div>
+
+        <!-- Student Stat Boxes -->
+        <div class="admin-stats-grid">
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">📝</div>
+            <div class="admin-stat-info">
+              <h4>Topshirilgan Testlar</h4>
+              <b id="studentTotalQuizzes">0 ta</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">🎯</div>
+            <div class="admin-stat-info">
+              <h4>O'rtacha Natija</h4>
+              <b id="studentAvgScore">0%</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">🏆</div>
+            <div class="admin-stat-info">
+              <h4>Muvaffaqiyatli (85%+)</h4>
+              <b id="studentPassedQuizzes">0 ta</b>
+            </div>
+          </div>
+          <div class="admin-stat-box">
+            <div class="admin-stat-icon">🎓</div>
+            <div class="admin-stat-info">
+              <h4>Sertifikatlar</h4>
+              <b id="studentTotalCerts">0 ta</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:20px 0 15px 0;">
+          <input type="text" id="studentResultSearch" placeholder="🔍 Part nomi yoki sana bo'yicha qidirish..." oninput="renderStudentPersonalResults()" style="padding:9px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-main); color:var(--text-main); font-size:0.88rem; width:300px; max-width:100%;">
+          <div style="font-size:0.85rem; color:var(--text-muted);" id="studentResultCountText">
+            0 ta natija
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:50px; text-align:center;">№</th>
+                <th>Bo'lim (Part)</th>
+                <th style="text-align:center;">To'g'ri / Jami</th>
+                <th style="text-align:center;">Ball & Foiz</th>
+                <th style="text-align:center;">Holati</th>
+                <th>Sana & Vaqt</th>
+                <th style="text-align:center;">Amal</th>
+              </tr>
+            </thead>
+            <tbody id="studentResultsTableBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
 
     <!-- Student Edit / Add Modal -->
@@ -2517,9 +2598,9 @@
 
   <!-- Load Data and Main Script -->
 
-  <script src="data.js?v=5.2"></script>
+  <script src="data.js?v=5.3"></script>
 
-  <script src="app.js?v=5.2"></script>
+  <script src="app.js?v=5.3"></script>
 
 
   <!-- ========================================== -->
