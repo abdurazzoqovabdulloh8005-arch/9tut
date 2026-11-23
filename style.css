@@ -2971,10 +2971,35 @@ html.is-authenticated .nav-tabs {
 }
 
 .chat-bubble-meta {
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 4px;
   padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-bubble-row.sent .chat-bubble-meta {
+  justify-content: flex-end;
+}
+
+.chat-read-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.chat-read-status.read {
+  color: #38bdf8;
+}
+
+.chat-read-status.sent {
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 .chat-input-footer {

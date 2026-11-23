@@ -286,6 +286,41 @@ export default async function handler(req, res) {
           if (toSave.length > 3000) toSave = toSave.slice(0, 3000);
         }
 
+        if (key === 'chat' && Array.isArray(toSave)) {
+          let currentChat = (await store.get('chat')) || [];
+          while (typeof currentChat === 'string') {
+            try { currentChat = JSON.parse(currentChat); } catch(e) { break; }
+          }
+          if (!Array.isArray(currentChat)) currentChat = [];
+
+          // SMART MERGE: Preserve all messages and ensure read receipts (isRead: true) are never reverted
+          const chatMap = new Map();
+          currentChat.forEach(m => {
+            if (m && m.id) chatMap.set(m.id, m);
+          });
+          toSave.forEach(m => {
+            if (m && m.id) {
+              const existing = chatMap.get(m.id);
+              if (existing) {
+                chatMap.set(m.id, {
+                  ...existing,
+                  ...m,
+                  isRead: Boolean(existing.isRead || m.isRead)
+                });
+              } else {
+                chatMap.set(m.id, m);
+              }
+            }
+          });
+          toSave = Array.from(chatMap.values());
+          toSave.sort((a, b) => {
+            const ta = a.isoTime ? new Date(a.isoTime).getTime() : 0;
+            const tb = b.isoTime ? new Date(b.isoTime).getTime() : 0;
+            return (ta || 0) - (tb || 0);
+          });
+          if (toSave.length > 2500) toSave = toSave.slice(-2500);
+        }
+
         await store.set(key, toSave);
         return res.status(200).json({ success: true, count: Array.isArray(toSave) ? toSave.length : 0 });
       }

@@ -368,9 +368,28 @@ const CloudSync = {
         const localRaw = localStorage.getItem('ccna_chat_messages');
         const localChat = localRaw ? JSON.parse(localRaw) : [];
         const chatMap = new Map();
-        localChat.forEach(m => chatMap.set(m.id, m));
-        cloudChat.forEach(m => chatMap.set(m.id, m));
-        const merged = Array.from(chatMap.values()).sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+        localChat.forEach(m => {
+          if (m && m.id) chatMap.set(m.id, m);
+        });
+        let hasChanges = false;
+        cloudChat.forEach(m => {
+          if (m && m.id) {
+            const loc = chatMap.get(m.id);
+            if (loc) {
+              const mergedRead = Boolean(loc.isRead || m.isRead);
+              if (loc.isRead !== mergedRead) hasChanges = true;
+              chatMap.set(m.id, { ...m, ...loc, isRead: mergedRead });
+            } else {
+              chatMap.set(m.id, m);
+              hasChanges = true;
+            }
+          }
+        });
+        const merged = Array.from(chatMap.values()).sort((a,b) => {
+          const ta = a.isoTime ? new Date(a.isoTime).getTime() : 0;
+          const tb = b.isoTime ? new Date(b.isoTime).getTime() : 0;
+          return (ta || 0) - (tb || 0);
+        });
         localStorage.setItem('ccna_chat_messages', JSON.stringify(merged));
       }
     } catch(e) {}
@@ -3485,7 +3504,15 @@ function renderStudentChatMessages() {
             ${m.image ? `<div style="margin-top:6px;"><img src="${m.image}" class="chat-attached-image" onclick="openImageModal(this.src)" alt="Chat rasm" title="Kattalashtirish uchun bosing"></div>` : ''}
         </div>
         <div class="chat-bubble-meta">
-          ${isMe ? 'Siz' : '👑 Abdulloh'} • ${m.timestamp}
+          <span>${isMe ? 'Siz' : '👑 Abdulloh'} • ${m.timestamp}</span>
+          ${isMe ? `
+            <span class="chat-read-status ${m.isRead ? 'read' : 'sent'}" title="${m.isRead ? "Ustoz xabarni o'qidi" : "Yuborildi, hali o'qilmadi"}">
+              ${m.isRead 
+                ? `<span style="letter-spacing:-2px; font-weight:800; font-size:0.95rem; color:#38bdf8;">✓✓</span> <span style="font-size:0.72rem; font-weight:600; color:#38bdf8;">O'qildi</span>` 
+                : `<span style="font-weight:700; font-size:0.85rem; color:var(--text-muted);">✓</span> <span style="font-size:0.72rem; font-weight:500; color:var(--text-muted);">Yuborildi</span>`
+              }
+            </span>
+          ` : ''}
         </div>
       </div>
     `;
@@ -3639,7 +3666,14 @@ function renderAdminChatConversations() {
             ${unreadCount > 0 ? `<span style="background:#ef4444; color:white; font-size:0.72rem; font-weight:800; border-radius:10px; padding:1px 6px;">${unreadCount}</span>` : ''}
           </div>
           <div style="font-size:0.78rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${lastMsg ? escapeHtml(lastMsg.text) : "Hozircha xabarlar yo'q"}
+            ${lastMsg ? `
+              ${lastMsg.fromLogin === 'abdulloh' ? `
+                <span style="${lastMsg.isRead ? 'color:#38bdf8; font-weight:800;' : 'color:var(--text-muted); font-weight:700;'} margin-right:3px;" title="${lastMsg.isRead ? "O'qildi" : "Yuborildi"}">
+                  ${lastMsg.isRead ? '✓✓' : '✓'}
+                </span>
+              ` : ''}
+              ${escapeHtml(lastMsg.text || (lastMsg.image ? '📷 Rasm' : ''))}
+            ` : "Hozircha xabarlar yo'q"}
           </div>
         </div>
       </div>
@@ -3710,7 +3744,15 @@ function renderAdminActiveChatMessages() {
             ${m.image ? `<div style="margin-top:6px;"><img src="${m.image}" class="chat-attached-image" onclick="openImageModal(this.src)" alt="Chat rasm" title="Kattalashtirish uchun bosing"></div>` : ''}
         </div>
         <div class="chat-bubble-meta">
-          ${isMe ? '👑 Siz (Admin)' : escapeHtml(m.fromName)} • ${m.timestamp}
+          <span>${isMe ? '👑 Siz (Admin)' : escapeHtml(m.fromName)} • ${m.timestamp}</span>
+          ${isMe ? `
+            <span class="chat-read-status ${m.isRead ? 'read' : 'sent'}" title="${m.isRead ? "Talaba xabarni o'qidi" : "Yuborildi, hali o'qilmadi"}">
+              ${m.isRead 
+                ? `<span style="letter-spacing:-2px; font-weight:800; font-size:0.95rem; color:#38bdf8;">✓✓</span> <span style="font-size:0.72rem; font-weight:600; color:#38bdf8;">O'qildi</span>` 
+                : `<span style="font-weight:700; font-size:0.85rem; color:var(--text-muted);">✓</span> <span style="font-size:0.72rem; font-weight:500; color:var(--text-muted);">Yuborildi</span>`
+              }
+            </span>
+          ` : ''}
         </div>
       </div>
     `;
@@ -3987,15 +4029,17 @@ function startChatLiveMonitor() {
     // Check and trigger live notifications for new chat, users, results, alerts
     try { checkLiveNotifications(); } catch(e) {}
 
-    // If student chat modal is open, refresh silently
+    // If student chat modal is open, refresh silently and mark messages as read
     const studentModal = document.getElementById('studentChatModal');
-    if (studentModal && studentModal.style.display === 'flex') {
+    if (studentModal && studentModal.style.display === 'flex' && state.currentUser) {
+      markChatDialogueAsRead(state.currentUser.login, 'student');
       renderStudentChatMessages();
     }
 
-    // If admin chat tab is active, refresh active dialogue
+    // If admin chat tab is active, refresh active dialogue and mark incoming as read
     const adminChatView = document.getElementById('adminViewChat');
     if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+      markChatDialogueAsRead(activeAdminChatUser.login, 'admin');
       renderAdminActiveChatMessages();
       renderAdminChatConversations();
     }
@@ -4046,11 +4090,13 @@ function startChatLiveMonitor() {
     if (e.key === 'ccna_chat_messages') {
       updateChatBadges();
       const studentModal = document.getElementById('studentChatModal');
-      if (studentModal && studentModal.style.display === 'flex') {
+      if (studentModal && studentModal.style.display === 'flex' && state.currentUser) {
+        markChatDialogueAsRead(state.currentUser.login, 'student');
         renderStudentChatMessages();
       }
       const adminChatView = document.getElementById('adminViewChat');
       if (adminChatView && adminChatView.style.display === 'block' && activeAdminChatUser) {
+        markChatDialogueAsRead(activeAdminChatUser.login, 'admin');
         renderAdminActiveChatMessages();
         renderAdminChatConversations();
       }
