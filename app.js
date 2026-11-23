@@ -2462,7 +2462,7 @@ function switchMainTab(target) {
 
     renderAdminDashboard();
     if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
-      CloudSync.syncResults().then(() => {
+      Promise.allSettled([CloudSync.syncUsers(), CloudSync.syncResults()]).then(() => {
         renderAdminDashboard();
       });
     }
@@ -10520,11 +10520,14 @@ async function toggleUserApproval(userId) {
 async function manualSyncAdminStudents() {
   if (typeof CloudSync !== 'undefined' && CloudSync.isAvailable()) {
     try {
-      const synced = await CloudSync.syncUsers();
+      const [syncedUsers, syncedResults] = await Promise.all([
+        CloudSync.syncUsers(),
+        CloudSync.syncResults()
+      ]);
       renderAdminStudentsList();
       updateAdminStats();
       try { SoundEffects.playNotify(); } catch(e) {}
-      alert(`✅ Bulut bilan to'liq sinxronlandi! Jami ro'yxatdan o'tganlar: ${Array.isArray(synced) ? synced.length : 0} ta.`);
+      alert(`✅ Bulut bilan to'liq sinxronlandi!\nJami foydalanuvchilar: ${Array.isArray(syncedUsers) ? syncedUsers.length : 0} ta\nJami test natijalari: ${Array.isArray(syncedResults) ? syncedResults.length : 0} ta.`);
     } catch(e) {
       console.warn("Manual sync error:", e);
       renderAdminStudentsList();
