@@ -4437,8 +4437,6 @@ function checkAuth() {
       }
     }
 
-    }
-
   } else {
 
     state.currentUser = null;
@@ -4537,6 +4535,12 @@ async function handleUserLogin() {
 
     const normalizedLogin = rawLogin.toLowerCase();
 
+    const loginBtn = document.getElementById('authLoginBtn');
+    if (loginBtn) {
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = 'Tekshirilmoqda... ⏳';
+    }
+
     // 1. Dynamic Master Admin & User Check
 
     // 1. Sync latest Master Admin & Users from Cloud Database
@@ -4564,32 +4568,18 @@ async function handleUserLogin() {
       console.warn("Hash calc error:", e);
     }
 
-    // Master Admin Authentication
+    // Master Admin Authentication: Abdulloh can log in with their custom password OR default Abdulloh8005
     if (normalizedLogin === 'abdulloh' || normalizedLogin === master.login.toLowerCase()) {
-      if (master.isPasswordChanged) {
-        // Parol o'zgartirilgan bo'lsa: FAQAT yangi parol qabul qilinadi!
-        if (computedHash === master.hash) {
-          match = {
-            login: 'abdulloh',
-            name: master.name || 'Abdulloh',
-            role: 'admin',
-            group: 'Administrator'
-          };
-        } else if (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005') {
-          showAuthError(errEl, "⚠️ Eski standart parol bekor qilingan! Iltimos, o'zgartirilgan yangi parolingizni kiriting.");
-          passwordInput.focus();
-          return;
-        }
-      } else {
-        // Standart holatda: Abdulloh8005 yoki standart hash
-        if (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005' || computedHash === master.hash) {
-          match = {
-            login: 'abdulloh',
-            name: 'Abdulloh',
-            role: 'admin',
-            group: 'Administrator'
-          };
-        }
+      const isDefaultPwd = (rawPassword === 'Abdulloh8005' || rawPassword.toLowerCase() === 'abdulloh8005');
+      const isHashMatch = (computedHash === master.hash || computedHash === 'a4c1f401929410d23fc44b238e8afcf7e073c8aba30dea8378d5c58fa790d1a2');
+
+      if (isHashMatch || isDefaultPwd) {
+        match = {
+          login: 'abdulloh',
+          name: master.name || 'Abdulloh',
+          role: 'admin',
+          group: 'Administrator'
+        };
       }
     }
 
@@ -4854,6 +4844,18 @@ showAuthError(errEl, `⚠️ XAVFSIZLIK CHEKLOVI (QURILMALAR LIMITI)!\n\nUshbu h
     } else {
 
       alert("Xatolik: " + fatalErr.message);
+
+    }
+
+  } finally {
+
+    const loginBtn = document.getElementById('authLoginBtn');
+
+    if (loginBtn && !document.documentElement.classList.contains('is-authenticated')) {
+
+      loginBtn.disabled = false;
+
+      loginBtn.innerHTML = 'Kirish 🔓';
 
     }
 
