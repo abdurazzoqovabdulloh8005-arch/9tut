@@ -410,7 +410,25 @@ const CloudSync = {
 function healQuestionAnswer(q) {
   if (!q) return;
   if (q.isDragDrop) return;
-  
+
+  // 1. Real-time Option Healer: Agar keshda qolgan savolda "Option A/B/C/D" bo'sh variantlari bo'lsa,
+  // lekin master CCNA_QUESTIONS bazasida haqiqiy Cisco CLI buyruqlari bo'lsa, ularni darhol yangilaymiz!
+  if (typeof CCNA_QUESTIONS !== 'undefined' && Array.isArray(CCNA_QUESTIONS)) {
+    const master = (q.id ? CCNA_QUESTIONS.find(m => m.id === q.id) : null) || 
+                   CCNA_QUESTIONS.find(m => m.question && q.question && m.question.trim().toLowerCase() === q.question.trim().toLowerCase());
+    if (master && master.options) {
+      const qVals = Object.values(q.options || {}).map(v => String(v).trim().toLowerCase());
+      const isPlaceholder = qVals.length >= 3 && qVals.every(v => /^option\s+[a-e]$/i.test(v));
+      const masterVals = Object.values(master.options || {}).map(v => String(v).trim().toLowerCase());
+      const masterIsReal = masterVals.some(v => !/^option\s+[a-e]$/i.test(v));
+      if (isPlaceholder && masterIsReal) {
+        q.options = JSON.parse(JSON.stringify(master.options));
+        q.answer = Array.isArray(master.answer) ? [...master.answer] : [master.answer];
+        return;
+      }
+    }
+  }
+
   const isValid = Array.isArray(q.answer) && 
                   q.answer.length > 0 && 
                   q.answer.every(a => typeof a === 'string' && /^[A-Z]$/.test(a.trim()));
