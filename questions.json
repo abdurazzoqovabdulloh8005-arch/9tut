@@ -6236,7 +6236,7 @@
       "ip address 192.168.3.14 255.255.255.248"
     ],
     "explanation": "Refer to the matched terms above for correct CCNA mapping.",
-    "explanation_uz": "<b>Javob: To'g'ri moslashtirish:</b><br>• <b>ip address 209.165.202.130 255.255.255.252</b> ➔ DC-1<br>• <b>ip address 192.168.4.9 255.255.255.248</b> ➔ DC-1<br>• <b>ip address 192.168.3.14 255.255.255.240</b> ➔ DC-1<br>• <b>ip address 192.168.3.14 255.255.255.248</b> ➔ HQ-1<br><br>🔑 <b>Ilgak:</b> CCNA imtihonida ushbu tushunchalar o'rtasidagi asosiy bog'liqlikni eslab qoling.",
+    "explanation_uz": "<b>Javob: To'g'ri moslashtirish:</b><br>• <b>DC-1: Gi1/0</b> ➔ <code>ip address 209.165.202.130 255.255.255.252</code> (/30 tarmog'ining oxirgi foydalaniladigan IP manzili)<br>• <b>DC-1: Gi1/1</b> ➔ <code>ip address 192.168.4.9 255.255.255.248</code> (/29 tarmog'ining birinchi foydalaniladigan IP manzili)<br>• <b>DC-1: Gi1/2</b> ➔ <code>ip address 192.168.3.14 255.255.255.240</code> (/28 tarmog'ining oxirgi foydalaniladigan IP manzili)<br>• <b>HQ-1: Gi1/3</b> ➔ <code>ip address 192.168.3.14 255.255.255.248</code> (/29 tarmog'ining oxirgi foydalaniladigan IP manzili)<br><br>🔑 <b>Ilgak:</b> Subnet mask va usable IP hisoblash qoidalari: /30 maskasi 255.255.255.252, /29 maskasi 255.255.255.248, /28 maskasi 255.255.255.240 bo'ladi.",
     "source": "Part 9.docx",
     "images": [
       "images/part_9_image40.jpeg",
@@ -6247,26 +6247,29 @@
     "pairs": [
       {
         "term": "ip address 209.165.202.130 255.255.255.252",
-        "def": "DC-1"
+        "def": "DC-1: Gi1/0"
       },
       {
         "term": "ip address 192.168.4.9 255.255.255.248",
-        "def": "DC-1"
+        "def": "DC-1: Gi1/1"
       },
       {
         "term": "ip address 192.168.3.14 255.255.255.240",
-        "def": "DC-1"
+        "def": "DC-1: Gi1/2"
       },
       {
         "term": "ip address 192.168.3.14 255.255.255.248",
-        "def": "HQ-1"
+        "def": "HQ-1: Gi1/3"
       }
     ],
     "shuffledTerms": [
-      "ip address 192.168.3.14 255.255.255.248",
-      "ip address 192.168.4.9 255.255.255.248",
+      "ip address 192.168.4.13 255.255.255.240",
+      "ip address 209.165.202.129 255.255.255.252",
       "ip address 209.165.202.130 255.255.255.252",
-      "ip address 192.168.3.14 255.255.255.240"
+      "ip address 209.165.202.131 255.255.255.252",
+      "ip address 192.168.3.14 255.255.255.240",
+      "ip address 192.168.4.9 255.255.255.248",
+      "ip address 192.168.3.14 255.255.255.248"
     ],
     "id": 299
   },

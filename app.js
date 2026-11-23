@@ -428,7 +428,19 @@ const CloudSync = {
 // DYNAMIC ANSWER HEALER: Automatically heals any missing or corrupted answers from CCNA_QUESTIONS master
 function healQuestionAnswer(q) {
   if (!q) return;
-  if (q.isDragDrop) return;
+  if (q.isDragDrop) {
+    if (typeof CCNA_QUESTIONS !== 'undefined' && Array.isArray(CCNA_QUESTIONS)) {
+      const master = (q.id ? CCNA_QUESTIONS.find(m => m.id === q.id) : null) || 
+                     CCNA_QUESTIONS.find(m => m.question && q.question && m.question.trim().toLowerCase() === q.question.trim().toLowerCase());
+      if (master && master.isDragDrop && Array.isArray(master.pairs)) {
+        q.pairs = JSON.parse(JSON.stringify(master.pairs));
+        if (master.shuffledTerms) q.shuffledTerms = JSON.parse(JSON.stringify(master.shuffledTerms));
+        if (master.answer) q.answer = JSON.parse(JSON.stringify(master.answer));
+        if (master.explanation_uz) q.explanation_uz = master.explanation_uz;
+      }
+    }
+    return;
+  }
 
   // 1. Real-time Option Healer: Agar keshda qolgan savolda "Option A/B/C/D" bo'sh variantlari bo'lsa,
   // lekin master CCNA_QUESTIONS bazasida haqiqiy Cisco CLI buyruqlari bo'lsa, ularni darhol yangilaymiz!
@@ -6119,7 +6131,7 @@ function renderCurrentQuestion() {
   bookmarkBtn.innerHTML = isBookmarked ? '⭐ Saqlangan' : '☆ Saqlash';
 
   const expectedCount = getRequiredAnswerCount(q);
-  const multiAnswer = expectedCount > 1;
+  const multiAnswer = !q.isDragDrop && expectedCount > 1;
   const multiNotice = multiAnswer 
     ? `<div class="multi-choice-badge">☑️ <b>Diqqat: Ushbu savolda ${expectedCount} ta to'g'ri javobni tanlashingiz kerak!</b></div>` 
     : '';
@@ -6475,7 +6487,12 @@ function checkCurrentAnswer() {
   }
 
   if (!isQuestionFullyAnswered(q, uAns)) {
-    alert(`Ushbu savolda ${needed} ta to'g'ri javobni tanlashingiz kerak!`);
+    if (q && q.isDragDrop) {
+      const neededPairs = (q.pairs || []).length;
+      alert(`Barcha elementlarni moslashtiring! (${curCount}/${neededPairs} ta moslashtirildi)`);
+    } else {
+      alert(`Ushbu savolda ${needed} ta to'g'ri javobni tanlashingiz kerak!`);
+    }
     return;
   }
 
